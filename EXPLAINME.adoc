@@ -1,0 +1,55 @@
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= pons: The Bridge of Asses Static Analyzer
+
+== What is pons?
+
+pons (after the _pons asinorum_ / Euclid I.5, the "bridge of asses") is a lightweight, 
+multi-language static scanner that flags three categories of critical code issues:
+
+* **Dead work** — Code that does nothing, is unreachable, or produces no effect
+* **Self-contradiction** — Inconsistent logic or state that cannot be reconciled
+* **Missing escape hatches** — Error paths that don't properly handle failures
+
+== Design Philosophy
+
+pons is the depth companion to link:https://github.com/hyperpolymath/panic-attack[panic-attack]:
+
+| Tool | Focus | Approach |
+|------|-------|----------|
+| panic-attack | Breadth | 49 languages, security weak points, line-level patterns + relational reasoning |
+| pons | Depth | Few languages, parse trees + real dataflow + typestate, waste/contradiction smells |
+
+== Evidence Tiers
+
+Every finding carries an explicit evidence class:
+
+* `PROTOCOL` — Mathematically certain, based on formal specifications
+* `DATAFLOW` — High confidence, based on concrete dataflow analysis
+* `HEURISTIC` — Moderate confidence, based on pattern matching
+* `SPECULATIVE` — Low confidence, visually demoted in all output formats
+
+**Key principle:** Never dress a heuristic up as a proof.
+
+== Current Status
+
+*Planning complete; implementation not started.* This repository contains the ratified v0.1.0 plan.
+
+== Repository Structure
+
+include::docs/structure.adoc[]
+
+== Quick Start
+
+See link:CONTRIBUTING.md[CONTRIBUTING.md] for development setup.
+
+== License
+
+Code: MPL-2.0-or-later (see LICENSE)
+Docs: CC-BY-SA-4.0
+
+== Contact
+
+* Issues: https://github.com/hyperpolymath/pons/issues
+* Discussions: https://github.com/hyperpolymath/pons/discussions
+* Email: j.d.a.jewell@open.ac.uk
