@@ -1,8 +1,17 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
-= pons
+= pons-asinorum
 :toc: preamble
 
-*pons* — after the _pons asinorum_ (Euclid I.5, the "bridge of asses"), the
+// ── Licensing ───────────────────────────────────────────────────────────────
+image:https://img.shields.io/badge/Code-MPL--2.0-blue.svg?logo=mozilla[Code licence: MPL-2.0,link="https://opensource.org/licenses/MPL-2.0"]
+image:https://img.shields.io/badge/Docs-CC--BY--SA--4.0-blue.svg?logo=creativecommons[Docs licence: CC-BY-SA-4.0,link="https://creativecommons.org/licenses/by-sa/4.0/"]
+
+// ── Standard & quality gates ────────────────────────────────────────────────
+image:https://img.shields.io/badge/RSR-Rhodium_Standard-9C27B0[Rhodium Standard Repository,link="https://github.com/hyperpolymath/rhodium-standard-repositories"]
+image:https://api.scorecard.dev/projects/github.com/hyperpolymath/pons-asinorum/badge[OpenSSF Scorecard,link="https://scorecard.dev/viewer/?uri=github.com/hyperpolymath/pons-asinorum"]
+image:https://archive.softwareheritage.org/badge/origin/https://github.com/hyperpolymath/pons-asinorum/[Archived in Software Heritage,link="https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/hyperpolymath/pons-asinorum"]
+
+*pons-asinorum* — after the _pons asinorum_ (Euclid I.5, the "bridge of asses"), the
 historical test that separates real understanding from rote. A lightweight,
 multi-language static scanner that flags the small set of mistakes
 mathematicians and computing experts spot on sight but ordinary coders miss —
@@ -12,7 +21,7 @@ each finding with an honest label for how strong the evidence is.
 Design companion to
 https://github.com/hyperpolymath/panic-attack[panic-attack]: panic-attack is
 breadth (49 languages, security/panic weak points, line-level patterns +
-relational reasoning); pons is depth (a few languages, parse trees + real
+relational reasoning); pons-asinorum is depth (a few languages, parse trees + real
 dataflow + typestate, waste/contradiction smells). See
 link:docs/adr/0004-companion-to-panic-attack.adoc[ADR-0004].
 
