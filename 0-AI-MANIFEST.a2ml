@@ -1,0 +1,40 @@
+// SPDX-License-Identifier: MPL-2.0-or-later
+// Machine-readable manifest for pons repository
+// See: https://github.com/hyperpolymath/standards/blob/main/docs/CONTRACTILES-SPEC.adoc
+
+{
+  "repository": {
+    "name": "pons-asinorum",
+    "description": "A depth-first, multi-language static scanner that flags wasted work, self-contradiction, and missing escape hatches",
+    "estate": "hyperpolymath",
+    "license": {
+      "code": "MPL-2.0-or-later",
+      "docs": "CC-BY-SA-4.0"
+    },
+    "primary_language": ["Rust", "Zig", "Idris"],
+    "status": "planning",
+    "rsr_compliance_target": "full"
+  },
+
+  "constraints": {
+    "no_typescript": true,
+    "no_handwritten_js": true,
+    "no_ruby": true,
+    "no_python_scripts": true
+  },
+
+  "doors": {
+    "DOOR-001": {
+      "description": "Never dress a heuristic up as a proof",
+      "evidence_tiers": ["PROTOCOL", "DATAFLOW", "HEURISTIC", "SPECULATIVE"],
+      "enforcement": "CI_gate"
+    }
+  },
+
+  "verification": {
+    "last_audited": "2026-08-13",
+    "audit_type": "automated",
+    "compliance_score": "partial",
+    "target_compliance": "full"
+  }
+}

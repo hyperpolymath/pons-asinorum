@@ -1,0 +1,24 @@
+// SPDX-License-Identifier: MPL-2.0
+= pons Machine-Readable Metadata
+:toc:
+
+This directory contains machine-readable contractiles and descriptiles for the pons repository.
+
+== Structure
+
+* `0-AI-MANIFEST.a2ml` — Primary machine manifest
+* `contractiles/` — Contract files (requirements, constraints, guarantees)
+* `descriptiles/` — Descriptive files (metadata, classifications)
+* `scripts/` — Automation and verification scripts
+
+== Contractiles
+
+include::contractiles/README.adoc[]
+
+== Descriptiles
+
+include::descriptiles/README.adoc[]
+
+== Scripts
+
+include::scripts/README.adoc[]
