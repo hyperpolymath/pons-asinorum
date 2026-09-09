@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: MPL-2.0
+schema_version = "0.1.0"
+id = "linear-egg"
+description = "An acquired egg must be consumed exactly once in the supplied trace."
+channel = "egg"
+states = ["absent", "available", "consumed"]
+initial = "absent"
+must_exit_in = ["consumed"]
+
+[[transition]]
+on = "acquire"
+from = "absent"
+to = "available"
+
+[[transition]]
+on = "eat"
+from = "available"
+to = "consumed"
+
+[[operation]]
+on = "eat"
+kind = "emit"
+forbidden_in = ["absent", "consumed"]
+message = "This egg is unavailable or has already been consumed."
+
+[[operation]]
+on = "acquire"
+kind = "emit"
+forbidden_in = ["available", "consumed"]
+message = "This instance key already identifies an acquired egg; use a fresh key for another egg."

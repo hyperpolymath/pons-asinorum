@@ -1,3 +1,5 @@
+// Current implementation status: see AUDIT.adoc and ADR-0005.
+// Original acceptance milestones remain binding; this file is not a completion claim.
 // SPDX-License-Identifier: CC-BY-SA-4.0
 = pons v0.1.0 — Implementation Plan
 :toc: left

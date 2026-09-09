@@ -1,0 +1,47 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Pons container and deployment gates
+
+The multi-stage Containerfile builds a musl Rust binary and installs it in a
+digest-pinned Wolfi image. The runtime uses UID/GID 65532. It exposes no ports.
+The core scanner is offline; optional Pandoc, spelling, OCR and Invariant Path
+tools are deliberately separate installations and are not in this small image.
+
+[source,shell]
+----
+just container-build
+just container-smoke
+podman run --rm --network=none --read-only --cap-drop=all \
+  --security-opt=no-new-privileges \
+  -v "$PWD:/input:ro" localhost/pons:dev scan /input --format json
+----
+
+On an enforcing SELinux host, stage scan inputs in a dedicated directory labelled
+for container access; use `:ro,Z` for a private container label on that staging
+directory. Do not recursively relabel an unrelated home directory or disable
+SELinux confinement. The example above assumes labels already permit reading.
+Pons never changes the host's SELinux mode.
+
+== Transactional report gate
+
+`transactional-scan.sh INPUT_DIRECTORY REPORT.json` is a stricter deployment
+wrapper. It requires a running firewalld daemon and enforcing SELinux before
+starting the offline container. It writes to a temporary file beside the final
+report, validates successful completion, then atomically renames it. Failed
+scans preserve the previous report. It never reloads or rewrites host firewall
+rules and opens no port. An image reference can be supplied via `PONS_IMAGE`.
+
+The companion firewalld zone file is a reviewable ingress DROP zone for a dedicated
+scanner network if an operator creates one; a zone is not an egress policy.
+Do not assign the host's management
+interface to it. The default `--network=none` deployment needs no such interface.
+Any future online rule acquisition must happen as a separate reviewed transaction:
+acquire an attributed bundle, verify it, run its falsifiers, then activate it.
+Authority Watch does not yet supply a production update feed for Pons.
+
+The maintainer's WSL host deliberately uses permissive SELinux and currently has
+no firewalld executable. The strict wrapper therefore cannot pass preflight there;
+the host has not been reconfigured. Container tests establish offline execution,
+not enforcement on a host whose SELinux mode is permissive.
+
+References: https://docs.podman.io/en/latest/markdown/podman-run.1.html[Podman run]
+and https://firewalld.org/documentation/man-pages/firewalld.zone.html[firewalld zones].

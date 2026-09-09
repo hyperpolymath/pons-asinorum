@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: MPL-2.0
+name: Dogfood Gate
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: project
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: hyperpolymath/standards
+          ref: 1f3eef621985b2dd0e7e2d3ac265c0f0ba6b0a78
+          path: standards
+          persist-credentials: false
+      - run: bash standards/scripts/check-rsr-profile.sh project

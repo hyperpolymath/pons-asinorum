@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: MPL-2.0
+FROM docker.io/library/rust:1.97.1-alpine@sha256:3c38f3f82c2f3d73da3b38e18d279393a04cb43ddded0e35088a8c3324d40900 AS builder
+RUN apk add --no-cache build-base
+WORKDIR /build
+COPY . .
+RUN cargo build --release --locked -p pons-cli
+
+FROM cgr.dev/chainguard/wolfi-base@sha256:918a593b8268c222afd4e2c4f06860ac984e60719b4697e4c71d796bc8fcd042
+LABEL org.opencontainers.image.title="Pons Asinorum" \
+      org.opencontainers.image.source="https://github.com/hyperpolymath/pons-asinorum" \
+      org.opencontainers.image.licenses="MPL-2.0"
+COPY --from=builder /build/target/release/pons /usr/local/bin/pons
+USER 65532:65532
+WORKDIR /work
+ENTRYPOINT ["/usr/local/bin/pons"]
+CMD ["--help"]

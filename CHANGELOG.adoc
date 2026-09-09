@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Changelog
+
+== Unreleased — 0.1.0-dev.1
+
+* Implement the Rust/tree-sitter scanner, five grammar smoke tests and eight
+  structural source rules with mandatory positive and negative corpora.
+* Add repository, localisation, claim-sanity and conditional resource checks.
+* Add scoped overrides, custom text rules, human/JSON/SARIF reports and explicit
+  incomplete-scan failures. Add bounded text, spelling and OCR adapters.
+* Implement supplied event-trace contracts and an Invariant Path hand-off.
+* Add Rust CI, an offline rootless container and RSR capability metadata.
+
+This development version does not complete the original v0.1 acceptance plan:
+Python CFG/dataflow and CFG-based typestate remain outstanding.

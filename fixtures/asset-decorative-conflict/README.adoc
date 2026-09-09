@@ -1,0 +1,4 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= asset-decorative-conflict falsifiers
+
+Positive cases expose a missing or contradictory declaration; negative cases supply it.

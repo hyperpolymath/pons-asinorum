@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Maintainers
+
+Jonathan D.A. Jewell (hyperpolymath) maintains pons-asinorum.
+The GitHub repository is https://github.com/hyperpolymath/pons-asinorum.
+Security reports follow `.github/SECURITY.md`; source and contribution policy
+are in `.github/CONTRIBUTING.md` and `GOVERNANCE.adoc`.
+Rule additions require an evidence class, a practical explanation, an explicit
+counter-condition and both positive and negative fixtures. Maintainer review
+is required before publishing a release or an approved specification-derived
+rule bundle.

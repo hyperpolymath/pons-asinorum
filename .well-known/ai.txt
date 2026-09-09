@@ -1,0 +1,5 @@
+SPDX-License-Identifier: CC-BY-SA-4.0
+Project: Pons Asinorum
+Agent instructions: ../0-AI-MANIFEST.a2ml
+State: ../.machine_readable/descriptiles/STATE.a2ml
+Do not execute scanned source. Do not elevate heuristic findings into proofs.

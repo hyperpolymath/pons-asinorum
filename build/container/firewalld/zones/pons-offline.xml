@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<zone target="DROP">
+  <short>Pons offline scan network</short>
+  <description>Optional dedicated scanner zone. Never attach the host management interface. Core scans normally use no network namespace connectivity.</description>
+</zone>

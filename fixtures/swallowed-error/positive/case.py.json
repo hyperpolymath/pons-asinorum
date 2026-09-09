@@ -1,0 +1,5 @@
+{
+  "license": "MPL-2.0",
+  "language": "python",
+  "source": "# SPDX-License-Identifier: MPL-2.0\ntry:\n    run()\nexcept:\n    pass\n"
+}

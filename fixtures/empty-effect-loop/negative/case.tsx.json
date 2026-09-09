@@ -1,0 +1,5 @@
+{
+  "license": "MPL-2.0",
+  "language": "tsx",
+  "source": "// SPDX-License-Identifier: MPL-2.0\nfor (const x of events()) {}\n"
+}

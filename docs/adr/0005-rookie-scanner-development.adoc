@@ -1,0 +1,33 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= ADR-0005: executable rookie-scanner development slice
+:status: accepted
+:date: 2026-09-09
+
+The owner expanded scope to repository/prose/asset mistakes, custom contracts,
+local tool integration, RSR maintenance and secure container operation. Retain
+the Rust/tree-sitter substrate and four-crate architecture. Deliver useful
+bounded checks while keeping the original CFG/dataflow and source typestate
+milestones open. The development version is 0.1.0-dev.1, not the planned release.
+
+Amendments to the original plan:
+
+* Pin the installed/tested Rust and cached grammar dependency versions in Cargo
+  and the toolchain files. Cargo.lock is tracked for the CLI.
+* Reject non-UTF-8 supported input rather than silently fall back to Latin-1;
+  preserve byte offsets and report incomplete scans. Transcoding is explicit.
+* PROTOCOL labels apply only to consequences of the supplied contract and
+  supported loop/trace model. They do not mean unconditional mathematical
+  certainty about the real program. No source CFG is implied by trace checking.
+* Store Python corpus snippets as JSON string data (`.py.json`), decoded by
+  Rust tests. This follows the estate scanner-suppression guidance for fixtures;
+  no raw Python implementation or runtime is introduced. TypeScript corpus
+  examples use the same encoding; the current canonical detector did not apply
+  its fixture carve-out to this root-level corpus.
+* Enable capability-scoped RSR governance and real Rust/container/benchmark
+  gates now. Do not instantiate unused Idris/Zig/ABI, proof or service templates.
+* Use advisory output by default, opt-in CI thresholds and scoped allowances.
+  Keep advanced evidence behind `--explain` in human output.
+
+No release, deployment, mathematical proof or external integration is complete
+merely because its configuration or design appears here. See AUDIT for evidence
+and SCOPE for deferred work.

@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: MPL-2.0
+repos:
+  - repo: local
+    hooks:
+      - id: rust-format
+        name: Rust formatting
+        entry: cargo fmt --all --check
+        language: system
+        pass_filenames: false
+        types: [rust]
+      - id: pons-falsifiers
+        name: Pons rule falsifiers
+        entry: cargo test -p pons-rules --test falsifier --locked
+        language: system
+        pass_filenames: false
+        files: '^(src/|crates/|fixtures/|Cargo\.)'

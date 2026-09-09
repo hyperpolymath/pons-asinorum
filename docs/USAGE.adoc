@@ -1,0 +1,150 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Using Pons
+:toc:
+
+== Commands and limits
+
+`pons scan PATH` selects source grammars by extension and checks supported
+text documents/configuration. For an extensionless single source file, use
+`--lang python` (or javascript, typescript, tsx, rust). A forced grammar is
+rejected for a directory. Unknown extensions in a tree are counted as skipped;
+explicitly requesting an unsupported file is an error. Text is UTF-8, at most
+2 MiB per file. Use `--rule ID` repeatedly to choose rules, `--no-speculative`
+to omit speculative prompts, and `--explain` for supporting detail.
+
+`--format human|json|sarif` changes presentation. `--fail-on never|info|warn|error`
+sets the CI threshold; never is the default. Errors and incomplete scans exit 2
+regardless of threshold. Inspect the scanned counts and diagnostics alongside
+any zero-finding result.
+
+== Configuration and dismissals
+
+Pons reads `pons.toml` at the scan root, or the file supplied with `--config`.
+Unknown keys and rule IDs fail explicitly. `.ponsignore` uses ignore-file
+patterns, including outside a Git repository; `.gitignore` is also honoured.
+
+[source,toml]
+----
+[identity]
+name = "pons-asinorum"
+aliases = ["Pons"]
+
+[suppress]
+rules = []
+paths = ["generated/**"]
+
+[[suppress.allow]]
+rule = "while-true-no-break"
+path = "examples/service.rs"
+reason = "Intentional service loop; termination is external"
+
+[[pattern]]
+id = "user-placeholder-account"
+path = "docs/**"
+regex = "ACCOUNT_NAME_HERE"
+message = "The account name still needs filling in"
+counter_condition = "A template example may deliberately retain this marker"
+----
+
+In supported source languages, an actual comment on the finding's start line
+can contain `pons:allow self-assignment -- deliberate binding example`.
+A string containing that text cannot suppress a finding. Document and asset
+findings use configuration allowances. A word-processor-style dismissal UI
+and baseline fingerprints are planned; the CLI currently edits no source.
+
+== Consumable resources
+
+[source,toml]
+----
+[[budget]]
+path = "breakfast.py"
+resource = "eggs"
+available = 4
+consume = "eat"
+units = 1
+----
+
+For a Python loop with `range(2245)` and the call `eat(egg)`, this states that
+each call consumes one egg. If that loop completes, the checker reports 2245
+needed and 2241 short. It handles nested literal one-argument ranges and
+checked arithmetic; branches, unknown calls, exits and unresolved bounds do
+not yield a purported exact count. This is a user assertion about consumption,
+not an inference from the word "egg". No runtime availability is observed.
+
+For explicit event traces, run `pons trace events.json --protocol
+protocols/linear-egg.toml`. Events have `instance`, `call` and positive `line`
+fields in nondecreasing order. This checks the supplied events only.
+
+== Localisation
+
+[source,toml]
+----
+[i18n]
+base = "locales/eng.json"
+translations = ["locales/fra.json"]
+lol_catalogue = "locale-catalogue.json"
+----
+
+Nested JSON keys and named interpolation placeholders are compared. The
+optional catalogue is a Pons import array of records such as
+`{"code":"eng","name":"English"}`; locale filename stems must match its
+codes. This is not a claim that LOL already exports this format. Detection of
+mixed prose languages, plural rules and semantic translation errors remains
+future work. Intentional bilingual documents should be explicitly declared
+when that support is added, never penalised merely for being multilingual.
+
+== Images and publishing reminders
+
+[source,toml]
+----
+[[asset]]
+path = "images/border.svg"
+decorative = true
+
+[[asset]]
+path = "images/process.svg"
+rights_required = true
+rights = "Original work owned by the project; CC-BY-SA-4.0"
+attribution_required = true
+attribution = "Example Artist, Process diagram, CC-BY-SA-4.0"
+ai_generated = false
+description_required = true
+description = "The three stages and their transitions are described in the adjacent text"
+title_required = false
+----
+
+The HTML checker prompts on an img element with no alt attribute. An explicit
+empty `alt=""` is allowed; a declared decorative asset with nonempty or absent
+alt produces a review prompt. Decorative declarations currently apply to all
+matched HTML uses in the scan: scope them to separate scans if intent differs
+between pages. HTML comments, scripts and styles are excluded. This is a
+literal markup check, not complete HTML parsing or accessibility certification.
+
+Asset requirements are opt-in author declarations. Empty required rights,
+attribution, description, title, or an empty `ai_disclosure` when
+`ai_generated=true`, produce a prompt. Populating a manifest is not proof that
+attribution/disclosure appears on the published page, nor proof of permission.
+A decorative declaration never waives rights or attribution requirements.
+Missing fields are not automatically illegal. File metadata, photo/edit/AI
+classification and provenance verification are not yet implemented.
+
+== Optional tools
+
+`pons doctor` reports executable presence only. Commands below require GNU
+`timeout` and the selected tool. Child execution is capped at 15 seconds and
+4 MiB each for stdout/stderr; document input is capped at 32 MiB. No remote
+uploads are performed by Pons. Installed tools and dictionaries remain the
+operator's responsibility.
+
+* `pons extract guide.docx --via pandoc`: explicit Pandoc sandbox conversion
+  for Markdown, HTML, DOCX, ODT and reStructuredText inputs.
+* `pons extract figure.png --via ocr --language eng`: Tesseract OCR for PNG,
+  JPEG, TIFF and BMP. OCR may be wrong; it is extracted text, not a verified caption.
+* `pons spell guide.txt --via aspell --dictionary en_GB`, or `--via hunspell`:
+  dictionary misses, with no automatic rewrites.
+* `pons search misspelt guide.txt --errors 1`: agrep approximate search.
+* `pons challenge claims.adoc`: explicit local Invariant Path JSON hand-off;
+  no annotations are accepted or persisted by this command.
+
+No substitute is used when a requested tool is missing. Default scanning
+remains independent of these adapters.

@@ -1,0 +1,5 @@
+{
+  "license": "MPL-2.0",
+  "language": "python",
+  "source": "# SPDX-License-Identifier: MPL-2.0\nfor _ in range(2245):\n    eat(egg)\n"
+}
