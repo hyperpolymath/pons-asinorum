@@ -11,7 +11,7 @@ jobs:
   estate-audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       
       - name: Required Files Gate
         uses: hyperpolymath/cicd-suite/actions/required-files-check@0405f138caa8e9ac10bc181f3b46224bbdcda693 # main
