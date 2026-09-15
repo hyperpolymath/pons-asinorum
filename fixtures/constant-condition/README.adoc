@@ -1,0 +1,7 @@
+= Fixtures: constant-condition
+
+Positive fixtures: `if (true)`, `if (false)`, `while (false)` — a literal
+boolean in the condition slot.
+
+Negative fixtures: a variable condition, and `while (true)` — deliberately
+out of this rule's scope (that's `while-true-no-break`'s territory).

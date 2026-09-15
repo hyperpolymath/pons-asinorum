@@ -19,31 +19,32 @@ pub fn render(findings: &[Finding]) -> String {
 }
 
 fn render_one(f: &Finding, out: &mut String) {
-    let severity = match f.severity {
+    let severity = match f.severity() {
         Severity::Info => "INFO",
         Severity::Warn => "WARN",
         Severity::Error => "ERROR",
     };
 
-    let suffix = if f.evidence == EvidenceClass::Speculative {
+    let suffix = if f.evidence() == EvidenceClass::Speculative {
         SPECULATIVE_SUFFIX
     } else {
         ""
     };
 
+    let loc = f.location();
     let _ = writeln!(
         out,
         "{}:{}:{} [{}] {}: {}{}",
-        f.location.file,
-        f.location.line_start,
-        f.location.col_start,
+        loc.file,
+        loc.line_start,
+        loc.col_start,
         severity,
-        f.rule_id,
-        f.message,
+        f.rule_id(),
+        f.message(),
         suffix
     );
-    let _ = writeln!(out, "    evidence: {}", f.evidence_note);
-    if let Some(cond) = &f.counter_condition {
+    let _ = writeln!(out, "    evidence: {}", f.evidence_note());
+    if let Some(cond) = f.counter_condition() {
         let _ = writeln!(out, "    when fine: {cond}");
     }
 }

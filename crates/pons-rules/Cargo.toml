@@ -9,3 +9,4 @@ authors.workspace = true
 [dependencies]
 pons-core = { path = "../pons-core" }
 anyhow = { workspace = true }
+tree-sitter = "=0.27.0"

@@ -85,8 +85,8 @@ fn run_scan(path: &Path, fail_on: Option<FailOn>) -> ExitCode {
     // --fail-on: the tool never dresses a heuristic as a verdict.
     let should_fail = fail_on.is_some_and(|threshold| {
         findings.iter().any(|f| {
-            f.evidence != EvidenceClass::Speculative
-                && severity_rank(f.severity) >= threshold.rank()
+            f.evidence() != EvidenceClass::Speculative
+                && severity_rank(f.severity()) >= threshold.rank()
         })
     });
 
