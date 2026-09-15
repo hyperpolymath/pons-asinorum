@@ -1,0 +1,9 @@
+= Fixtures: self-assignment
+
+Positive fixtures: a bare identifier assigned to itself (`x = x`).
+
+Negative fixtures: an assignment between two different identifiers, a
+property/attribute self-assignment (`obj.p = obj.p` — has a different node
+shape and may carry setter side effects), and, in Rust, `let x = x;` — a
+*shadow* (`let_declaration`), not an `assignment_expression`, so it is a
+structurally different node the query never matches.

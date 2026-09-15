@@ -1,0 +1,9 @@
+= Fixtures: while-true-no-break
+
+Positive fixtures: `while (true)` / `loop` whose body has no reachable
+`break`/`return`/`throw` (or `raise` in Python) anywhere in it — a plausible
+infinite loop.
+
+Negative fixtures: the same loop shape with a `break`/`throw` present, and
+(Rust only) `while false`/`loop` disambiguation via a `while false` case that
+must stay silent here (that's `constant-condition`'s territory).

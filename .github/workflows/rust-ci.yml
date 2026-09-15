@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: MPL-2.0
+name: rust-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: fmt
+        run: cargo fmt --check
+      - name: clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+        env:
+          RUSTFLAGS: "-D warnings"
+      - name: test
+        run: cargo test --workspace

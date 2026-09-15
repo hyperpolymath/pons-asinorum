@@ -1,0 +1,22 @@
+= Fixtures: string-concat-in-loop
+
+Positive fixtures: `+=` or self-referential `x = x + ...` string accumulation
+inside a `for`/`while`/`do` loop — each append rebuilds the whole string, so
+an N-iteration loop does O(N^2) work.
+
+Negative fixtures cover three cases the string-typed-RHS narrowing and the
+loop-ancestor walk must both get right:
+
+- Purely numeric accumulation (`n += x`) — never flagged, regardless of
+  loop nesting, since the RHS subtree has no string-literal node.
+- Accumulation outside any loop — a single `+=` before or after the loop
+  body is not quadratic.
+- Accumulation inside a function/closure defined *inside* the loop — the
+  assignment only runs once per call to that inner function, not once per
+  outer-loop iteration, so the parent-walk stops at the function boundary
+  before crediting the enclosing loop (see the rule's `boundary_kinds` doc
+  comment).
+
+No Rust fixtures: `String += &str` is amortised O(1) in Rust (it grows the
+buffer geometrically), so the pattern this rule targets does not exist there
+— `string-concat-in-loop` is the one T0 rule with no Rust variant.

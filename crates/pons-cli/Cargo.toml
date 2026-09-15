@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pons-cli"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "pons"
+path = "src/main.rs"
+
+[dependencies]
+pons-core = { path = "../pons-core" }
+pons-rules = { path = "../pons-rules" }
+anyhow = { workspace = true }
+clap = { workspace = true }

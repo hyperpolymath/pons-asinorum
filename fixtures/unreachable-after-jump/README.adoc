@@ -1,0 +1,8 @@
+= Fixtures: unreachable-after-jump
+
+Positive fixtures: a statement immediately following `return`/`throw`/`raise`/
+`break`/`continue` in the same block — never reachable.
+
+Negative fixtures: the jump statement is the last statement in its block, or
+a jump inside a nested block (`if`) followed by more code in the *outer*
+block (not the same block as the jump, so not unreachable).

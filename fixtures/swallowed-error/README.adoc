@@ -1,0 +1,8 @@
+= Fixtures: swallowed-error
+
+Positive fixtures: a `catch` / `except` whose body is empty (JS/TS/Tsx) or
+only `pass` (Python — the one way to write an empty Python block).
+
+Negative fixtures: the same shape but with either a comment documenting the
+swallow as intentional, or a handler that actually does something with the
+error (logging it). Rust is excluded entirely — it has no exceptions.

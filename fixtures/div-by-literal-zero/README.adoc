@@ -1,0 +1,10 @@
+= Fixtures: div-by-literal-zero
+
+Positive fixtures: `/` or `%` (or their augmented-assignment forms) against a
+literal zero right-hand side, across every language the rule covers
+(Python, JavaScript, TypeScript, Tsx, Rust).
+
+Negative fixtures: the same operators against a non-zero or non-literal
+right-hand side, plus Python's `%` string-formatting operator
+(`string_format.py`), which parses with the identical AST shape as modulo but
+is not modulo at all.

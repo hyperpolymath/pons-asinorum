@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= ADR-0005: CLI exit-code contract
+:status: ACCEPTED
+:date: 2026-09-14
+
+*Status:* ACCEPTED. Implemented in `pons-cli/src/main.rs` (M1); this ADR
+records the decision after the fact.
+
+== Context
+
+`pons scan <path>` needed an exit-code contract before M1 could be called
+done, and none of the source docs (kickoff, PLAN.adoc, OWNER-DECISIONS.adoc)
+specify one. The obvious default for a lint-shaped tool — exit non-zero
+whenever findings exist — collides with two facts specific to pons:
+
+* Suppression (M7) does not exist yet. A tool that fails CI on every
+  legitimate, intentional pattern (e.g. `while-true-no-break` on a daemon
+  loop, `WARN` by design) with no way to silence the noise would break real
+  codebases the moment it is wired into CI, long before suppression ships.
+* `SPECULATIVE`-tier findings are, by pons's own founding proposition (ADR-
+  0001), heuristics rather than verdicts. Letting them fail a build would
+  contradict the one guarantee the engine exists to make.
+
+== Decision
+
+* `pons scan <path>` exits `0` by default, even when findings are reported.
+* `--fail-on <info|warn|error>` is opt-in. When set, the process exits `1`
+  if any finding meets or exceeds the given severity — but only among
+  findings whose `EvidenceClass` is not `Speculative`.
+* Exit `2` is reserved for operational errors: a scan path that does not
+  exist, or `Engine::scan` returning `Err` (I/O or parse failure). Findings,
+  however many or however severe, never produce exit `2`.
+
+== Rationale
+
+This extends the "never dress a heuristic as a verdict" honesty rule (ADR-
+0001) from the reporter's message text to the process's exit status: a
+`SPECULATIVE` finding already prints demoted (`report/human.rs`'s fixed
+suffix); it would be incoherent for that same finding to be able to fail a
+build via `--fail-on` while its own output disclaims verdict status.
+
+Defaulting to exit `0` is the honest option given the current state of the
+tool, not a permanent stance: once M7 suppression lands, projects gain a way
+to silence accepted findings, and `--fail-on` becomes safe to default to a
+non-`none` value in CI templates. That default flip is out of scope for this
+ADR.
+
+== Consequences
+
+* A CI job wanting pons to gate merges must pass `--fail-on <severity>`
+  explicitly — silence is not enforcement.
+* Exit codes are two-valued in intent (`0`/`1` = tool ran, `2` = tool
+  couldn't run) plus the severity threshold as a modifier on the first —
+  scripts should treat `2` as "fix the invocation," not "findings exist."
+* If a future rule tier introduces a fifth `EvidenceClass`, this contract's
+  `!= Speculative` check must be revisited — it currently assumes
+  `Speculative` is the only class ADR-0001's honesty rule needs to exempt.

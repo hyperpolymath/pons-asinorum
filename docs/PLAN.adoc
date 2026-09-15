@@ -301,17 +301,28 @@ truth thereafter.
 [cols="2,2,2", options="header"]
 |===
 | crate | purpose | pin (fill at M0)
-| `tree-sitter` | core parsing/query API | `=<resolved>`
-| `tree-sitter-python` | Python grammar (T0 + T1 + T2) | `=<resolved>`
-| `tree-sitter-javascript` | JS grammar (T0) | `=<resolved>`
-| `tree-sitter-typescript` | TS + TSX grammars (T0) | `=<resolved>`
-| `tree-sitter-rust` | Rust grammar (T0) | `=<resolved>`
-| `serde` / `serde_json` | JSON + SARIF serialisation | `=<resolved>`
-| `toml` | protocol + `pons.toml` parsing | `=<resolved>`
-| `clap` (derive) | CLI | `=<resolved>`
-| `anyhow` | error handling (house style) | `=<resolved>`
-| `ignore` / `walkdir` | file discovery + `.ponsignore` | `=<resolved>`
+| `tree-sitter` | core parsing/query API | `=0.27.0`
+| `tree-sitter-python` | Python grammar (T0 + T1 + T2) | `=0.25.0`
+| `tree-sitter-javascript` | JS grammar (T0) | `=0.25.0`
+| `tree-sitter-typescript` | TS + TSX grammars (T0) | `=0.23.2`
+| `tree-sitter-rust` | Rust grammar (T0) | `=0.24.2`
+| `serde` / `serde_json` | JSON + SARIF serialisation | `=1.0.229` / `=1.0.151` (M1+)
+| `toml` | protocol + `pons.toml` parsing | not yet added (M5 scope)
+| `clap` (derive) | CLI | `=4.6.6` (added, unused until M1's real CLI surface)
+| `anyhow` | error handling (house style) | `=1.0.104`
+| `ignore` / `walkdir` | file discovery + `.ponsignore` | `=0.4.33` (ignore, direct); `walkdir` `2.5.0` pulled in transitively, not a direct dependency
 |===
+
+Resolved 2026-09-14 via `cargo add tree-sitter tree-sitter-python
+tree-sitter-javascript tree-sitter-typescript tree-sitter-rust -p pons-core`
+against the real workspace; confirmed no duplicate `tree-sitter` core-version
+pulls via `cargo tree -d` (only unrelated `serde_core` duplication, harmless).
+`serde`, `clap`, `anyhow` pins above are the versions resolved when those
+crates were added to the workspace/`pons-core`/`pons-cli` manifests at M0;
+`ignore` was added at M1 for `source.rs`'s recursive file discovery (pulls in
+`walkdir` transitively — no direct `walkdir` dependency needed). `toml`
+remains unresolved until M5, per the foundations-before-scaffolding build
+discipline — do not add a dependency before the code that uses it.
 
 Extension → `Lang` table (source.rs / lang.rs): `.py`→Python; `.js`/`.mjs`/
 `.cjs`→JavaScript; `.ts`→TypeScript; `.tsx`→TSX; `.jsx`→JavaScript (or TSX —

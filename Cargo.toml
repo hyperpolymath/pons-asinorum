@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: MPL-2.0
+[workspace]
+resolver = "2"
+members = [
+    "crates/pons-core",
+    "crates/pons-protocols",
+    "crates/pons-rules",
+    "crates/pons-cli",
+]
+
+[workspace.package]
+edition = "2021"
+license = "MPL-2.0"
+authors = ["Jonathan D.A. Jewell"]
+
+[workspace.dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+walkdir = "2"
+ignore = "0.4"
+clap = { version = "4", features = ["derive"] }
