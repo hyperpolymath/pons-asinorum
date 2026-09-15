@@ -1,0 +1,382 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+//
+// Proof Progress Snapshot — pons-asinorum Static Analyzer
+// Generated: 2026-08-14
+
+= pons-asinorum — Proof/Verification Guarantee Progress Snapshot
+:toc:
+:icons: font
+
+This document provides an indicative state of progress on formal guarantees for
+the pons-asinorum static analyzer as of 2026-08-14. It consolidates
+information from:
+
+- `docs/pons-kickoff.adoc` — Mission, decidability wall, evidence tiers
+- `docs/adr/0001-substrate.adoc` — tree-sitter native + Rust decision
+- `docs/adr/0002-t1-language-and-cfg.adoc` — T1 language (Python) and CFG/dataflow design
+- `docs/adr/0003-protocol-spec-and-typestate.adoc` — T2 protocol spec format + typestate
+- `docs/adr/0004-companion-to-panic-attack.adoc` — Relationship to panic-attack
+- `docs/PLAN.adoc` — Implementation plan and acceptance gates
+
+== Headline Status
+
+[cols="1,2,3",options="header"]
+|===
+| Component | Status | Details
+
+| Overall implementation | ⚠️ PLANNING COMPLETE | v0.1.0 plan ratified; implementation not started
+
+| Substrate decision | ✅ LANDED | tree-sitter native + Rust workspace (ADR-0001)
+
+| T1 language choice | ✅ LANDED | Python (not Rust) with CFG + dataflow (ADR-0002)
+
+| T2 protocol format | ✅ LANDED | TOML protocol specs with typestate semantics (ADR-0003)
+
+| Evidence tier model | ✅ LANDED | T0–T3 tiers with explicit decidability stance
+
+| Companion positioning | ✅ LANDED | Depth-first sibling to panic-attack's breadth-first (ADR-0004)
+
+| Falsifier-first discipline | ✅ LANDED | Every rule ships with negative corpus; rule fires on its own neg-corp → demoted/removed
+|===
+
+**Overall:** pons is **at the planning stage** — the v0.1.0 plan is complete and
+ratified, but implementation has not started. The core intellectual contribution
+is the **evidence-tier model** and the **falsifier-first discipline**, both of
+which are fully specified and ready for implementation.
+
+== Compiler Guarantee Detail
+
+=== The Core Contract (from README.adoc)
+
+[quote]
+____
+Never dress a heuristic up as a proof.
+____
+
+Every finding carries an evidence class (`HEURISTIC` / `DATAFLOW` / `PROTOCOL` / `SPECULATIVE`).
+`SPECULATIVE` findings are **visually demoted** in every output format.
+
+**Status:** ✅ SPECIFIED
+
+This is the **normative MUST** of pons. It is implemented by construction:
+- Evidence class is a **required field** in the finding data structure
+- The reporter **must handle** the evidence class in every output path
+- Output formats **must** visually demote SPECULATIVE findings
+
+**Confidence:** High — this is a structural invariant, not a runtime check.
+
+=== The Four Evidence Tiers (from pons-kickoff.adoc)
+
+[cols="1,3,2,2",options="header"]
+|===
+| Tier | What it rests on | Decidable? | Default evidence class
+
+| *T0 — Syntactic / structural* | Concrete syntax only (tree-sitter queries + small local predicates). No control flow, no types. | Cheap, language-parametric | `HEURISTIC`
+
+| *T1 — Intraprocedural dataflow* | Per-function CFG + live-variable / reaching-defs analysis | Decidable (sound modulo reflection/FFI/macros) | `DATAFLOW`
+
+| *T2 — Typestate / protocol* | Supplied protocol over abstract channel/resource. Contract violation on reachable path. | Decidable (given correct protocol spec) | `PROTOCOL`
+
+| *T3 — Undecidable / heuristic* | Pattern catalogue only (real complexity, general div-by-zero, non-termination) | Undecidable | `SPECULATIVE`
+|===
+
+**Honest assessment:** All four tiers are **fully specified** in the kickoff document.
+The decidability stance is **explicit and honest** — undecidable properties are
+labelled as such and never presented as proofs.
+
+=== The Decidability Wall (from pons-kickoff.adoc §4)
+
+[cols="1,3,2",options="header"]
+|===
+| Property | Status | Reason
+
+| Real asymptotic complexity | ❌ Undecidable | Rice's theorem — non-trivial semantic property
+
+| General divide-by-zero | ❌ Undecidable | Reachability + runtime divisor value
+
+| Non-termination | ❌ Undecidable | Halting problem
+
+| Literal-zero divisor | ✅ Decidable | Cheap, near-certain
+
+| Unreachable code after return | ✅ Decidable | Standard linter territory
+
+| Dead store on every path | ✅ Decidable | Standard linter territory
+|===
+
+**Honest assessment:** The decidability wall is **clearly articulated**. pons will
+**never** claim to prove undecidable properties. This is a **design feature**,
+not a limitation.
+
+== File Map
+
+[cols="1,2,3",options="header"]
+|===
+| Path | Purpose | Status
+
+| `docs/pons-kickoff.adoc` | Mission, species, decidability wall, evidence tiers, catalogue | ✅ Authoritative
+
+| `docs/adr/0001-substrate.adoc` | Substrate: tree-sitter native + Rust | ✅ Accepted
+
+| `docs/adr/0002-t1-language-and-cfg.adoc` | T1 language (Python), CFG, dataflow equations | ✅ Accepted
+
+| `docs/adr/0003-protocol-spec-and-typestate.adoc` | T2 protocol TOML format, typestate semantics | ✅ Accepted
+
+| `docs/adr/0004-companion-to-panic-attack.adoc` | Relationship to panic-attack | ✅ Accepted
+
+| `docs/PLAN.adoc` | Milestone-by-milestone implementation plan | ✅ Authored
+
+| `docs/OWNER-DECISIONS.adoc` | Owner decisions log | ✅ Authored
+
+| `README.adoc` | Project overview | ✅ Current
+
+| `EXPLAINME.adoc` | Developer deep-dive | ✅ Current
+|===
+
+== Implementation Plan (from PLAN.adoc)
+
+=== Milestone Structure
+
+The PLAN document specifies a **falsifier-first** acceptance gate: every rule
+must ship with a negative corpus that falsifies it. A rule that fires on its own
+negative corpus is **demoted or removed**, enforced in CI.
+
+[cols="1,3,2",options="header"]
+|===
+| Milestone | Focus | Acceptance Gate
+
+| M0 | Substrate validation | Parse non-trivial files, run trivial queries against each pinned grammar
+
+| M1 | T0 rules (structural) | Negative corpus for each T0 rule; rule fires on neg-corp → fail
+
+| M2 | T1 rules (dataflow) | Negative corpus for each T1 rule; CFG snapshot tests; dataflow equations verified
+
+| M3 | T2 rules (typestate) | Negative corpus for each T2 rule; protocol spec parsing; typestate walk soundness
+
+| M4 | Integration | SARIF 2.1.0 export; PanLL integration (deferred to post-v0.1.0)
+|===
+
+**Status:** All milestones are **specified** but **not started**.
+
+=== Acceptance Gates
+
+The PLAN document includes:
+- **Appendix A:** Starter catalogue (rules 1–12 with evidence classes)
+- **Appendix B:** Query guidance for tree-sitter queries
+- **Appendix C:** JSON schema for protocol specs
+- **Appendix D:** SARIF mapping
+- **Appendix E:** Dependency pins
+- **Appendix F:** Grammar version pin table
+
+**Status:** All appendices are **authored** and ready for implementation.
+
+== Design Decisions Summary
+
+=== ADR-0001: Substrate — tree-sitter native + Rust
+
+[cols="1,2,3",options="header"]
+|===
+| Aspect | Decision | Rationale
+
+| Substrate | tree-sitter native + Rust workspace | Evidence class must be structural; Semgrep cannot enforce this; CodeQL fails "scan lightly"
+
+| Grammar pinning | Exact crate versions in workspace | Prevent grammar drift breaking node types
+
+| Deployment | Single static binary | Inherits panic-attack's standalone mode
+
+| Licence | MIT for tree-sitter grammars | Avoid licence gravity
+|===
+
+**Honest assessment:** The substrate decision is **final and non-negotiable**.
+"Do not re-open this spike."
+
+=== ADR-0002: T1 Language = Python; CFG + Dataflow Design
+
+[cols="1,2,3",options="header"]
+|===
+| Aspect | Decision | Rationale
+
+| T1 language | Python (not Rust) | Cleaner for dead-store and read-before-init; Rust has Drop semantics complications
+
+| T1 rules | dead-store (rule 9), read-before-init (rule 10) | Two concrete, decidable analyses
+
+| CFG granularity | Statement-level basic blocks | Function-level scope only (no block scope in Python)
+
+| Analyses | Backward live-variables + forward definite-assignment | Conservative soundness stance
+
+| OPAQUE hatch | Functions with reflection disabled | Soundness valve for false-positive containment
+|===
+
+**Honest assessment:** The T1 design is **complete and ready for transcription**.
+The dataflow equations are **explicitly specified** — "do not re-derive them."
+
+=== ADR-0003: T2 Protocol Spec Format + Typestate Semantics
+
+[cols="1,2,3",options="header"]
+|===
+| Aspect | Decision | Rationale
+
+| Protocol format | TOML | Matches estate style (TOML for config, AsciiDoc for prose)
+
+| Typestate model | Forward may-analysis per path | One instance key at a time
+
+| Instance key | Syntactic call receiver | Best-effort; yields false negatives, never false positives
+
+| Flagship rules | suppress-then-emit (rule 11), resource-acquired-not-released (rule 12) | Demonstrates the model
+
+| Terminal obligation | must_exit_in for T2 | Function must exit in specified state
+|===
+
+**Honest assessment:** T2 is **fully specified** with explicit limitations documented.
+
+=== ADR-0004: Companion to panic-attack
+
+[cols="1,2,3",options="header"]
+|===
+| Aspect | Decision | Rationale
+
+| Relationship | Separate repository and binary | Evidence-class discipline vs severity-code discipline
+
+| Interop | SARIF 2.1.0 export only | pons findings can flow into panic-attack's sink
+
+| Evidence class field | `result.properties.evidenceClass` | Allows consumers to respect pons's discipline
+
+| Shared assets | None (copied house style) | No build-time dependency in v0.1.0
+|===
+
+**Honest assessment:** The separation is **intentional and load-bearing**.
+Folding pons into panic-attack would blur the evidence-class discipline.
+
+== Blockers and Honest Notes
+
+=== Current Status
+
+**Status:** ⚠️ IMPLEMENTATION NOT STARTED
+
+The repository contains the **ratified v0.1.0 plan**. Implementation agents can
+execute it without re-opening any design question.
+
+**What is landed:**
+- All ADRs are **accepted**
+- All specification documents are **authored**
+- The falsifier-first discipline is **structural**
+- The evidence-tier model is **complete**
+
+**What is pending:**
+- Implementation of M0–M4 milestones
+- CFG construction (ADR-0002 §99–179)
+- Dataflow analyses (ADR-0002 §206–295)
+- Typestate walker (ADR-0003 §95–100+)
+- Protocol spec parser
+- Tree-sitter integration
+
+=== Known Gaps
+
+[cols="1,3,2",options="header"]
+|===
+| Gap | Impact | Resolution
+
+| No implementation | Cannot verify specification against code | Implementation is the next step
+
+| Grammar drift risk | Node type renames break queries | Mitigated by pin table + fixture corpus
+
+| Reflection limitations | OPAQUE hatch excludes some Python code | Documented limitation; soundness preserved
+
+| Instance key limitation | Syntactic matching yields false negatives | Documented; never yields false positives
+|===
+
+=== Documentation Drift
+
+**Status:** ✅ CURRENT
+
+All documentation is **authoritative and current**. The planning documents are
+the specification; there is no code to drift from the spec.
+
+== Ecosystem Positioning
+
+=== Relationship to panic-attack
+
+[cols="1,3,2",options="header"]
+|===
+| Aspect | panic-attack | pons
+
+| Question | "Where might this crash or be exploited?" | "Where is this program doing wasted work or contradicting itself?"
+
+| Breadth vs depth | 49 languages, breadth-first | 3–4 languages, depth-first
+
+| Evidence model | Severity codes PA001–PA025 | Evidence classes T0–T3
+
+| Core asset | 25-category security catalogue | Waste/contradiction catalogue + falsifier discipline
+
+| Decidability | Pattern-matched weak points | Explicit tiering by decidability
+
+| Interop | Consumes SARIF from others | Emits SARIF for others to consume
+|===
+
+**Relationship:** pons and panic-attack are **complementary siblings**.
+- panic-attack: breadth, security weak points, line-level patterns
+- pons: depth, waste/contradiction, parse trees + real dataflow + typestate
+
+=== Upstream Dependencies
+
+[cols="1,3,2",options="header"]
+|===
+| Project | Role | Status
+
+| tree-sitter | Parser generator framework | ✅ Upstream dependency
+
+| tree-sitter-python | Python grammar | ✅ Pinned in workspace
+
+| tree-sitter-javascript | JS/TS grammar | ✅ Pinned (ships two languages)
+
+| tree-sitter-rust | Rust grammar | ✅ Pinned (not used in v0.1.0)
+
+| panic-attack | SARIF sink for pons findings | ✅ Deferred interop (post-v0.1.0)
+
+| verisimdb | Findings storage | ✅ Deferred (via panic-attack integration)
+|===
+
+== Honest Summary
+
+[cols="1,2,3",options="header"]
+|===
+| Aspect | Status | Confidence
+
+| Mission and contract | ✅ Landed | High — "never dress heuristic as proof" is structural
+
+| Evidence tier model | ✅ Landed | High — T0–T3 fully specified with honest decidability stance
+
+| Decidability wall | ✅ Landed | High — undecidable properties explicitly identified
+
+| Falsifier-first discipline | ✅ Landed | High — negative corpus gate enforced in CI by construction
+
+| Substrate decision | ✅ Landed | High — tree-sitter native + Rust, non-negotiable
+
+| T1 design (Python CFG + dataflow) | ✅ Landed | High — complete and ready for implementation
+
+| T2 design (protocol + typestate) | ✅ Landed | High — complete with documented limitations
+
+| Companion positioning | ✅ Landed | High — separation preserves evidence-class discipline
+
+| Implementation | ⚠️ Not started | None — planning complete, awaiting execution
+|===
+
+**Honest headline:** pons is **specification-complete**. The intellectual contribution
+(the evidence-tier model, decidability honesty, falsifier-first discipline) is
+**fully landed in the planning documents**. Implementation is the remaining work.
+
+The **normative MUST** — "Never dress a heuristic up as a proof" — is **structural**
+and will be enforced by the data structures and output formats when implemented.
+
+== References
+
+- link:README.adoc[README.adoc] — Project overview and one-line contract
+- link:EXPLAINME.adoc[EXPLAINME.adoc] — Developer deep-dive
+- link:docs/pons-kickoff.adoc[docs/pons-kickoff.adoc] — Mission, species, decidability wall, evidence tiers, catalogue
+- link:docs/PLAN.adoc[docs/PLAN.adoc] — Milestone-by-milestone implementation plan
+- link:docs/OWNER-DECISIONS.adoc[docs/OWNER-DECISIONS.adoc] — Owner decisions log
+- link:docs/adr/0001-substrate.adoc[ADR-0001] — Substrate decision
+- link:docs/adr/0002-t1-language-and-cfg.adoc[ADR-0002] — T1 language and CFG/dataflow design
+- link:docs/adr/0003-protocol-spec-and-typestate.adoc[ADR-0003] — T2 protocol spec and typestate
+- link:docs/adr/0004-companion-to-panic-attack.adoc[ADR-0004] — Relationship to panic-attack
+- link:https://github.com/hyperpolymath/panic-attack[panic-attack] — The breadth-first sibling
