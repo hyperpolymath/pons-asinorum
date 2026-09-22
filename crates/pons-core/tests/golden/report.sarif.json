@@ -68,6 +68,7 @@
           ]
         }
       },
+      "columnKind": "utf16CodeUnits",
       "results": [
         {
           "ruleId": "dead-store",

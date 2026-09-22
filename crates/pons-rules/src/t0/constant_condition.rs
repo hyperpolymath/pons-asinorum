@@ -106,7 +106,7 @@ impl Rule for ConstantCondition {
             findings.push(RawFinding::new(
                 Tier::T0,
                 Severity::Warn,
-                Location::from_node(ctx.path.display().to_string(), &stmt),
+                Location::from_node(ctx.path.display().to_string(), &stmt, ctx.text),
                 "constant condition",
                 format!("`{keyword} ({literal})` — the condition can never vary"),
                 Some("a debug or feature-flag constant that gets edited in place".to_string()),

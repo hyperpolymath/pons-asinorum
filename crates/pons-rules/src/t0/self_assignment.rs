@@ -106,7 +106,7 @@ impl Rule for SelfAssignment {
             findings.push(RawFinding::new(
                 Tier::T0,
                 Severity::Warn,
-                Location::from_node(ctx.path.display().to_string(), &stmt),
+                Location::from_node(ctx.path.display().to_string(), &stmt, ctx.text),
                 "variable is assigned to itself",
                 format!("`{left_name}` is assigned to itself — this has no effect"),
                 Some(

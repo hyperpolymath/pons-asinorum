@@ -16,6 +16,11 @@ use crate::report::SPECULATIVE_SUFFIX;
 const SARIF_SCHEMA: &str = "https://json.schemastore.org/sarif-2.1.0.json";
 const INFORMATION_URI: &str = "https://github.com/hyperpolymath/pons-asinorum";
 
+/// The unit `region.startColumn`/`endColumn` are measured in, declared on every
+/// run. See [`Run::column_kind`]; the conversion itself lives in
+/// [`Location::from_node`](crate::finding::Location::from_node).
+const COLUMN_KIND: &str = "utf16CodeUnits";
+
 /// SARIF severity for a finding.
 ///
 /// The `SPECULATIVE` check comes **first** and unconditionally: Appendix E
@@ -79,6 +84,16 @@ struct Sarif {
 #[derive(Serialize)]
 struct Run {
     tool: SarifTool,
+    /// Declared explicitly rather than left to the default.
+    ///
+    /// SARIF 2.1.0 admits exactly two values here — `utf16CodeUnits` and
+    /// `unicodeCodePoints` — and *no* byte option, which is why
+    /// [`Location`](crate::finding::Location) converts columns at construction
+    /// rather than the reporter reinterpreting them here. A consumer that
+    /// assumed the other kind would be off by one per non-BMP character, and
+    /// saying nothing would leave that disagreement to the default.
+    #[serde(rename = "columnKind")]
+    column_kind: &'static str,
     results: Vec<SarifResult>,
 }
 
@@ -285,6 +300,7 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
                     rules,
                 },
             },
+            column_kind: COLUMN_KIND,
             results,
         }],
     };

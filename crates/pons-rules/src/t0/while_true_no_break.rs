@@ -161,7 +161,7 @@ impl Rule for WhileTrueNoBreak {
             findings.push(RawFinding::new(
                 Tier::T0,
                 Severity::Warn,
-                Location::from_node(ctx.path.display().to_string(), &stmt),
+                Location::from_node(ctx.path.display().to_string(), &stmt, ctx.text),
                 "no way to interrupt this loop",
                 "infinite loop with no reachable break/return/throw".to_string(),
                 Some(

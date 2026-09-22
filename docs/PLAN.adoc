@@ -279,6 +279,13 @@ Per finding → one `result`:
   verdict)".
 * `locations[].physicalLocation` = file URI + `region` (1-based line/col +
   byte offsets).
+* `runs[].columnKind` = `"utf16CodeUnits"`, declared explicitly on every run
+  rather than left to the SARIF default. The spec admits only `utf16CodeUnits`
+  and `unicodeCodePoints` here — there is **no byte option** — so
+  `region.startColumn`/`endColumn` are UTF-16 code units, converted once in
+  `Location::from_node` and printed unchanged by all three reporters. One unit,
+  one field: human, JSON and SARIF must never disagree about a column.
+  `region.byteOffset`/`byteLength` stay byte-based, which is their definition.
 * `properties` (survives round-trip on every consumer): `evidenceClass`, `tier`,
   `evidenceNote`, and `counterCondition` when present.
 * `tool.driver.rules[]` (reporting descriptors): `id`, `name`,
