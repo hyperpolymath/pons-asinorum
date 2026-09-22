@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MPL-2.0
 name: Central Estate CI/CD Audit
 
 on:
@@ -7,6 +8,21 @@ on:
     branches: [ "main" ]
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
+  # Was pinned to @feat/cicd-workflow-call, a branch that no longer exists on
+  # cicd-suite. An unresolvable ref is not a failing job — the run dies at
+  # startup with jobs=0, so this audit has been reporting nothing at all.
+  #
+  # Repointed at a full commit SHA on cicd-suite main. That reusable workflow
+  # invokes all 26 estate gates from hyperpolymath/cicd-suite/actions/*, which
+  # is the canonical copy: vendoring those composites into this repo would fork
+  # a snapshot that is already stale (cicd-suite has since replaced
+  # zig-hexadeca-check with zig-unified-api-adapter-check).
+  #
+  # The SHA below is cicd-suite main as of 2026-09-21 and is the head of a
+  # green run of that workflow. Re-pin when the gate set changes.
   call-estate-audit:
-    uses: hyperpolymath/cicd-suite/.github/workflows/main-estate-audit.yml@feat/cicd-workflow-call
+    uses: hyperpolymath/cicd-suite/.github/workflows/main-estate-audit.yml@3b4afafa969103279ee580572626a175ec9dc0d0

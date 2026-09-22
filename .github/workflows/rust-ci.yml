@@ -26,3 +26,14 @@ jobs:
           RUSTFLAGS: "-D warnings"
       - name: test
         run: cargo test --workspace
+      - name: build
+        run: cargo build --release
+      - name: e2e
+        run: bash tests/e2e.sh
+      - name: e2e non-vacuity (stub binary must fail the suite)
+        run: |
+          if PONS_BIN=/bin/true bash tests/e2e.sh >/dev/null 2>&1; then
+            echo "::error::e2e suite passes against a stub binary — it is vacuous"
+            exit 1
+          fi
+          echo "e2e suite correctly rejects a stub binary"

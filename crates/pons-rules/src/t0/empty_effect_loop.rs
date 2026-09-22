@@ -115,7 +115,7 @@ impl Rule for EmptyEffectLoop {
                 Tier::T0,
                 Severity::Warn,
                 Location::from_node(ctx.path.display().to_string(), &stmt),
-                "empty-effect-loop",
+                "loop body has no observable effect",
                 "loop body is empty or a no-op — entered and exited for nothing".to_string(),
                 Some("a deliberate spin-wait on a volatile/side-effecting condition".to_string()),
             ));

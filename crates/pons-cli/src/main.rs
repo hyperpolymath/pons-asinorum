@@ -12,6 +12,7 @@ use pons_rules::registry::RuleRegistry;
 #[derive(Parser)]
 #[command(
     name = "pons",
+    version,
     about = "pons asinorum — a falsifier-first static analyzer"
 )]
 struct Cli {
