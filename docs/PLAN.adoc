@@ -279,6 +279,19 @@ Per finding → one `result`:
   verdict)".
 * `locations[].physicalLocation` = file URI + `region` (1-based line/col +
   byte offsets).
+* `locations[].physicalLocation.artifactLocation.uri` is **relative to the scan
+  root and percent-escaped**, not the path as the finding carries it. `pons scan .`
+  and `pons scan /abs/path/to/repo` visit the same files and must produce the same
+  URI, so the scan root is stripped: the URI is a property of the file, not of the
+  command line. Each segment is escaped per RFC 3986 `pchar` (`/` stays a
+  separator; space, `#`, `%` and every non-ASCII byte are `%XX`-escaped over their
+  UTF-8). `originalUriBaseIds` is deliberately **not** emitted — it would have to
+  name an absolute base, reintroducing the build-machine detail this removes;
+  GitHub code scanning resolves a bare relative URI against the repository root.
+  *Known limitation:* the URI is relative to the **scan root**, which equals the
+  repository root only when the scan is invoked there; `pons scan src/` yields
+  paths a repo-root consumer will not resolve. Discovering a VCS root is a scanner
+  concern, not a reporter one, and is out of scope for v0.1.0.
 * `runs[].columnKind` = `"utf16CodeUnits"`, declared explicitly on every run
   rather than left to the SARIF default. The spec admits only `utf16CodeUnits`
   and `unicodeCodePoints` here — there is **no byte option** — so
@@ -296,6 +309,13 @@ Validate output against the SARIF 2.1.0 JSON schema (bundle the schema in
 `tests/` and validate with `jsonschema`), plus a smoke check with the Microsoft
 `sarif-tools`/`sarif validate` if available in CI. Golden-file the exact output
 for a fixed corpus.
+
+**A schema validator is not a consumer contract.** The bundled schema constrains
+*shape* only: it accepts `./app/svc.py` and `/home/runner/work/repo/app/svc.py`
+alike, and it cannot tell a byte column from a UTF-16 one. The two bullets above
+are therefore asserted by direct value tests on the rendered JSON, never via
+`jsonschema` — a green validator on a wrong URI or a wrong column is exactly the
+vacuous pass this note exists to forbid.
 
 == Appendix F — Dependency + grammar pins
 
