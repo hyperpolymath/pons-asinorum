@@ -338,7 +338,7 @@ impl Rule for StringConcatInLoop {
                 Tier::T0,
                 Severity::Warn,
                 Location::from_node(ctx.path.display().to_string(), &assign),
-                "string-concat-in-loop",
+                "string built by repeated concatenation in a loop",
                 "string accumulation inside a loop rebuilds the whole string each iteration \
                  (quadratic)"
                     .to_string(),

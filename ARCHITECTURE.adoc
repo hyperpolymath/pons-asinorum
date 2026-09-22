@@ -35,22 +35,23 @@ semantics
 ....
 .
 ├── docs/                  # Architecture Decision Records (ADRs) and planning
-│   └── adr/               # ADR-0001 through ADR-0004
+│   └── adr/               # ADR-0001 through ADR-0005
 │   ├── 0001-substrate.adoc
 │   ├── 0002-t1-language-and-cfg.adoc
 │   ├── 0003-protocol-spec-and-typestate.adoc
-│   └── 0004-companion-to-panic-attack.adoc
+│   ├── 0004-companion-to-panic-attack.adoc
+│   └── 0005-cli-exit-code-contract.adoc
 ├── docs/PLAN.adoc          # Milestone-by-milestone implementation plan
 ├── docs/pons-kickoff.adoc  # Mission, species, decidability wall, evidence tiers
 ├── .machine_readable/      # RSR compliance infrastructure
 │   ├── contractiles/      # Machine-readable contracts
 │   ├── descriptiles/      # Machine-readable descriptions
 │   └── scripts/           # Verification and lifecycle scripts
-├── tests/                 # Test suites (planning phase)
+├── tests/                 # Shell test suites (e2e runs in CI)
 │   ├── e2e.sh             # End-to-end validation of artefacts
 │   ├── aspect_tests.sh    # Cross-cutting architectural invariants
 │   └── workflows/         # CI workflow validation
-├── benches/               # Benchmarks (planning phase)
+├── benches/               # Benchmarks (not yet wired into CI)
 │   └── pons_bench.sh      # Performance benchmarks
 ├── LICENSE                # MPL-2.0 for source code
 ├── LICENSE.adoc           # Licence documentation
@@ -65,38 +66,50 @@ semantics
 
 === Component Architecture
 
-==== Planned Implementation (Post-Planning Phase)
-
-Once implementation begins (post-v0.1.0 planning), the architecture will
-include:
+Components marked *built* exist on `main` and are exercised by the test suite.
+Components marked *planned* carry the milestone that delivers them; see
+`docs/PLAN.adoc`.
 
 [arabic]
-. *Parser Layer*
-* tree-sitter grammars for Python, JavaScript/TypeScript, Rust
-* Grammar version pinning via workspace dependencies
-* Exact grammar crate versions pinned (PLAN Appendix F)
-. *CFG + Dataflow Engine*
-* Per-language CFG extraction (Python first, per ADR-0002)
-* Reaching definitions for `+read-before-init+`
-* Liveness analysis for `+dead-store+`
-* Typestate semantics (ADR-0003)
-. *Rule Engine*
-* Evidence classes: PROTOCOL, DATAFLOW, HEURISTIC, SPECULATIVE
-* Negative corpus for each rule (falsification testing)
-* Automatic demotion/removal of rules firing on negative corpus
+. *Parser Layer* — *built*
+* tree-sitter grammars for Python, JavaScript, TypeScript, TSX and Rust
+* Grammar crate versions pinned exactly (PLAN Appendix F)
+* `.jsx` maps to the JavaScript grammar; `.tsx` to the TSX grammar
+. *CFG + Dataflow Engine* — *planned (M4, ADR-0002)*
+* Per-language CFG extraction, Python first
+* Forward may-be-unbound analysis for `+read-before-init+`
+* Backward live-variables analysis for `+dead-store+`
+* The OPAQUE hatch: no T1 finding is reported for a function that can
+  rewrite its own scope (`exec`, `eval`, `locals`, wildcard import)
+. *Typestate Engine* — *planned (M5, ADR-0003)*
+* Forward per-path may-analysis over the CFG, one instance key at a time
+. *Rule Engine* — *built (T0 catalogue; higher tiers planned)*
+* Evidence class is fixed by tier and cannot be overridden per finding
+* Negative corpus for every rule (falsification testing)
+* A rule that fires anywhere in its own negative corpus is falsified, and is
+  demoted or removed
 . *Reporter*
-* Evidence class visualization
-* SPECULATIVE findings visually demoted
-* Multiple output formats (JSON, SARIF, human-readable)
+* Human-readable output with SPECULATIVE visually demoted — *built*
+* JSON and SARIF output — *planned (M3)*
 
 === Evidence Classes
 
-The core architectural invariant is the evidence class taxonomy:
+The core architectural invariant is the evidence class taxonomy. Evidence class
+is a function of the analysis tier that produced the finding, and is never set
+per finding:
 
-* *PROTOCOL*: Findings with mathematical certainty
-* *DATAFLOW*: Findings from dataflow analysis
-* *HEURISTIC*: Pattern-based findings
-* *SPECULATIVE*: Weakest evidence, visually demoted
+* *PROTOCOL* (T2): the typestate analysis found a path on which the protocol is
+  violated. This is a *may* result over an approximation of the real control
+  flow — it means "a violating path exists in the model", not "this will
+  happen". It is the strongest class pons emits, and it is still not a proof.
+* *DATAFLOW* (T1): supported by an intraprocedural dataflow analysis over a
+  real CFG, within that analysis's disclosed limits.
+* *HEURISTIC* (T0): a syntactic pattern match. No flow analysis stands behind it.
+* *SPECULATIVE* (T3): the underlying question is undecidable or the signal is
+  weak. Always visually demoted, never counted toward a `--fail-on` threshold.
+
+*Never dress a heuristic up as a proof.* No class above claims certainty,
+because no analysis in pons delivers certainty.
 
 Every finding carries its evidence class, and the reporter enforces
 visual distinction between classes, especially demoting SPECULATIVE

@@ -103,7 +103,7 @@ impl Rule for SelfAssignment {
                 Tier::T0,
                 Severity::Warn,
                 Location::from_node(ctx.path.display().to_string(), &stmt),
-                "self-assignment",
+                "variable is assigned to itself",
                 format!("`{left_name}` is assigned to itself — this has no effect"),
                 Some(
                     "a property/attribute setter with side effects, or a volatile read \

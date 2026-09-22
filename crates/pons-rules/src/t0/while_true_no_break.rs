@@ -158,7 +158,7 @@ impl Rule for WhileTrueNoBreak {
                 Tier::T0,
                 Severity::Warn,
                 Location::from_node(ctx.path.display().to_string(), &stmt),
-                "while-true-no-break",
+                "no way to interrupt this loop",
                 "infinite loop with no reachable break/return/throw".to_string(),
                 Some(
                     "an intentional daemon/event loop that exits via an external \
