@@ -22,7 +22,12 @@ jobs:
   # a snapshot that is already stale (cicd-suite has since replaced
   # zig-hexadeca-check with zig-unified-api-adapter-check).
   #
-  # The SHA below is cicd-suite main as of 2026-09-21 and is the head of a
-  # green run of that workflow. Re-pin when the gate set changes.
+  # The SHA below is cicd-suite main as of 2026-09-22: the head of a run whose
+  # `Gate controls` job executed 14 steps and whose `Composite shell contract`
+  # job executed 6. Both numbers matter. The PREVIOUS pin (3b4afafa) was also
+  # "the head of a green run" — but green there meant the self-test never ran,
+  # and its composites still carried the harness `-e` kill that fails Required
+  # Files Gate here in 41ms, silently, skipping 25 downstream gates.
+  # Re-pin on a gate-set change, and check the STEP COUNT, not the square.
   call-estate-audit:
-    uses: hyperpolymath/cicd-suite/.github/workflows/main-estate-audit.yml@3b4afafa969103279ee580572626a175ec9dc0d0
+    uses: hyperpolymath/cicd-suite/.github/workflows/main-estate-audit.yml@0c1bc9f5aa5857965e50f96021485d5710b6e0ea
