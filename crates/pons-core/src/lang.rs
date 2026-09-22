@@ -2,7 +2,7 @@
 
 use tree_sitter::Language;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Lang {
     Python,
     JavaScript,
@@ -23,6 +23,20 @@ impl Lang {
             "tsx" => Some(Lang::Tsx),
             "rs" => Some(Lang::Rust),
             _ => None,
+        }
+    }
+
+    /// The stable, lowercase spelling used in machine-readable output
+    /// (`scanned.languages` in the Appendix G envelope). Deliberately not
+    /// `Debug`, whose Rust-shaped spelling is free to change and would drag
+    /// the wire format with it.
+    pub fn name(self) -> &'static str {
+        match self {
+            Lang::Python => "python",
+            Lang::JavaScript => "javascript",
+            Lang::TypeScript => "typescript",
+            Lang::Tsx => "tsx",
+            Lang::Rust => "rust",
         }
     }
 

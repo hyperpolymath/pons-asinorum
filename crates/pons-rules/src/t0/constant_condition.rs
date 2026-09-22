@@ -60,6 +60,10 @@ impl Rule for ConstantCondition {
         "constant-condition"
     }
 
+    fn description(&self) -> &'static str {
+        "a literal boolean in a condition slot, so the branch is decided before it runs"
+    }
+
     fn languages(&self) -> &'static [Lang] {
         LANGUAGES
     }

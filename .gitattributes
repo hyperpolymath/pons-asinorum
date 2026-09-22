@@ -87,3 +87,8 @@ Dockerfile eol=lf
 *.clj linguist-language=Clojure
 *.cljs linguist-language=Clojure
 *.cljc linguist-language=Clojure
+
+# Vendored third-party schemas. Verbatim copies used by the test suite; they
+# are not this repository's code and must not skew its language statistics.
+# See crates/pons-core/tests/schemas/PROVENANCE.adoc.
+crates/pons-core/tests/schemas/** linguist-vendored

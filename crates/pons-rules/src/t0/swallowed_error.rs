@@ -52,6 +52,10 @@ impl Rule for SwallowedError {
         "swallowed-error"
     }
 
+    fn description(&self) -> &'static str {
+        "a catch or except block that discards the error without acting on it"
+    }
+
     fn languages(&self) -> &'static [Lang] {
         LANGUAGES
     }

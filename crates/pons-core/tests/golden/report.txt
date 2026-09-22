@@ -1,0 +1,10 @@
+app/svc.py:41:5 [ERROR] dead-store: value assigned to `total` is never read before it is overwritten
+    evidence: live-variable analysis: `total` not in LiveOut after this store
+app/svc.py:47:5 [WARN] div-by-literal-zero: division by a literal zero
+    evidence: constant zero on the right-hand side
+    when fine: the surrounding branch is provably dead
+lib/util.ts:9:5 [WARN] suppress-then-emit: channel enters `suppressed` and reaches `prompt` with no `set_loud`
+    evidence: enters `suppressed` at line 4; reaches `prompt` at line 9
+    when fine: a different channel instance reaches the prompt
+lib/util.ts:22:5 [ERROR] possible-superlinear: nested iteration may be superlinear in the input size (heuristic — not a verdict)
+    evidence: two loops over collections derived from the same source

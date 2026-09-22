@@ -3,11 +3,7 @@
 use std::fmt::Write as _;
 
 use crate::finding::{EvidenceClass, Finding, Severity};
-
-/// A colour-independent suffix demoting `SPECULATIVE`-tier findings from a
-/// verdict to a heuristic — colour is lost in piped CI output, so this text
-/// is the only signal that must survive.
-const SPECULATIVE_SUFFIX: &str = " (heuristic — not a verdict)";
+use crate::report::SPECULATIVE_SUFFIX;
 
 /// Deterministic, colour-free rendering of findings for terminal/CI output.
 pub fn render(findings: &[Finding]) -> String {
@@ -105,5 +101,31 @@ mod tests {
         let f = Finding::new("r", Tier::T0, Severity::Info, loc(), "msg", "note", None);
         let rendered = render(&[f]);
         assert!(!rendered.contains("when fine"));
+    }
+}
+
+#[cfg(test)]
+mod golden_tests {
+    use super::*;
+    use crate::report::{assert_golden, fixture};
+
+    #[test]
+    fn matches_the_golden_human_output() {
+        let out = render(&fixture::report().findings);
+        assert_golden(
+            "report.txt",
+            &out,
+            include_str!("../../tests/golden/report.txt"),
+        );
+    }
+
+    #[test]
+    fn the_speculative_finding_is_demoted_in_the_shared_fixture() {
+        let out = render(&fixture::report().findings);
+        assert!(out.contains(
+            "nested iteration may be superlinear in the input size (heuristic — not a verdict)"
+        ));
+        // ...and nothing else in the same corpus picked up the suffix.
+        assert_eq!(out.matches("heuristic — not a verdict").count(), 1);
     }
 }

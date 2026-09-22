@@ -60,6 +60,10 @@ impl Rule for DivByLiteralZero {
         "div-by-literal-zero"
     }
 
+    fn description(&self) -> &'static str {
+        "division or modulo whose right-hand side is a literal zero"
+    }
+
     fn languages(&self) -> &'static [Lang] {
         LANGUAGES
     }

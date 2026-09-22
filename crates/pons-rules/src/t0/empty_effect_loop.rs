@@ -79,6 +79,10 @@ impl Rule for EmptyEffectLoop {
         "empty-effect-loop"
     }
 
+    fn description(&self) -> &'static str {
+        "a loop whose body is empty or does nothing observable"
+    }
+
     fn languages(&self) -> &'static [Lang] {
         LANGUAGES
     }

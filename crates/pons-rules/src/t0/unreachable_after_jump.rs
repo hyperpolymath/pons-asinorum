@@ -76,6 +76,10 @@ impl Rule for UnreachableAfterJump {
         "unreachable-after-jump"
     }
 
+    fn description(&self) -> &'static str {
+        "a statement immediately after return, throw, raise, break or continue"
+    }
+
     fn languages(&self) -> &'static [Lang] {
         LANGUAGES
     }
