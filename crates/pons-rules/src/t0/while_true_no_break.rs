@@ -110,6 +110,10 @@ impl Rule for WhileTrueNoBreak {
         "while-true-no-break"
     }
 
+    fn description(&self) -> &'static str {
+        "an unconditional loop with no reachable break, return or throw"
+    }
+
     fn languages(&self) -> &'static [Lang] {
         LANGUAGES
     }

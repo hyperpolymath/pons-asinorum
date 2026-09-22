@@ -253,6 +253,10 @@ impl Rule for StringConcatInLoop {
         "string-concat-in-loop"
     }
 
+    fn description(&self) -> &'static str {
+        "repeated string concatenation inside a loop, quadratic where a join is linear"
+    }
+
     fn languages(&self) -> &'static [Lang] {
         LANGUAGES
     }

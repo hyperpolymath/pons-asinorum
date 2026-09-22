@@ -63,6 +63,10 @@ impl Rule for SelfAssignment {
         "self-assignment"
     }
 
+    fn description(&self) -> &'static str {
+        "an identifier assigned to itself, doing no work"
+    }
+
     fn languages(&self) -> &'static [Lang] {
         LANGUAGES
     }

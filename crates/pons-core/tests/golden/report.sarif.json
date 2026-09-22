@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "pons",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/hyperpolymath/pons-asinorum",
+          "rules": [
+            {
+              "id": "dead-store",
+              "name": "DeadStore",
+              "shortDescription": {
+                "text": "a value stored and then overwritten before any read"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tier": "T1",
+                "evidenceClass": "DATAFLOW"
+              }
+            },
+            {
+              "id": "div-by-literal-zero",
+              "name": "DivByLiteralZero",
+              "shortDescription": {
+                "text": "division or modulo whose right-hand side is a literal zero"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tier": "T0",
+                "evidenceClass": "HEURISTIC"
+              }
+            },
+            {
+              "id": "possible-superlinear",
+              "name": "PossibleSuperlinear",
+              "shortDescription": {
+                "text": "nested iteration that may be superlinear in the input size"
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "tier": "T3",
+                "evidenceClass": "SPECULATIVE"
+              }
+            },
+            {
+              "id": "suppress-then-emit",
+              "name": "SuppressThenEmit",
+              "shortDescription": {
+                "text": "output suppressed on one path and emitted on another"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tier": "T2",
+                "evidenceClass": "PROTOCOL"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "dead-store",
+          "ruleIndex": 0,
+          "level": "error",
+          "rank": 80.0,
+          "message": {
+            "text": "value assigned to `total` is never read before it is overwritten"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/svc.py"
+                },
+                "region": {
+                  "startLine": 41,
+                  "startColumn": 5,
+                  "endLine": 41,
+                  "endColumn": 12,
+                  "byteOffset": 812,
+                  "byteLength": 7
+                }
+              }
+            }
+          ],
+          "properties": {
+            "evidenceClass": "DATAFLOW",
+            "tier": "T1",
+            "evidenceNote": "live-variable analysis: `total` not in LiveOut after this store"
+          }
+        },
+        {
+          "ruleId": "div-by-literal-zero",
+          "ruleIndex": 1,
+          "level": "warning",
+          "rank": 50.0,
+          "message": {
+            "text": "division by a literal zero"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/svc.py"
+                },
+                "region": {
+                  "startLine": 47,
+                  "startColumn": 5,
+                  "endLine": 47,
+                  "endColumn": 12,
+                  "byteOffset": 904,
+                  "byteLength": 7
+                }
+              }
+            }
+          ],
+          "properties": {
+            "evidenceClass": "HEURISTIC",
+            "tier": "T0",
+            "evidenceNote": "constant zero on the right-hand side",
+            "counterCondition": "the surrounding branch is provably dead"
+          }
+        },
+        {
+          "ruleId": "suppress-then-emit",
+          "ruleIndex": 3,
+          "level": "warning",
+          "rank": 70.0,
+          "message": {
+            "text": "channel enters `suppressed` and reaches `prompt` with no `set_loud`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "lib/util.ts"
+                },
+                "region": {
+                  "startLine": 9,
+                  "startColumn": 5,
+                  "endLine": 9,
+                  "endColumn": 12,
+                  "byteOffset": 120,
+                  "byteLength": 7
+                }
+              }
+            }
+          ],
+          "properties": {
+            "evidenceClass": "PROTOCOL",
+            "tier": "T2",
+            "evidenceNote": "enters `suppressed` at line 4; reaches `prompt` at line 9",
+            "counterCondition": "a different channel instance reaches the prompt"
+          }
+        },
+        {
+          "ruleId": "possible-superlinear",
+          "ruleIndex": 2,
+          "level": "note",
+          "rank": 20.0,
+          "message": {
+            "text": "nested iteration may be superlinear in the input size (heuristic — not a verdict)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "lib/util.ts"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 5,
+                  "endLine": 22,
+                  "endColumn": 12,
+                  "byteOffset": 300,
+                  "byteLength": 7
+                }
+              }
+            }
+          ],
+          "properties": {
+            "evidenceClass": "SPECULATIVE",
+            "tier": "T3",
+            "evidenceNote": "two loops over collections derived from the same source"
+          }
+        }
+      ]
+    }
+  ]
+}

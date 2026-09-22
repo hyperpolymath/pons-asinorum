@@ -11,6 +11,7 @@ pub enum Tier {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum EvidenceClass {
     Heuristic,
     Dataflow,
@@ -30,6 +31,7 @@ impl From<Tier> for EvidenceClass {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum Severity {
     Info,
     Warn,
@@ -283,5 +285,35 @@ mod tests {
         };
         let f = Finding::from(wire);
         assert_eq!(f.evidence(), EvidenceClass::Heuristic);
+    }
+
+    #[test]
+    fn a_tampered_evidence_value_on_the_wire_is_discarded_not_trusted() {
+        // The test above builds `FindingWire` directly, which proves the `From`
+        // impl but cannot prove what serde does with a real JSON document that
+        // *does* carry an `evidence` key — and that is the shape an attacker or
+        // a stale cache actually presents. So: serialize a genuine T0 finding,
+        // tamper with the serialized text, and deserialize it back.
+        let original = Finding::new("r", Tier::T0, Severity::Warn, loc(), "msg", "note", None);
+        let json = serde_json::to_string(&original).expect("serializes");
+        assert!(
+            json.contains("\"evidence\":\"HEURISTIC\""),
+            "precondition: the wire carries the derived evidence class, got {json}"
+        );
+
+        let tampered = json.replace("\"evidence\":\"HEURISTIC\"", "\"evidence\":\"PROTOCOL\"");
+        // A no-op replace would make the assertion below pass vacuously.
+        assert_ne!(
+            tampered, json,
+            "the mutation must actually have been applied"
+        );
+
+        let back: Finding = serde_json::from_str(&tampered).expect("deserializes");
+        assert_eq!(
+            back.evidence(),
+            EvidenceClass::Heuristic,
+            "the wire's PROTOCOL claim must be discarded and re-derived from tier T0"
+        );
+        assert_eq!(back, original, "nothing but the tampered field may differ");
     }
 }

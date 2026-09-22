@@ -16,6 +16,19 @@ const SKIP_DIRS: &[&str] = &[
     "corpus",
 ];
 
+/// A source file located by [`discover`] but **not yet read**.
+///
+/// Discovery is deliberately separated from reading. Slurping an entire tree
+/// into memory before a single rule runs is wasteful, but the real defect it
+/// caused was worse: one unreadable file aborted the whole scan. Reading now
+/// happens per file inside [`Engine::scan_files`][crate::engine::Engine::scan_files],
+/// where a failure is recorded as a skip and the scan carries on.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiscoveredFile {
+    pub path: PathBuf,
+    pub lang: Lang,
+}
+
 pub struct SourceFile {
     pub path: PathBuf,
     pub lang: Lang,
@@ -24,7 +37,15 @@ pub struct SourceFile {
 
 /// Recursively discover source files under `root`, honouring `.gitignore`
 /// and a custom `.ponsignore` file, and skipping [`SKIP_DIRS`].
-pub fn discover(root: &Path) -> anyhow::Result<Vec<SourceFile>> {
+///
+/// Returns paths and languages only — see [`read`] for the contents.
+///
+/// A walk error is **fatal by design**, and that is not merely the cheaper
+/// option: the walker reports "root does not exist" as an error entry, and
+/// ADR-0005 requires that case to exit 2. Failing to enumerate the tree is an
+/// operational error about the scan itself; failing to read one file inside a
+/// tree that enumerated fine is not, and is handled as a skip instead.
+pub fn discover(root: &Path) -> anyhow::Result<Vec<DiscoveredFile>> {
     let mut files = Vec::new();
 
     let walker = ignore::WalkBuilder::new(root)
@@ -52,21 +73,32 @@ pub fn discover(root: &Path) -> anyhow::Result<Vec<SourceFile>> {
             continue;
         };
 
-        let bytes = std::fs::read(path)?;
-        let text = String::from_utf8(bytes).unwrap_or_else(|e| {
-            // Latin-1 fallback: every byte is a valid Unicode scalar value
-            // in 0..=255, so this never fails, unlike UTF-8 decoding.
-            e.into_bytes().into_iter().map(char::from).collect()
-        });
-
-        files.push(SourceFile {
+        files.push(DiscoveredFile {
             path: path.to_path_buf(),
             lang,
-            text,
         });
     }
 
     Ok(files)
+}
+
+/// Read one [`DiscoveredFile`] into a [`SourceFile`].
+///
+/// Fallible on purpose, and called per file: this is the boundary at which a
+/// single unreadable file stops being able to end the whole scan.
+pub fn read(file: &DiscoveredFile) -> anyhow::Result<SourceFile> {
+    let bytes = std::fs::read(&file.path)?;
+    let text = String::from_utf8(bytes).unwrap_or_else(|e| {
+        // Latin-1 fallback: every byte is a valid Unicode scalar value
+        // in 0..=255, so this never fails, unlike UTF-8 decoding.
+        e.into_bytes().into_iter().map(char::from).collect()
+    });
+
+    Ok(SourceFile {
+        path: file.path.clone(),
+        lang: file.lang,
+        text,
+    })
 }
 
 #[cfg(test)]
@@ -94,6 +126,34 @@ mod tests {
 
         let found = discover(&dir).unwrap();
         assert!(found.is_empty());
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn reading_a_file_that_vanished_after_discovery_is_an_error_not_a_panic() {
+        let dir = tempfile_dir();
+        std::fs::write(dir.join("gone.py"), "x = 1").unwrap();
+
+        let found = discover(&dir).unwrap();
+        assert_eq!(found.len(), 1);
+
+        // The TOCTOU window discovery/read separation exists to survive.
+        std::fs::remove_file(dir.join("gone.py")).unwrap();
+        assert!(read(&found[0]).is_err());
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn read_applies_the_latin1_fallback_for_non_utf8_bytes() {
+        let dir = tempfile_dir();
+        // 0xFF is never valid UTF-8; it must survive as U+00FF, not panic.
+        std::fs::write(dir.join("latin.py"), [b'x', b' ', b'=', b' ', 0xFF]).unwrap();
+
+        let found = discover(&dir).unwrap();
+        let src = read(&found[0]).unwrap();
+        assert!(src.text.ends_with('\u{00FF}'));
 
         std::fs::remove_dir_all(&dir).unwrap();
     }
