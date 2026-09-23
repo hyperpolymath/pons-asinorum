@@ -23,9 +23,18 @@ const COLUMN_KIND: &str = "utf16CodeUnits";
 
 /// Bytes that may appear unescaped in a URI path segment, beyond the
 /// alphanumerics: RFC 3986's unreserved set (`-._~`) plus the sub-delimiters
-/// and `:@` that `pchar` admits. Everything else — space, `#`, `?`, `%`, and
-/// every non-ASCII byte — is percent-escaped.
-const URI_SEGMENT_SAFE: &[u8] = b"-._~!$&'()*+,;=:@";
+/// and `@`. Everything else — space, `#`, `?`, `%`, `:`, and every non-ASCII
+/// byte — is percent-escaped.
+///
+/// `:` is escaped even though `pchar` admits it. A SARIF `uri` is a
+/// relative-path reference, whose *first* segment is `segment-nz-nc`
+/// (RFC 3986 §4.2) — the one production that excludes `:`, precisely so the
+/// text before it cannot be read as a scheme. `note:v2.py` at the scan root
+/// would otherwise parse as scheme `note` with path `v2.py`, annotating a file
+/// that does not exist. Escaping `:` in *every* segment rather than only the
+/// first buys that guarantee without a positional rule the next reader has to
+/// remember.
+const URI_SEGMENT_SAFE: &[u8] = b"-._~!$&'()*+,;=@";
 
 /// Percent-escapes one path segment into `out`, byte by byte over its UTF-8.
 fn push_escaped_segment(segment: &str, out: &mut String) {
@@ -484,6 +493,38 @@ mod tests {
         assert!(
             !abs.contains("/home/me/repo"),
             "the scanning machine's filesystem layout leaked into the artefact"
+        );
+
+        // The comment above promises this and it was not here. The rendered
+        // SARIF carries no `root`, so two spellings of one scan must produce
+        // byte-identical documents, not merely matching URIs — the negative
+        // assertions alone would pass on two documents that differed elsewhere.
+        assert_eq!(
+            dot, abs,
+            "one scan spelled two ways produced two different artefacts"
+        );
+    }
+
+    /// RFC 3986 §4.2: the first segment of a relative-path reference is
+    /// `segment-nz-nc`, which excludes `:` so the text before it cannot be read
+    /// as a scheme. `pchar` admits `:` everywhere else, which is why the naive
+    /// safe-set let it through.
+    ///
+    /// Found by review on #34, not by the SARIF schema — the schema validates
+    /// `uri` as a string and accepts `note:v2.py` without complaint. The same
+    /// lesson as #28 itself: a schema validator is not a consumer contract.
+    #[test]
+    fn a_colon_cannot_turn_a_relative_uri_into_a_scheme() {
+        let out = render(&report_rooted(".", "./note:v2.py")).unwrap();
+
+        assert!(
+            out.contains(r#""uri": "note%3Av2.py""#),
+            "a `:` in the first segment must be escaped or a consumer reads \
+             `note` as a URI scheme and resolves a file that does not exist; got:\n{out}"
+        );
+        assert!(
+            !out.contains(r#""uri": "note:v2.py""#),
+            "the unescaped colon survived into the artefact URI"
         );
     }
 

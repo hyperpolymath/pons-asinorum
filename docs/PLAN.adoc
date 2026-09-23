@@ -283,11 +283,16 @@ Per finding → one `result`:
   root and percent-escaped**, not the path as the finding carries it. `pons scan .`
   and `pons scan /abs/path/to/repo` visit the same files and must produce the same
   URI, so the scan root is stripped: the URI is a property of the file, not of the
-  command line. Each segment is escaped per RFC 3986 `pchar` (`/` stays a
-  separator; space, `#`, `%` and every non-ASCII byte are `%XX`-escaped over their
+  command line. Each segment is escaped per RFC 3986 `pchar` minus `:` (`/` stays a
+  separator; space, `#`, `%`, `:` and every non-ASCII byte are `%XX`-escaped over their
   UTF-8). `originalUriBaseIds` is deliberately **not** emitted — it would have to
   name an absolute base, reintroducing the build-machine detail this removes;
   GitHub code scanning resolves a bare relative URI against the repository root.
+  `:` is escaped although `pchar` admits it: the first segment of a relative-path
+  reference is `segment-nz-nc` (RFC 3986 §4.2), which excludes `:` precisely so the
+  text before it cannot be read as a scheme. Without this, a file `note:v2.py` at the
+  scan root emits `uri: "note:v2.py"`, which a consumer resolves as scheme `note`
+  with path `v2.py` — an annotation on a file that does not exist.
   *Known limitation:* the URI is relative to the **scan root**, which equals the
   repository root only when the scan is invoked there; `pons scan src/` yields
   paths a repo-root consumer will not resolve. Discovering a VCS root is a scanner
