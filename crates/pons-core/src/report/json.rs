@@ -22,7 +22,17 @@ use crate::engine::{ScanReport, SkippedFile};
 use crate::finding::{EvidenceClass, Finding};
 
 /// Version of the envelope itself, not of the tool.
-pub const SCHEMA_VERSION: &str = "0.1.0";
+///
+/// Bumped 0.1.0 -> 0.2.0 when `scanned.skipped` was added (#29). The field is
+/// purely additive and always present, so a 0.1.0 consumer would not have
+/// broken — the bump is deliberate discipline, taken before v0.1.0 ships
+/// rather than after: an envelope shape change is version-visible from the
+/// start. `envelope_shape_is_pinned_to_the_schema_version` below is what
+/// stops the next change skipping this line silently.
+///
+/// Not to be confused with the `schema_version` in a protocol TOML
+/// (ADR-0003), which versions a different file entirely.
+pub const SCHEMA_VERSION: &str = "0.2.0";
 
 #[derive(Serialize)]
 struct Envelope<'a> {
@@ -227,5 +237,72 @@ mod tests {
         for class in ["HEURISTIC", "DATAFLOW", "PROTOCOL", "SPECULATIVE"] {
             assert!(json.contains(class), "{class} vanished from an empty tally");
         }
+    }
+
+    /// The envelope's shape and its `schema_version` are one fact, so they are
+    /// asserted as one fact. Adding, removing or renaming any key below fails
+    /// this test, and the only way to go green again is to arrive at this line
+    /// — whose failure message names `SCHEMA_VERSION` — and decide deliberately
+    /// whether the change warrants a bump.
+    ///
+    /// Written because the 0.1.0 -> 0.2.0 bump (#29 added `scanned.skipped`)
+    /// was very nearly shipped without one: the golden file absorbed the new
+    /// key silently and every other test in this module stayed green. A version
+    /// constant nothing checks is a comment, not a contract.
+    #[test]
+    fn envelope_shape_is_pinned_to_the_schema_version() {
+        // (path, the complete key set at that path). "" is the root object.
+        const SHAPE: &[(&str, &[&str])] = &[
+            (
+                "",
+                &["counts", "findings", "scanned", "schema_version", "tool"],
+            ),
+            ("tool", &["name", "version"]),
+            ("scanned", &["files", "languages", "root", "skipped"]),
+            ("counts", &["by_evidence", "total"]),
+            (
+                "counts.by_evidence",
+                &["DATAFLOW", "HEURISTIC", "PROTOCOL", "SPECULATIVE"],
+            ),
+        ];
+
+        let out = render(&fixture::report()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
+
+        for (path, expected) in SHAPE {
+            let node = if path.is_empty() {
+                &parsed
+            } else {
+                path.split('.').fold(&parsed, |v, seg| &v[seg])
+            };
+            let actual: Vec<&str> = node
+                .as_object()
+                .unwrap_or_else(|| panic!("{path:?} is not an object in the envelope"))
+                .keys()
+                .map(String::as_str)
+                .collect();
+            // serde_json without `preserve_order` hands back a sorted map, and
+            // SHAPE is written sorted to match; declaration order is a separate
+            // contract, asserted by `field_order_follows_appendix_g_not_the_alphabet`.
+            assert_eq!(
+                actual, *expected,
+                "the key set at {path:?} no longer matches the shape pinned for \
+                 schema_version {SCHEMA_VERSION}. Decide whether this is a \
+                 breaking or additive envelope change, bump SCHEMA_VERSION in \
+                 src/report/json.rs accordingly, update Appendix G in \
+                 docs/PLAN.adoc, then update SHAPE here in the same commit."
+            );
+        }
+
+        // The constant is the source of truth; the golden must follow it. These
+        // drift apart silently because `PONS_BLESS=1` rewrites the golden from
+        // whatever the code currently emits.
+        let golden: serde_json::Value =
+            serde_json::from_str(include_str!("../../tests/golden/report.json")).unwrap();
+        assert_eq!(
+            golden["schema_version"], SCHEMA_VERSION,
+            "the golden envelope declares a different schema_version than the \
+             constant — one of the two was bumped without the other"
+        );
     }
 }

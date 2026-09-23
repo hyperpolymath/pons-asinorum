@@ -361,7 +361,7 @@ unless `--lang` forces one.
 [source,json]
 ----
 {
-  "schema_version": "0.1.0",
+  "schema_version": "0.2.0",
   "tool": { "name": "pons", "version": "<cargo pkg version>" },
   "scanned": { "root": "<root exactly as given on the command line>",
                "files": 123, "languages": ["python","rust"],
@@ -402,3 +402,24 @@ per ADR-0005. `scanned.root` is the root exactly as the caller spelled it and is
 deliberately not canonicalised, so a relative invocation stays relative — the
 absolute form would be a build-machine detail, the same one Appendix E strips
 out of `artifactLocation.uri`.
+
+=== Versioning this envelope
+
+`schema_version` versions the envelope, not the tool — `tool.version` does that
+— and not a protocol file, whose own `schema_version` (ADR-0003) is a different
+key in a different format. Semantics: **major** for a removed or renamed key or
+a changed value type; **minor** for an added key; **patch** for a documentation
+or wording change that leaves the shape alone.
+
+It moved `0.1.0 -> 0.2.0` when `scanned.skipped` was added (#29). Purely
+additive, so a 0.1.0 consumer would not have broken — the bump is deliberate
+discipline taken *before* v0.1.0 ships rather than after, so the envelope's shape
+is version-visible from its first release.
+
+A version constant that nothing checks is a comment, not a contract, so the key
+set above is asserted against `SCHEMA_VERSION` by
+`envelope_shape_is_pinned_to_the_schema_version`. That test exists because this
+very bump was nearly missed: re-blessing the golden file with `PONS_BLESS=1`
+absorbs a new key silently and turns every other test in the module green again.
+Measured — with the guard removed, a mutant adding a field and a re-bless leaves
+the whole suite passing at an unchanged `schema_version`.
