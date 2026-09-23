@@ -33,9 +33,19 @@ pub trait Rule: Send + Sync {
     fn check(&self, ctx: &RuleCtx) -> Vec<RawFinding>;
 }
 
-/// A file that was discovered but never analysed, with the reason. Surfaced
-/// so a partial scan can never be mistaken for a clean one.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// A file or directory that was found but never analysed, with the reason.
+/// Surfaced so a partial scan can never be mistaken for a clean one.
+///
+/// Three different layers produce these — a subdirectory the walker could not
+/// enumerate, a file that could not be read, a file that could not be parsed —
+/// and they deliberately share one type. The distinction matters to the code
+/// that noticed; it does not matter to the person reading the report, who
+/// needs exactly one question answered: what did you not look at, and why.
+///
+/// `Serialize` is derived here rather than mirrored by a private struct in the
+/// JSON reporter, so the envelope's `scanned.skipped` entries cannot drift
+/// from the fields the engine actually fills in.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct SkippedFile {
     pub path: String,
     pub reason: String,
@@ -66,6 +76,16 @@ pub struct ScanReport {
     pub rules: Vec<RuleInfo>,
 }
 
+/// One ordering for skips, wherever they came from.
+///
+/// Discovery skips and per-file skips are produced in different places and
+/// merged in [`Engine::scan`]; a second comparator would be a second source of
+/// truth for the report's order, and a golden file would eventually catch the
+/// two disagreeing.
+fn sort_skips(skips: &mut [SkippedFile]) {
+    skips.sort_by(|a, b| a.path.cmp(&b.path));
+}
+
 /// Orchestrates discovery, parsing, and rule execution over a directory.
 pub struct Engine {
     rules: Vec<Box<dyn Rule>>,
@@ -78,12 +98,23 @@ impl Engine {
 
     /// Discover every source file under `root` and scan it.
     ///
-    /// Fails only if the tree cannot be enumerated at all (see
-    /// [`source::discover`]); a file that cannot be read or parsed is
-    /// recorded in [`ScanReport::skipped`] and the scan continues.
+    /// Fails only if `root` itself cannot be opened (see [`source::discover`]),
+    /// which ADR-0005 makes exit 2. Everything below the root degrades to a
+    /// skip: a subdirectory that cannot be enumerated, a file that cannot be
+    /// read, a file that cannot be parsed. All three land in
+    /// [`ScanReport::skipped`] together, because to a reader of the report they
+    /// are the same fact — "this part of your tree was not analysed" — and
+    /// splitting them by which layer noticed would only invite a consumer to
+    /// handle one and miss the others.
     pub fn scan(&self, root: &Path) -> anyhow::Result<ScanReport> {
-        let discovered = source::discover(root)?;
-        Ok(self.scan_files(root, &discovered))
+        let discovery = source::discover(root)?;
+        let mut report = self.scan_files(root, &discovery.files);
+        report.skipped.extend(discovery.skipped);
+        // `scan_files` sorted what it produced; the discovery skips arrive
+        // after that, so the merged list is sorted again rather than left in
+        // two concatenated runs.
+        sort_skips(&mut report.skipped);
+        Ok(report)
     }
 
     /// Scan an explicit file list. Infallible: every per-file failure becomes
@@ -152,7 +183,7 @@ impl Engine {
                 .then(x.byte_start.cmp(&y.byte_start))
                 .then_with(|| a.rule_id().cmp(b.rule_id()))
         });
-        skipped.sort_by(|a, b| a.path.cmp(&b.path));
+        sort_skips(&mut skipped);
 
         ScanReport {
             root: root.display().to_string(),
@@ -248,7 +279,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("good.py"), "x = 1\n").unwrap();
 
-        let mut files = source::discover(&dir).unwrap();
+        let mut files = source::discover(&dir).unwrap().files;
         assert_eq!(files.len(), 1);
 
         // A path that does not exist fails `fs::read` for every user, root
@@ -282,7 +313,7 @@ mod tests {
         std::fs::write(dir.join("a.py"), "x = 1\n").unwrap();
         std::fs::write(dir.join("b.py"), "y = 2\n").unwrap();
 
-        let mut files = source::discover(&dir).unwrap();
+        let mut files = source::discover(&dir).unwrap().files;
         // Force the walker's order to be wrong, which is exactly what a
         // different filesystem would hand us.
         files.sort_by(|p, q| q.path.cmp(&p.path));
@@ -298,6 +329,42 @@ mod tests {
         let mut expected = order.clone();
         expected.sort_unstable();
         assert_eq!(order, expected, "findings were not sorted by file");
+    }
+
+    #[test]
+    fn a_directory_the_walker_could_not_enter_is_reported_alongside_the_findings() {
+        use std::os::unix::fs::PermissionsExt as _;
+
+        let dir = std::env::temp_dir().join(format!("pons-engine-test-{}", nanos()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("good.py"), "x = 1\n").unwrap();
+
+        let locked = dir.join("locked");
+        std::fs::create_dir_all(&locked).unwrap();
+        std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o000)).unwrap();
+        assert!(
+            std::fs::read_dir(&locked).is_err(),
+            "fixture is readable despite mode 000 — running as root?"
+        );
+
+        let engine = Engine::new(vec![Box::new(StubRule)]);
+        // `scan`, not `scan_files`: the point is that a discovery-level skip
+        // survives the merge into the report rather than being dropped on the
+        // floor between the two layers.
+        let report = engine.scan(&dir).unwrap();
+
+        assert_eq!(report.files_scanned, 1, "the readable file was not scanned");
+        assert_eq!(report.findings.len(), 1, "the scan did not complete");
+        assert_eq!(
+            report.skipped.len(),
+            1,
+            "the unreadable directory never reached the report"
+        );
+        assert!(report.skipped[0].path.ends_with("locked"));
+        assert!(report.skipped[0].reason.starts_with("could not enumerate"));
+
+        let _ = std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755));
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     fn nanos() -> u128 {

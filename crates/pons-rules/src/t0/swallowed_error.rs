@@ -87,7 +87,7 @@ impl Rule for SwallowedError {
                 findings.push(RawFinding::new(
                     Tier::T0,
                     Severity::Warn,
-                    Location::from_node(ctx.path.display().to_string(), &clause),
+                    Location::from_node(ctx.path.display().to_string(), &clause, ctx.text),
                     "empty or pass-only exception handler",
                     "the caught exception is discarded with no handling and no note",
                     Some(
