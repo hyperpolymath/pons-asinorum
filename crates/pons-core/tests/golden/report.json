@@ -1,0 +1,104 @@
+{
+  "schema_version": "0.2.0",
+  "tool": {
+    "name": "pons",
+    "version": "0.1.0"
+  },
+  "scanned": {
+    "root": ".",
+    "files": 7,
+    "languages": [
+      "python",
+      "typescript"
+    ],
+    "skipped": [
+      {
+        "path": "app/broken.py",
+        "reason": "could not read: No such file or directory (os error 2)"
+      }
+    ]
+  },
+  "counts": {
+    "by_evidence": {
+      "HEURISTIC": 1,
+      "DATAFLOW": 1,
+      "PROTOCOL": 1,
+      "SPECULATIVE": 1
+    },
+    "total": 4
+  },
+  "findings": [
+    {
+      "rule_id": "dead-store",
+      "tier": "T1",
+      "evidence": "DATAFLOW",
+      "severity": "ERROR",
+      "location": {
+        "file": "app/svc.py",
+        "byte_start": 812,
+        "byte_end": 819,
+        "line_start": 41,
+        "col_start": 5,
+        "line_end": 41,
+        "col_end": 12
+      },
+      "message": "value assigned to `total` is never read before it is overwritten",
+      "evidence_note": "live-variable analysis: `total` not in LiveOut after this store",
+      "counter_condition": null
+    },
+    {
+      "rule_id": "div-by-literal-zero",
+      "tier": "T0",
+      "evidence": "HEURISTIC",
+      "severity": "WARN",
+      "location": {
+        "file": "app/svc.py",
+        "byte_start": 904,
+        "byte_end": 911,
+        "line_start": 47,
+        "col_start": 5,
+        "line_end": 47,
+        "col_end": 12
+      },
+      "message": "division by a literal zero",
+      "evidence_note": "constant zero on the right-hand side",
+      "counter_condition": "the surrounding branch is provably dead"
+    },
+    {
+      "rule_id": "suppress-then-emit",
+      "tier": "T2",
+      "evidence": "PROTOCOL",
+      "severity": "WARN",
+      "location": {
+        "file": "lib/util.ts",
+        "byte_start": 120,
+        "byte_end": 127,
+        "line_start": 9,
+        "col_start": 5,
+        "line_end": 9,
+        "col_end": 12
+      },
+      "message": "channel enters `suppressed` and reaches `prompt` with no `set_loud`",
+      "evidence_note": "enters `suppressed` at line 4; reaches `prompt` at line 9",
+      "counter_condition": "a different channel instance reaches the prompt"
+    },
+    {
+      "rule_id": "possible-superlinear",
+      "tier": "T3",
+      "evidence": "SPECULATIVE",
+      "severity": "ERROR",
+      "location": {
+        "file": "lib/util.ts",
+        "byte_start": 300,
+        "byte_end": 307,
+        "line_start": 22,
+        "col_start": 5,
+        "line_end": 22,
+        "col_end": 12
+      },
+      "message": "nested iteration may be superlinear in the input size",
+      "evidence_note": "two loops over collections derived from the same source",
+      "counter_condition": null
+    }
+  ]
+}

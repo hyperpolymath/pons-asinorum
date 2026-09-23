@@ -1,0 +1,63 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= The pons wiki: source, format, and publishing
+
+The `wiki/` directory at the repository root holds the source pages for the
+project wiki at https://github.com/hyperpolymath/pons-asinorum/wiki. They live
+in the repository as well as on the wiki tab so the content is versioned under
+CC-BY-SA-4.0 and reviewable by pull request.
+
+== Format: berrywiki
+
+Pages are Markdown in the https://github.com/metadatastician/berrywiki[berrywiki]
+format. Two properties matter:
+
+* *Every page is a plain, GitHub-renderable Markdown file.* Nothing about the
+  format requires a tool to read the page — open it on the wiki tab, in the
+  repository browser, or in an editor, and it reads correctly.
+* *Hierarchy is carried in metadata, not in the filename.* Filenames are flat,
+  with `--` separating the levels for human legibility
+  (`Weeks--Week-01.md`); the hierarchy of record is the `parent` id chain.
+
+Each content page opens with a metadata block in an HTML comment:
+
+[source,markdown]
+----
+<!-- berrywiki
+id: 0199c4a0-0000-7000-8000-000000000002
+parent: 0199c4a0-0000-7000-8000-000000000001
+position: 10
+kind: page
+tags: []
+archived: false
+-->
+----
+
+The block is an HTML comment rather than YAML frontmatter deliberately: GitHub
+Wiki renders frontmatter *visibly*, at the top of the page, which would put
+machine metadata in the reader's face on every page. An HTML comment renders as
+nothing.
+
+The navigation pages `_Sidebar.md` and `_Footer.md` carry *no* metadata block.
+They are chrome, not notebook nodes.
+
+Cross-page links use the wiki convention `+[[Page Name]]+`, which resolves on
+the wiki tab.
+
+== Pages
+
+`Home` · `Evidence-Tiers` (read first) · `For-Users` · `For-Developers` ·
+`For-Platform-Maintainers` · `Rule-Catalogue` · `Roadmap`, plus `_Sidebar` and
+`_Footer` navigation.
+
+== Publishing
+
+To publish to the GitHub *wiki tab*, the wiki must be initialised once by
+creating any first page through the web UI. After that, `pons.wiki.git` can be
+pushed and will replace it. Until then, this directory is the canonical copy.
+
+== Why not AsciiDoc
+
+The rest of this repository's prose is AsciiDoc, and that is the estate default.
+Wiki content is the documented exception: GitHub Wiki is a Markdown surface, and
+berrywiki builds on that. The estate formatting gate encodes the same rule —
+`.adoc` everywhere, `.md` for wiki content.

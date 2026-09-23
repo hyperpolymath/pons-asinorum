@@ -1,6 +1,8 @@
-// SPDX-License-Identifier: CC-BY-SA-4.0
-= unreachable-after-jump falsifiers
+= Fixtures: unreachable-after-jump
 
-Positive cases require this rule to fire. Negative cases exercise the documented
-counter-condition and must remain quiet for this rule. Fixtures are parsed,
-never executed; intentionally suspicious source is the test data.
+Positive fixtures: a statement immediately following `return`/`throw`/`raise`/
+`break`/`continue` in the same block — never reachable.
+
+Negative fixtures: the jump statement is the last statement in its block, or
+a jump inside a nested block (`if`) followed by more code in the *outer*
+block (not the same block as the jump, so not unreachable).

@@ -2,91 +2,79 @@
 = pons-asinorum
 :toc: preamble
 
-Pons catches the mistakes that make you ask, "How did I miss that?"
-Successful compilation is its starting point: wasted work, forgotten wiring,
-contradictory instructions, missing figures, and claims worth a second look.
-It is written in Rust, with native tree-sitter grammars for Python,
-JavaScript, TypeScript, TSX and Rust. Analysing a language does not require
-that language's runtime.
+// ── Licensing ───────────────────────────────────────────────────────────────
+image:https://img.shields.io/badge/Code-MPL--2.0-blue.svg?logo=mozilla[Code licence: MPL-2.0,link="https://opensource.org/licenses/MPL-2.0"]
+image:https://img.shields.io/badge/Docs-CC--BY--SA--4.0-blue.svg?logo=creativecommons[Docs licence: CC-BY-SA-4.0,link="https://creativecommons.org/licenses/by-sa/4.0/"]
+
+// ── Standard & quality gates ────────────────────────────────────────────────
+image:https://img.shields.io/badge/RSR-Rhodium_Standard-9C27B0[Rhodium Standard Repository,link="https://github.com/hyperpolymath/rhodium-standard-repositories"]
+image:https://api.scorecard.dev/projects/github.com/hyperpolymath/pons-asinorum/badge[OpenSSF Scorecard,link="https://scorecard.dev/viewer/?uri=github.com/hyperpolymath/pons-asinorum"]
+image:https://archive.softwareheritage.org/badge/origin/https://github.com/hyperpolymath/pons-asinorum/[Archived in Software Heritage,link="https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/hyperpolymath/pons-asinorum"]
+
+*pons-asinorum* — after the _pons asinorum_ (Euclid I.5, the "bridge of asses"), the
+historical test that separates real understanding from rote. A lightweight,
+multi-language static scanner that flags the small set of mistakes
+mathematicians and computing experts spot on sight but ordinary coders miss —
+*dead work*, *self-contradiction*, and *missing escape hatches* — and reports
+each finding with an honest label for how strong the evidence is.
+
+Design companion to
+https://github.com/hyperpolymath/panic-attack[panic-attack]: panic-attack is
+breadth (49 languages, security/panic weak points, line-level patterns +
+relational reasoning); pons-asinorum is depth (a few languages, parse trees + real
+dataflow + typestate, waste/contradiction smells). See
+link:docs/adr/0004-companion-to-panic-attack.adoc[ADR-0004].
 
 == Status
 
-*Working development version: 0.1.0-dev.1.* The CLI, 27 built-in rules,
-configuration, human/JSON/SARIF reports, explicit resource contracts and
-positive/negative fixture gate are implemented. General Python CFG/dataflow,
-source-derived typestate and the original v0.1 release acceptance gates remain
-unfinished. See link:docs/AUDIT.adoc[development audit] and
-link:docs/SCOPE.adoc[scope and next work]. No production or full RSR compliance
-claim is made.
+*Implementation in progress toward v0.1.0.* Milestones M0-M2 are merged: the
+Rust workspace, the scanning engine, the tree-sitter substrate for five
+languages, the eight-rule T0 catalogue and the falsifier gate all build, test
+and run. `pons scan <path>` works today and reports real findings.
 
-== Try it
+Milestones M3-M8 remain: machine-readable output (JSON + SARIF), the Python
+CFG and dataflow engine (T1), typestate and protocols (T2), speculative rules
+(T3), suppression, and the v0.1.0 acceptance sweep.
 
-[source,shell]
-----
-cargo build --release --locked -p pons-cli
-target/release/pons scan .
-target/release/pons scan . --explain
-target/release/pons scan . --format sarif
-target/release/pons scan . --fail-on warn
-----
+The ratified plan is still the authority for everything not yet built, and is
+written so that implementation agents can execute it without re-opening any
+design question.
 
-The default is advisory. Exit 0 means a completed scan below the selected
-threshold, 1 means that threshold was reached, and 2 means invalid input,
-an unavailable requested tool, or an incomplete scan. A clean result concerns
-only the supported checks and files actually inspected.
+Read in this order:
 
-Use `pons --help`, `pons scan --help`, and `pons man`. Read
-link:docs/USAGE.adoc[configuration and optional tools],
-link:docs/catalogue.adoc[the generated rule catalogue], and
-link:build/container/README.adoc[offline container operation].
+. link:docs/pons-kickoff.adoc[The kickoff document] — mission, the two
+  species, the decidability wall, the four evidence tiers, the starter
+  catalogue.
+. link:docs/adr/0001-substrate.adoc[ADR-0001] — substrate decision
+  (tree-sitter native + Rust). *Decided; do not re-spike.*
+. link:docs/adr/0002-t1-language-and-cfg.adoc[ADR-0002] — T1 language
+  (Python) and the complete CFG + dataflow design.
+. link:docs/adr/0003-protocol-spec-and-typestate.adoc[ADR-0003] — T2
+  protocol spec format (TOML) and typestate semantics.
+. link:docs/adr/0004-companion-to-panic-attack.adoc[ADR-0004] — positioning
+  relative to panic-attack.
+. link:docs/PLAN.adoc[*PLAN.adoc*] — the milestone-by-milestone
+  implementation plan with acceptance gates and appendices (dataflow
+  equations, query guidance, JSON schema, SARIF mapping, dependency pins).
 
-== Evidence without a lecture
+== The one-line contract
 
-A finding gives a location and a practical explanation. `--explain` adds the
-technical evidence and conditions under which it may be intentional.
-`HEURISTIC` is a pattern worth reviewing; `PROTOCOL` is a consequence of a
-supplied contract within its stated scope; `SPECULATIVE` is a weaker prompt,
-shown as a note. `DATAFLOW` is reserved for the planned flow analysis.
-Every built-in rule must pass both positive and negative fixtures.
+*Never dress a heuristic up as a proof.* Every finding carries an evidence
+class (`HEURISTIC` / `DATAFLOW` / `PROTOCOL` / `SPECULATIVE`), and
+`SPECULATIVE` findings are visually demoted in every output format. Every
+rule ships with a negative corpus that falsifies it; a rule that fires on its
+own negative corpus is demoted or removed, enforced in CI.
 
-You can dismiss a rule for one program, path or occurrence. There is no
-universal rule that eggs must be linear, that all loops must terminate, or
-that every large benchmark improvement is false. Project contracts state
-intent explicitly. For example, a loop needing 2245 eggs with only 4 allocated
-reports a conditional shortfall of 2241 eggs.
+== Author
 
-== Companions
+Jonathan D.A. Jewell.
 
-https://github.com/hyperpolymath/panic-attack[panic-attack] remains a separate
-security and robustness scanner. Exchange separate SARIF runs; do not flatten
-their evidence or require one executable to run the other.
-`pons challenge FILE` can explicitly invoke an installed
-https://github.com/hyperpolymath/invariant-path[Invariant Path] for further
-claim review without writing or accepting its annotations.
+== Licence
 
-https://github.com/metadatastician/authority-watch[Authority Watch] is a
-candidate source for reviewed specification changes, not an automatic rule
-publisher. https://github.com/hyperpolymath/lol[LOL] can inform locale naming;
-Pons currently accepts an explicit local catalogue import.
-https://github.com/hyperpolymath/kitchenspeak[KitchenSpeak] provides the teaching
-vocabulary for optional resource/type examples. See
-link:docs/INTEROPERABILITY.adoc[integration boundaries and verified interfaces].
+Dual, by artefact type (ratified 2026-07-08):
 
-== Development
+* *Source code* — `MPL-2.0` (`LICENSE`, `LICENSES/MPL-2.0.txt`).
+* *Documentation, prose, and the wiki* — `CC-BY-SA-4.0`
+  (`docs/LICENSE`, `LICENSES/CC-BY-SA-4.0.txt`).
 
-Rust 1.97.1 and Just 1.56.0 are recorded in the toolchain files. Cargo commands
-work independently of Just. Run `just check`, `just e2e`, and `just bench`.
-`just docs` additionally needs Asciidoctor. Python and TypeScript examples are stored as JSON
-strings and decoded by Rust falsifier tests, in accordance with the estate's
-fixture policy. They are data, not project implementation.
-
-The accepted substrate and original milestone plan remain in
-link:docs/PLAN.adoc[PLAN], with current amendments in
-link:docs/adr/0005-rookie-scanner-development.adoc[ADR-0005].
-
-== Author and licensing
-
-Jonathan D.A. Jewell. Source code: MPL-2.0 (`LICENSE` and
-`LICENSES/MPL-2.0.txt`). Documentation and prose: CC-BY-SA-4.0
-(`docs/LICENSE` and `LICENSES/CC-BY-SA-4.0.txt`). Artefact type determines the
-licence; the presence of two intentional scopes is not a contradiction.
+Every file carries an SPDX header declaring which of the two applies.

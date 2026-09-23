@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: MPL-2.0
+# THROWAWAY PROBE — delete with the branch. Same semantics as probe-yaml-arm.yml,
+# expressed in KYAML (KEP-5295) exactly as `kubectl -o kyaml` emits it.
+---
+{
+  name: "Probe KYAML arm",
+  "on": {
+    push: {
+      branches: [
+        "probe/kyaml-parse",
+      ],
+    },
+  },
+  permissions: {
+    contents: "read",
+  },
+  jobs: {
+    kyaml-arm: {
+      name: "KYAML arm",
+      runs-on: "ubuntu-latest",
+      timeout-minutes: 5,
+      steps: [
+        {
+          name: "Prove this job executed",
+          run: "echo \"PROBE_KYAML_ARM_EXECUTED\"",
+        },
+      ],
+    },
+  },
+}

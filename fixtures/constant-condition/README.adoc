@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: CC-BY-SA-4.0
-= constant-condition falsifiers
+= Fixtures: constant-condition
 
-Positive cases require this rule to fire. Negative cases exercise the documented
-counter-condition and must remain quiet for this rule. Fixtures are parsed,
-never executed; intentionally suspicious source is the test data.
+Positive fixtures: `if (true)`, `if (false)`, `while (false)` — a literal
+boolean in the condition slot.
+
+Negative fixtures: a variable condition, and `while (true)` — deliberately
+out of this rule's scope (that's `while-true-no-break`'s territory).

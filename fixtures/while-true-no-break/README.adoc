@@ -1,6 +1,9 @@
-// SPDX-License-Identifier: CC-BY-SA-4.0
-= while-true-no-break falsifiers
+= Fixtures: while-true-no-break
 
-Positive cases require this rule to fire. Negative cases exercise the documented
-counter-condition and must remain quiet for this rule. Fixtures are parsed,
-never executed; intentionally suspicious source is the test data.
+Positive fixtures: `while (true)` / `loop` whose body has no reachable
+`break`/`return`/`throw` (or `raise` in Python) anywhere in it — a plausible
+infinite loop.
+
+Negative fixtures: the same loop shape with a `break`/`throw` present, and
+(Rust only) `while false`/`loop` disambiguation via a `while false` case that
+must stay silent here (that's `constant-condition`'s territory).

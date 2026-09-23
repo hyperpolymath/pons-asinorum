@@ -1,104 +1,83 @@
 // SPDX-License-Identifier: MPL-2.0
-use anyhow::{Context, Result, bail};
-use serde::{Deserialize, Serialize};
-use tree_sitter::{Language, Parser, Tree};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+use tree_sitter::Language;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Lang {
     Python,
-    Javascript,
-    Typescript,
+    JavaScript,
+    TypeScript,
     Tsx,
     Rust,
 }
 
 impl Lang {
-    pub const ALL: [Self; 5] = [
-        Self::Python,
-        Self::Javascript,
-        Self::Typescript,
-        Self::Tsx,
-        Self::Rust,
-    ];
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::Python => "python",
-            Self::Javascript => "javascript",
-            Self::Typescript => "typescript",
-            Self::Tsx => "tsx",
-            Self::Rust => "rust",
-        }
-    }
+    /// Per `docs/PLAN.adoc` Appendix F: `.jsx` maps to `JavaScript` — the
+    /// `tree-sitter-javascript` grammar parses JSX natively, and TSX is
+    /// reserved for files with actual TypeScript type annotations.
     pub fn from_extension(ext: &str) -> Option<Self> {
         match ext {
-            "py" => Some(Self::Python),
-            "js" | "mjs" | "cjs" | "jsx" => Some(Self::Javascript),
-            "ts" => Some(Self::Typescript),
-            "tsx" => Some(Self::Tsx),
-            "rs" => Some(Self::Rust),
+            "py" => Some(Lang::Python),
+            "js" | "mjs" | "cjs" | "jsx" => Some(Lang::JavaScript),
+            "ts" => Some(Lang::TypeScript),
+            "tsx" => Some(Lang::Tsx),
+            "rs" => Some(Lang::Rust),
             _ => None,
         }
     }
-    pub fn grammar(self) -> Language {
+
+    /// The stable, lowercase spelling used in machine-readable output
+    /// (`scanned.languages` in the Appendix G envelope). Deliberately not
+    /// `Debug`, whose Rust-shaped spelling is free to change and would drag
+    /// the wire format with it.
+    pub fn name(self) -> &'static str {
         match self {
-            Self::Python => tree_sitter_python::LANGUAGE.into(),
-            Self::Javascript => tree_sitter_javascript::LANGUAGE.into(),
-            Self::Typescript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
-            Self::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
-            Self::Rust => tree_sitter_rust::LANGUAGE.into(),
+            Lang::Python => "python",
+            Lang::JavaScript => "javascript",
+            Lang::TypeScript => "typescript",
+            Lang::Tsx => "tsx",
+            Lang::Rust => "rust",
         }
     }
-}
 
-pub struct Parsed {
-    pub lang: Lang,
-    pub tree: Tree,
-}
-impl Parsed {
-    pub fn new(lang: Lang, text: &str) -> Result<Self> {
-        let mut parser = Parser::new();
-        parser
-            .set_language(&lang.grammar())
-            .context("loading pinned grammar")?;
-        let tree = parser.parse(text, None).context("parser cancelled")?;
-        if tree.root_node().has_error() {
-            bail!(
-                "{} parse contains errors; syntax rules were not run",
-                lang.name()
-            );
+    pub fn tree_sitter_language(&self) -> Language {
+        match self {
+            Lang::Python => tree_sitter_python::LANGUAGE.into(),
+            Lang::JavaScript => tree_sitter_javascript::LANGUAGE.into(),
+            Lang::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            Lang::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
+            Lang::Rust => tree_sitter_rust::LANGUAGE.into(),
         }
-        Ok(Self { lang, tree })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tree_sitter::{Query, QueryCursor, StreamingIterator};
+
     #[test]
-    fn all_grammars_parse_and_query_real_constructs() {
-        for (lang, text) in [
-            (Lang::Python, "def f(x):\n    return x + 1\n"),
-            (Lang::Javascript, "function f(x) { return x + 1; }"),
-            (
-                Lang::Typescript,
-                "function f(x: number): number { return x + 1; }",
-            ),
-            (Lang::Tsx, "const f = (x: number) => <div>{x}</div>;"),
-            (Lang::Rust, "fn f(x: i32) -> i32 { x + 1 }"),
+    fn jsx_maps_to_javascript_not_tsx() {
+        assert_eq!(Lang::from_extension("jsx"), Some(Lang::JavaScript));
+    }
+
+    #[test]
+    fn unknown_extension_maps_to_none() {
+        assert_eq!(Lang::from_extension("txt"), None);
+    }
+
+    #[test]
+    fn every_lang_variant_produces_a_loadable_grammar() {
+        for lang in [
+            Lang::Python,
+            Lang::JavaScript,
+            Lang::TypeScript,
+            Lang::Tsx,
+            Lang::Rust,
         ] {
-            let parsed = Parsed::new(lang, text).unwrap();
-            let query = Query::new(&lang.grammar(), "(identifier) @id").unwrap();
-            let mut cursor = QueryCursor::new();
-            assert!(
-                cursor
-                    .matches(&query, parsed.tree.root_node(), text.as_bytes())
-                    .next()
-                    .is_some(),
-                "{}",
-                lang.name()
-            );
+            let mut parser = tree_sitter::Parser::new();
+            parser
+                .set_language(&lang.tree_sitter_language())
+                .unwrap_or_else(|e| panic!("{lang:?} grammar failed to load: {e}"));
         }
     }
 }

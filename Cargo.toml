@@ -1,37 +1,29 @@
 # SPDX-License-Identifier: MPL-2.0
 [workspace]
-members = ["crates/pons-core", "crates/pons-rules", "crates/pons-cli", "crates/pons-protocols"]
 resolver = "2"
+members = [
+    "crates/pons-core",
+    "crates/pons-protocols",
+    "crates/pons-rules",
+    "crates/pons-cli",
+]
 
 [workspace.package]
-version = "0.1.0-dev.1"
-edition = "2024"
-rust-version = "1.97"
+edition = "2021"
 license = "MPL-2.0"
-authors = ["Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>"]
-repository = "https://github.com/hyperpolymath/pons-asinorum"
+authors = ["Jonathan D.A. Jewell"]
 
 [workspace.dependencies]
-anyhow = "=1.0.103"
-clap = { version = "=4.6.3", features = ["derive"] }
-clap_mangen = "=0.2.33"
-globset = "=0.4.18"
-ignore = "=0.4.25"
-regex = "=1.12.3"
-serde = { version = "=1.0.228", features = ["derive"] }
-serde_json = "=1.0.150"
-tempfile = "=3.27.0"
-toml = "=0.8.23"
-tree-sitter = "=0.26.13"
-tree-sitter-python = "=0.25.0"
-tree-sitter-javascript = "=0.25.0"
-tree-sitter-typescript = "=0.23.2"
-tree-sitter-rust = "=0.24.2"
-
-[workspace.lints.rust]
-unsafe_code = "forbid"
-
-[profile.release]
-lto = "thin"
-codegen-units = 1
-strip = "symbols"
+# Exact pins per docs/PLAN.adoc Appendix F. Every version here equals what
+# Cargo.lock already resolved, so these `=` pins freeze the current tree
+# rather than moving it. `walkdir` is deliberately absent: Appendix F records
+# it as transitive (via `ignore`), and no crate here names it directly.
+anyhow = "=1.0.104"
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
+ignore = "=0.4.33"
+clap = { version = "=4.6.6", features = ["derive"] }
+# Dev-only SARIF validation. `default-features = false` drops the `rustls` +
+# HTTP reference resolver: the SARIF 2.1.0 schema is bundled and self-contained,
+# so a validator that can reach the network is pure supply-chain surface.
+jsonschema = { version = "=0.57.0", default-features = false }

@@ -1,4 +1,0 @@
-// SPDX-License-Identifier: CC-BY-SA-4.0
-pons wiki · docs licensed https://creativecommons.org/licenses/by-sa/4.0/[CC-BY-SA-4.0] ·
-code https://www.mozilla.org/MPL/2.0/[MPL-2.0] · author Jonathan D.A. Jewell ·
-_status: design ratified, implementation not started_

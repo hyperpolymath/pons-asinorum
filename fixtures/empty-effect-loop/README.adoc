@@ -1,6 +1,11 @@
-// SPDX-License-Identifier: CC-BY-SA-4.0
-= empty-effect-loop falsifiers
+= Fixtures: empty-effect-loop
 
-Positive cases require this rule to fire. Negative cases exercise the documented
-counter-condition and must remain quiet for this rule. Fixtures are parsed,
-never executed; intentionally suspicious source is the test data.
+Positive fixtures: a loop (`while`/`for`/`loop`) whose body is empty or
+contains only no-ops (Python `pass`; JS/TS/Tsx an empty statement; Rust has
+no bare no-op statement, so only a literally empty block counts there).
+
+Negative fixtures: the same loop shapes with a real statement in the body.
+
+Deliberately not tested here (documented, not a bug): `loop {}` /
+`while (true) {}` also fires `while-true-no-break` — an empty infinite loop
+is both "no break" and "no effect" at once.

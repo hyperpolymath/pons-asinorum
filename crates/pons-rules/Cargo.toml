@@ -1,24 +1,12 @@
 # SPDX-License-Identifier: MPL-2.0
 [package]
 name = "pons-rules"
-description = "Falsifier-tested rookie mistake catalogue for Pons"
-version.workspace = true
+version = "0.1.0"
 edition.workspace = true
-rust-version.workspace = true
 license.workspace = true
-repository.workspace = true
+authors.workspace = true
 
 [dependencies]
 pons-core = { path = "../pons-core" }
-anyhow.workspace = true
-regex.workspace = true
-globset.workspace = true
-serde_json.workspace = true
-toml.workspace = true
-tree-sitter.workspace = true
-
-[dev-dependencies]
-tempfile.workspace = true
-
-[lints]
-workspace = true
+anyhow = { workspace = true }
+tree-sitter = "=0.27.0"

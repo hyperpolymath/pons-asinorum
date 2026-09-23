@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: MPL-2.0
+= Vendored schemas: provenance
+
+This directory holds third-party schema documents used by pons's own tests.
+They are *vendored verbatim* and must never be edited, reformatted or given an
+SPDX header: a schema that differs by one byte from the published one no longer
+proves what the test claims it proves.
+
+== sarif-2.1.0.json
+
+[cols="1,4"]
+|===
+| Upstream | https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json
+| Fetched  | 2026-09-22
+| Size     | 112768 bytes
+| SHA-256  | `c3b4bb2d6093897483348925aaa73af03b3e3f4bd4ca38cef26dcb4212a2682e`
+| Draft    | JSON Schema draft-04
+| Licence  | OASIS's own terms — see https://github.com/oasis-tcs/sarif-spec/blob/main/LICENSE.md.
+             GitHub's licence classifier reports `NOASSERTION`, so no SPDX
+             identifier is asserted here rather than guessing one.
+|===
+
+Used by `crates/pons-core/src/report/sarif.rs` to validate rendered output
+against the real SARIF 2.1.0 schema. It is bundled rather than fetched so the
+test suite is hermetic, and the `jsonschema` dev-dependency is built with
+`default-features = false` precisely so the validator *cannot* reach the
+network — a validator that can make HTTP requests is supply-chain surface for
+no gain when the schema is self-contained.
+
+To refresh it, re-fetch from the upstream URL, record the new hash here, and
+re-run the suite: a schema bump that silently changes what is accepted is
+exactly the drift this table exists to make visible.

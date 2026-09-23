@@ -1,6 +1,8 @@
-// SPDX-License-Identifier: CC-BY-SA-4.0
-= swallowed-error falsifiers
+= Fixtures: swallowed-error
 
-Positive cases require this rule to fire. Negative cases exercise the documented
-counter-condition and must remain quiet for this rule. Fixtures are parsed,
-never executed; intentionally suspicious source is the test data.
+Positive fixtures: a `catch` / `except` whose body is empty (JS/TS/Tsx) or
+only `pass` (Python — the one way to write an empty Python block).
+
+Negative fixtures: the same shape but with either a comment documenting the
+swallow as intentional, or a handler that actually does something with the
+error (logging it). Rust is excluded entirely — it has no exceptions.

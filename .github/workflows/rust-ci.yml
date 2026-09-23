@@ -1,49 +1,39 @@
 # SPDX-License-Identifier: MPL-2.0
-name: Rust CI
+name: rust-ci
+
 on:
   push:
     branches: [main]
   pull_request:
-  workflow_dispatch:
+
 permissions:
   contents: read
-concurrency:
-  group: rust-${{ github.ref }}
-  cancel-in-progress: true
+
 jobs:
   check:
-    name: Build, tests and falsifiers
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87  # stable
         with:
-          persist-credentials: false
-      - name: Install the pinned Rust toolchain
-        run: rustup toolchain install 1.97.1 --profile minimal --component rustfmt --component clippy
-      - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - run: cargo test --workspace --locked
-      - run: cargo build --workspace --release --locked
-      - name: Repository aspects
-        run: bash tests/aspect_tests.sh
-      - name: Check release CLI on planted controls
+          toolchain: stable
+          components: rustfmt, clippy
+      - name: fmt
+        run: cargo fmt --check
+      - name: clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+        env:
+          RUSTFLAGS: "-D warnings"
+      - name: test
+        run: cargo test --workspace
+      - name: build
+        run: cargo build --release
+      - name: e2e
+        run: bash tests/e2e.sh
+      - name: e2e non-vacuity (stub binary must fail the suite)
         run: |
-          target/release/pons scan fixtures/self-assignment/positive --format sarif > "$RUNNER_TEMP/pons.sarif"
-          target/release/pons scan fixtures/self-assignment/negative --fail-on warn
-  container:
-    name: Offline rootless container
-    runs-on: ubuntu-24.04
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - run: podman build -f build/container/Containerfile -t localhost/pons:ci .
-      - run: podman run --rm --network=none --read-only --cap-drop=all --security-opt=no-new-privileges localhost/pons:ci --version
-      - name: Run the scanner in its image
-        run: |
-          podman run --rm --network=none --read-only --cap-drop=all --security-opt=no-new-privileges \
-            -v "$PWD/fixtures/self-assignment/positive:/input:ro" \
-            localhost/pons:ci scan /input --format json > "$RUNNER_TEMP/pons.json"
-          jq -e '.scanned.complete and .counts.total > 0' "$RUNNER_TEMP/pons.json"
+          if PONS_BIN=/bin/true bash tests/e2e.sh >/dev/null 2>&1; then
+            echo "::error::e2e suite passes against a stub binary — it is vacuous"
+            exit 1
+          fi
+          echo "e2e suite correctly rejects a stub binary"
