@@ -16,6 +16,118 @@ use crate::report::SPECULATIVE_SUFFIX;
 const SARIF_SCHEMA: &str = "https://json.schemastore.org/sarif-2.1.0.json";
 const INFORMATION_URI: &str = "https://github.com/hyperpolymath/pons-asinorum";
 
+/// The unit `region.startColumn`/`endColumn` are measured in, declared on every
+/// run. See [`Run::column_kind`]; the conversion itself lives in
+/// [`Location::from_node`](crate::finding::Location::from_node).
+const COLUMN_KIND: &str = "utf16CodeUnits";
+
+/// Bytes that may appear unescaped in a URI path segment, beyond the
+/// alphanumerics: RFC 3986's unreserved set (`-._~`) plus the sub-delimiters
+/// and `@`. Everything else — space, `#`, `?`, `%`, `:`, and every non-ASCII
+/// byte — is percent-escaped.
+///
+/// `:` is escaped even though `pchar` admits it. A SARIF `uri` is a
+/// relative-path reference, whose *first* segment is `segment-nz-nc`
+/// (RFC 3986 §4.2) — the one production that excludes `:`, precisely so the
+/// text before it cannot be read as a scheme. `note:v2.py` at the scan root
+/// would otherwise parse as scheme `note` with path `v2.py`, annotating a file
+/// that does not exist. Escaping `:` in *every* segment rather than only the
+/// first buys that guarantee without a positional rule the next reader has to
+/// remember.
+const URI_SEGMENT_SAFE: &[u8] = b"-._~!$&'()*+,;=@";
+
+/// Percent-escapes one path segment into `out`, byte by byte over its UTF-8.
+fn push_escaped_segment(segment: &str, out: &mut String) {
+    use std::fmt::Write as _;
+    for byte in segment.bytes() {
+        if byte.is_ascii_alphanumeric() || URI_SEGMENT_SAFE.contains(&byte) {
+            out.push(char::from(byte));
+        } else {
+            // Non-ASCII is escaped per UTF-8 byte, which is what RFC 3986
+            // requires and what makes the URI safe to put in JSON and in a
+            // code-scanning API payload alike.
+            let _ = write!(out, "%{byte:02X}");
+        }
+    }
+}
+
+/// Renders a finding's path as a SARIF `artifactLocation.uri`.
+///
+/// Two things have to be true at once, and neither is what the path in the
+/// finding gives you:
+///
+/// * **The URI must not depend on how the scan was invoked.** `pons scan .` and
+///   `pons scan /abs/path/to/repo` visit the same files, and before this the
+///   first emitted `./app/svc.py` while the second emitted the machine's full
+///   filesystem layout. A consumer cannot annotate a line from the second
+///   form, and two runs of the same scan produced artefacts that did not
+///   compare equal. Stripping the scan root makes the URI a property of the
+///   file, not of the command line.
+/// * **It must be a URI, not a path.** A segment containing a space or a `#`
+///   is not a valid URI reference as-is; `#` in particular would truncate the
+///   path at a fragment delimiter.
+///
+/// `originalUriBaseIds` is deliberately **not** emitted. It would have to name
+/// an absolute base, which is precisely the build-machine detail this function
+/// exists to remove — it would make the artefact non-reproducible and move the
+/// leak from `uri` into a sibling key. GitHub code scanning resolves a bare
+/// relative URI against the repository root, which is the consumer that
+/// motivated #28.
+///
+/// **Honest limitation:** the URI is relative to the *scan root*, not to the
+/// repository root. `pons scan .` from the repository root — the normal case,
+/// and the one code scanning runs — makes those the same thing. Scanning a
+/// subdirectory does not: `pons scan src/` yields paths relative to `src/`, and
+/// a consumer resolving them against the repo root will miss. Fixing that would
+/// require discovering a VCS root, which is a scanner concern rather than a
+/// reporter one and is not in scope here.
+fn artifact_uri(file: &str, root: &str) -> String {
+    use std::path::{Component, Path};
+
+    let path = Path::new(file);
+    // `strip_prefix` fails rather than panicking when the path is not under
+    // the root, which is the case that matters: the fixture's `app/svc.py` is
+    // already relative and `strip_prefix(".")` does NOT match it, because
+    // `Path::components` keeps a leading `.` only when the path actually
+    // begins with one. Falling back to the path unchanged is therefore the
+    // common case for an already-relative finding, not an error path.
+    let relative = path.strip_prefix(root).unwrap_or(path);
+    // `pons scan foo.py` makes root and file the same string, and stripping
+    // one from the other leaves nothing. Name the file rather than emit "".
+    let relative = if relative.as_os_str().is_empty() {
+        path.file_name().map_or(path, Path::new)
+    } else {
+        relative
+    };
+
+    let mut absolute = false;
+    let mut segments: Vec<String> = Vec::new();
+    for component in relative.components() {
+        match component {
+            // Only reachable when the finding lies outside the scan root, which
+            // discovery does not produce. Keep the leading slash rather than
+            // silently presenting an absolute path as a relative one.
+            Component::RootDir | Component::Prefix(_) => absolute = true,
+            // A leading `./` carries no information and is exactly the prefix
+            // #28 asks to be rid of.
+            Component::CurDir => {}
+            Component::ParentDir => segments.push("..".to_string()),
+            Component::Normal(segment) => {
+                let mut escaped = String::new();
+                push_escaped_segment(&segment.to_string_lossy(), &mut escaped);
+                segments.push(escaped);
+            }
+        }
+    }
+
+    let joined = segments.join("/");
+    if absolute {
+        format!("/{joined}")
+    } else {
+        joined
+    }
+}
+
 /// SARIF severity for a finding.
 ///
 /// The `SPECULATIVE` check comes **first** and unconditionally: Appendix E
@@ -79,6 +191,16 @@ struct Sarif {
 #[derive(Serialize)]
 struct Run {
     tool: SarifTool,
+    /// Declared explicitly rather than left to the default.
+    ///
+    /// SARIF 2.1.0 admits exactly two values here — `utf16CodeUnits` and
+    /// `unicodeCodePoints` — and *no* byte option, which is why
+    /// [`Location`](crate::finding::Location) converts columns at construction
+    /// rather than the reporter reinterpreting them here. A consumer that
+    /// assumed the other kind would be off by one per non-BMP character, and
+    /// saying nothing would leave that disagreement to the default.
+    #[serde(rename = "columnKind")]
+    column_kind: &'static str,
     results: Vec<SarifResult>,
 }
 
@@ -246,12 +368,12 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
                 },
                 locations: vec![SarifLocation {
                     physical_location: PhysicalLocation {
-                        // The path exactly as the finding carries it: a
-                        // relative scan stays relative, which is both what
-                        // SARIF consumers want and what keeps the golden file
-                        // machine-independent.
+                        // Normalised against the scan root and escaped, so the
+                        // URI is a property of the file rather than of how the
+                        // scan was invoked. See `artifact_uri`, which also
+                        // records why `originalUriBaseIds` is omitted.
                         artifact_location: ArtifactLocation {
-                            uri: loc.file.clone(),
+                            uri: artifact_uri(&loc.file, &report.root),
                         },
                         region: Region {
                             start_line: loc.line_start,
@@ -285,6 +407,7 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
                     rules,
                 },
             },
+            column_kind: COLUMN_KIND,
             results,
         }],
     };
@@ -303,6 +426,159 @@ mod tests {
     /// reaches the network is a validator that passes vacuously the day the
     /// network is unavailable.
     const SCHEMA: &str = include_str!("../../tests/schemas/sarif-2.1.0.json");
+
+    /// A one-finding report standing for the same scan reached by a different
+    /// spelling of its root. Deliberately not the shared fixture: what is under
+    /// test is the relationship between `root` and `location.file`, and the
+    /// fixture fixes both.
+    fn report_rooted(root: &str, file: &str) -> ScanReport {
+        use crate::engine::RuleInfo;
+        use crate::finding::Location;
+        use crate::lang::Lang;
+
+        ScanReport {
+            root: root.to_string(),
+            findings: vec![Finding::new(
+                "div-by-literal-zero",
+                Tier::T0,
+                Severity::Warn,
+                Location {
+                    file: file.to_string(),
+                    byte_start: 15,
+                    byte_end: 20,
+                    line_start: 1,
+                    col_start: 16,
+                    line_end: 1,
+                    col_end: 21,
+                },
+                "division by a literal zero",
+                "constant zero on the right-hand side",
+                None,
+            )],
+            files_scanned: 1,
+            languages: vec![Lang::Python],
+            skipped: Vec::new(),
+            rules: vec![RuleInfo {
+                id: "div-by-literal-zero",
+                description: "division or modulo whose right-hand side is a literal zero",
+            }],
+        }
+    }
+
+    #[test]
+    fn the_uri_does_not_depend_on_how_the_scan_root_was_spelled() {
+        // The two invocations #28 measured. Before the fix the first emitted
+        // `./app/svc.py` and the second the scanning machine's full filesystem
+        // layout — two artefacts for one scan, and code scanning could not
+        // annotate a line from either.
+        let dot = render(&report_rooted(".", "./app/svc.py")).unwrap();
+        let abs = render(&report_rooted("/home/me/repo", "/home/me/repo/app/svc.py")).unwrap();
+
+        assert!(
+            dot.contains(r#""uri": "app/svc.py""#),
+            "relative root: expected a bare repo-relative URI, got:\n{dot}"
+        );
+        assert!(
+            abs.contains(r#""uri": "app/svc.py""#),
+            "absolute root: expected a bare repo-relative URI, got:\n{abs}"
+        );
+
+        // Each spelling gets its own negative assertion, so a regression in
+        // either one goes red on its own terms rather than hiding behind the
+        // equality below.
+        assert!(
+            !dot.contains("./app/svc.py"),
+            "the `./` prefix survived; consumers treat it as a distinct path"
+        );
+        assert!(
+            !abs.contains("/home/me/repo"),
+            "the scanning machine's filesystem layout leaked into the artefact"
+        );
+
+        // The comment above promises this and it was not here. The rendered
+        // SARIF carries no `root`, so two spellings of one scan must produce
+        // byte-identical documents, not merely matching URIs — the negative
+        // assertions alone would pass on two documents that differed elsewhere.
+        assert_eq!(
+            dot, abs,
+            "one scan spelled two ways produced two different artefacts"
+        );
+    }
+
+    /// RFC 3986 §4.2: the first segment of a relative-path reference is
+    /// `segment-nz-nc`, which excludes `:` so the text before it cannot be read
+    /// as a scheme. `pchar` admits `:` everywhere else, which is why the naive
+    /// safe-set let it through.
+    ///
+    /// Found by review on #34, not by the SARIF schema — the schema validates
+    /// `uri` as a string and accepts `note:v2.py` without complaint. The same
+    /// lesson as #28 itself: a schema validator is not a consumer contract.
+    #[test]
+    fn a_colon_cannot_turn_a_relative_uri_into_a_scheme() {
+        let out = render(&report_rooted(".", "./note:v2.py")).unwrap();
+
+        assert!(
+            out.contains(r#""uri": "note%3Av2.py""#),
+            "a `:` in the first segment must be escaped or a consumer reads \
+             `note` as a URI scheme and resolves a file that does not exist; got:\n{out}"
+        );
+        assert!(
+            !out.contains(r#""uri": "note:v2.py""#),
+            "the unescaped colon survived into the artefact URI"
+        );
+    }
+
+    #[test]
+    fn an_already_relative_path_is_unchanged_by_a_dot_root() {
+        // `Path::strip_prefix(".")` does NOT match `app/svc.py`: `components`
+        // keeps a leading `.` only when the path really begins with one. The
+        // fallback is therefore the ordinary case for a finding that is already
+        // relative, and it is what holds the golden corpus still.
+        assert_eq!(artifact_uri("app/svc.py", "."), "app/svc.py");
+        assert_eq!(artifact_uri("./app/svc.py", "."), "app/svc.py");
+    }
+
+    #[test]
+    fn scanning_a_single_file_names_that_file_rather_than_nothing() {
+        // `pons scan foo.py` makes root and file the same string; stripping one
+        // from the other leaves an empty path, and an empty `uri` is not a
+        // location.
+        assert_eq!(artifact_uri("foo.py", "foo.py"), "foo.py");
+        assert_eq!(artifact_uri("/tmp/foo.py", "/tmp/foo.py"), "foo.py");
+    }
+
+    #[test]
+    fn uri_segments_are_percent_escaped_but_separators_are_not() {
+        // A `#` is the one that actually breaks a consumer: unescaped, it
+        // truncates the path at a fragment delimiter, so the annotation lands
+        // on a file that does not exist.
+        assert_eq!(
+            artifact_uri("./my docs/a#b.py", "."),
+            "my%20docs/a%23b.py",
+            "space and # must be escaped, and the separator must not be"
+        );
+        // Non-ASCII is escaped per UTF-8 byte, not per character.
+        assert_eq!(artifact_uri("./café.py", "."), "caf%C3%A9.py");
+        // Percent itself, or the URI would decode to something else entirely.
+        assert_eq!(artifact_uri("./100%.py", "."), "100%25.py");
+    }
+
+    #[test]
+    fn a_normalised_uri_still_validates_against_the_bundled_schema() {
+        // Criterion 5 of #28. Noted for the reader, because it is the reason
+        // the assertions above are written by hand: the schema constrains
+        // shape only and accepts an absolute unescaped path just as happily,
+        // so it can confirm this change broke nothing and can never be the
+        // evidence that the change was needed.
+        let out = render(&report_rooted(
+            "/home/me/repo",
+            "/home/me/repo/my docs/a#b.py",
+        ))
+        .unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
+        assert!(validator().validate(&parsed).is_ok());
+        assert!(out.contains(r#""uri": "my%20docs/a%23b.py""#));
+    }
 
     fn validator() -> jsonschema::Validator {
         let schema: serde_json::Value =

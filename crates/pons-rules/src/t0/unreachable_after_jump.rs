@@ -112,7 +112,7 @@ impl Rule for UnreachableAfterJump {
             findings.push(RawFinding::new(
                 Tier::T0,
                 Severity::Warn,
-                Location::from_node(ctx.path.display().to_string(), &next),
+                Location::from_node(ctx.path.display().to_string(), &next, ctx.text),
                 "statement is unreachable after an unconditional jump",
                 format!("unreachable code — this can never run after `{keyword}`"),
                 Some("a label or fallthrough construct the walker doesn't see".to_string()),
