@@ -1,0 +1,4 @@
+Contact: mailto:j.d.a.jewell@open.ac.uk
+Expires: 2027-09-09T00:00:00Z
+Preferred-Languages: en
+Policy: https://github.com/hyperpolymath/pons-asinorum/security/policy

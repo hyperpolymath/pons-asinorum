@@ -1,0 +1,5 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= document-anchor-missing falsifiers
+
+Positive snapshots contain a broken or unfinished reference; negative snapshots
+resolve it or explicitly fence the example. No scanned project code is executed.

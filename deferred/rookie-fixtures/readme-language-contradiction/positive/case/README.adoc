@@ -1,0 +1,2 @@
+The tool is written in Rust.
+This tool is implemented in Python.

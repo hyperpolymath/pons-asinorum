@@ -1,0 +1,6 @@
+[[budget]]
+path="breakfast.py"
+resource="eggs"
+available=4
+consume="eat"
+units=1

@@ -88,3 +88,5 @@ hooks/playbook-to-recipe/Cargo.lock
 .verisimdb/ecosystem-ingest/Cargo.lock
 # Backup/scratch files (never commit)
 *.backup
+/.standards/
+/.hypatia/

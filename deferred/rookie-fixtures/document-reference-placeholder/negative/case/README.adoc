@@ -1,0 +1,5 @@
+= Example
+[source,asciidoc]
+----
+image::placeholder.svg[Example only]
+----

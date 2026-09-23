@@ -1,0 +1,5 @@
+{
+  "license": "MPL-2.0",
+  "language": "python",
+  "source": "# SPDX-License-Identifier: MPL-2.0\ndef f(x):\n    return x / 0\n"
+}

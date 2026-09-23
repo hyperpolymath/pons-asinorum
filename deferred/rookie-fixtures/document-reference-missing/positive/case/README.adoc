@@ -1,0 +1,2 @@
+= Example
+See image::images/result.svg[Result]

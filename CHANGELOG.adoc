@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Changelog
+
+== Unreleased — 0.1.0-dev.1
+
+* Add RSR capability metadata: machine-readable scorecard, descriptiles and
+  rsr-profile under `.machine_readable/`.
+* Add an offline rootless container build (Containerfile, firewalld zone,
+  transactional-scan entrypoint) with `.containerignore`.
+* Add `.well-known/{ai,humans,security}.txt` discovery files.
+* Add dogfood-gate, governance and hypatia-scan workflow scaffolding.
+* Add pre-commit configuration and `.tool-versions`.
+* Cap dependabot open pull requests per update block; retire stale
+  Idris/Zig-era aspect checks from `tests/aspect_tests.sh`.
+* Record ADR-0005 (rookie scanner development direction).
+
+Deferred to follow-up work (see branch history at 172f455): the rookie
+repository-hygiene rules (assets/budget/documents/repository), the bounded
+text/spelling/OCR adapters and the event-trace protocol contracts. These
+require porting onto the current `pons-core` engine API (registry +
+`Rule{id, description, languages, check}`) rather than the superseded
+September-9 crate layout.

@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: MPL-2.0
 # Dependabot configuration for pons
-# Rust + Zig + Idris project - GitHub Actions and Cargo only
+# Rust implementation: GitHub Actions and Cargo only
 
 version: 2
 updates:
   # GitHub Actions - always include
   - package-ecosystem: "github-actions"
+    open-pull-requests-limit: 2
     directory: "/"
     schedule:
       interval: "weekly"

@@ -1,0 +1,23 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Interoperability without coupling
+
+The interfaces below distinguish what was inspected from what is implemented.
+Companion repositories are not modified by this development branch.
+
+[cols="1,2,2",options="header"]
+|===
+|Companion |Current boundary |Next contract
+|panic-attack |Separate executable; both expose SARIF runs. Pons does not import its crate or relabel its findings. |A report combiner may concatenate runs while preserving tool identity, version, rules and evidence; deduplication must retain provenance.
+|Invariant Path |`pons challenge FILE` invokes `invariant-path scan --file ABSOLUTE --json` (or the inspected Cargo binary name `invariant-path-cli`), checks that output is a JSON array and returns both reports with unreviewed status. It never passes `--write`. |Version negotiation and a validated annotation schema before stronger mapping. Current adapter validates only the envelope shape, not every upstream suggestion field.
+|Authority Watch (metadatastician) |Inspected offline/manual precision core; automated monitoring and production signing remain gated. No Pons ingestion adapter or automatic update job is implemented. |Candidate bundle: source URI, document revision/digest, observed change, proposed failure type, rationale, fixtures, review status. Separate observation, interpretation, approval and publication. Pin an approved bundle; never hot-load specification changes as unquestionable rules.
+|LOL |Pons accepts local locale records shaped as an array of code/name objects. LOL's inspected catalogue uses iso639_3/iso639_1 and a separate locale ABI; no compatible production export was verified. |Versioned export/conversion with ISO identifiers, BCP47 tags, aliases and fallback metadata. Keep language identity distinct from spelling dictionaries.
+|KitchenSpeak |Teaching companion for resource/type explanations; no native grammar/import. |Explicit contracts map kitchen quantities and consumption into typed budgets. Preserve units, conditions and unknown bounds.
+|Pandoc, agrep, Aspell, Hunspell, Tesseract |Explicit local bounded process adapters. Optional; never invoked by ordinary scan. |Version/capability discovery and richer structured evidence. OCR output needs its own uncertainty and original-image location mapping.
+|ExifTool / C2PA |Planned; no installed-reader adapter or provenance verification claim. |Separate observed metadata, signature verification, classifier suggestions and author declarations. No implicit image upload.
+|===
+
+The long-term plug-in boundary should accept immutable input references and
+return versioned findings with rule ID, location, evidence, counter-condition,
+producer/version and capability coverage. Unknown or unsupported capabilities
+must be explicit. Requested external execution needs time, memory, output and
+network limits; a repository file cannot silently grant itself permissions.
