@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: MPL-2.0
+# THROWAWAY PROBE — delete with the branch. Positive control for the KYAML arm.
+name: Probe YAML arm
+on:
+  push:
+    branches: [probe/kyaml-parse]
+permissions:
+  contents: read
+jobs:
+  yaml-arm:
+    name: YAML arm
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prove this job executed
+        run: echo "PROBE_YAML_ARM_EXECUTED"
