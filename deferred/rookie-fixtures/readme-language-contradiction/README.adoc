@@ -1,0 +1,5 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= readme-language-contradiction falsifiers
+
+Each case is an independent repository snapshot. Positive cases must fire;
+negative cases represent corrected or intentionally different behaviour.

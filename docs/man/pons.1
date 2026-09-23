@@ -1,0 +1,49 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH pons 1  "pons 0.1.0-dev.1"
+.SH NAME
+pons \- Spot rookie mistakes beyond successful compilation
+.SH SYNOPSIS
+\fBpons\fR [\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] <\fIsubcommands\fR>
+.SH DESCRIPTION
+Pons scans source and repository documents without executing project code. Findings are evidence\-labelled suggestions. Exit codes: 0 completed below the chosen failure threshold, 1 threshold reached, 2 invalid input or incomplete scan.
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help (see a summary with \*(Aq\-h\*(Aq)
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print version
+.SH SUBCOMMANDS
+.TP
+pons\-scan(1)
+Scan a file or tree. Does not execute scanned code or external plug\-ins
+.TP
+pons\-catalogue(1)
+Print the built\-in rule catalogue (generated from the registry)
+.TP
+pons\-man(1)
+Generate a man page from the same command model as \-\-help
+.TP
+pons\-doctor(1)
+Show installed optional tools without claiming they are tested
+.TP
+pons\-challenge(1)
+Ask the separately installed Invariant Path to examine a document\*(Aqs claims. Produces JSON; does not persist or accept annotations
+.TP
+pons\-extract(1)
+Convert a document/image to text using a named optional local tool
+.TP
+pons\-spell(1)
+List dictionary misses using aspell or hunspell; no automatic rewrites
+.TP
+pons\-search(1)
+Approximate text search via the installed agrep executable
+.TP
+pons\-trace(1)
+Check an explicit ordered JSON event trace against a supplied TOML contract. Does not infer events or control flow from source code
+.TP
+pons\-help(1)
+Print this message or the help of the given subcommand(s)
+.SH VERSION
+v0.1.0\-dev.1

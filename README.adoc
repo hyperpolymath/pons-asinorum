@@ -57,6 +57,8 @@ Read in this order:
   implementation plan with acceptance gates and appendices (dataflow
   equations, query guidance, JSON schema, SARIF mapping, dependency pins).
 
+For formal verification and proof status, see link:PROOF-PROGRESS.adoc[PROOF-PROGRESS.adoc].
+
 == The one-line contract
 
 *Never dress a heuristic up as a proof.* Every finding carries an evidence

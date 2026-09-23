@@ -1,0 +1,8 @@
+= Example
+[[result]]
+.Result
+|===
+|Input |Output
+|1 |2
+|===
+See <<result>>.

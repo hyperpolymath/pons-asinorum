@@ -1,0 +1,122 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Scope and development priorities
+:toc:
+
+Pons reviews everyday oversights after a compiler or IDE is satisfied.
+Explain the practical mistake first, show the evidence on request, and let
+the author declare intent. One engine serves human-written, generated and
+accidentally damaged work. Failure-pattern packs may vary; authorship is not
+a diagnosis. No philosophy qualification is expected.
+
+== Implemented development slice
+
+* AST checks: literal zero division, bare-name self-assignment, literal
+  conditions, obvious loops without an escape, empty-effect literal loops,
+  unreachable same-block statements, empty broad catches, repeated string
+  concatenation. These are deliberately bounded heuristics.
+* Repository checks: conventional filename typos, known template markers,
+  explicit README language contradictions, simple manifest/SPDX contradictions,
+  missing Just tool declaration, and suspicious single-quoted shell expansion.
+* Prose: implausibly large speedup prompts and sub-unit "faster" ambiguity;
+  local Markdown/AsciiDoc missing references, placeholder targets and explicit
+  AsciiDoc anchor references; configured project-title mismatch.
+* Localisation key/placeholder drift; explicit resource budget arithmetic;
+  TOML finite-state contracts over supplied traces; custom text patterns.
+* Literal HTML alt/decorative checks and author-declared asset requirements.
+* Ignore/allow configuration, human/JSON/SARIF, generated help/man/catalogue,
+  optional local tool adapters, rootless container and CI definitions.
+
+Consult the generated catalogue for exact evidence classes and exceptions.
+The presence of a grammar does not mean every rule applies to every construct
+or language. No precision/recall or industrial readiness claim is established.
+
+== Next: finish the ratified core before a v0.1 release
+
+. Implement Python CFG extraction including exceptions, finally, loops,
+  break/continue and scopes; then liveness/reaching definitions with real
+  dead-store/read-before-init evidence. Add closure, alias and dynamic-language
+  counterexamples. Keep opaque behaviour explicitly unknown.
+. Derive source protocol events and typestate on that CFG, checking joins,
+  exceptional exits, receiver identity and alias uncertainty. The explicit
+  trace checker is useful groundwork, not completion of this milestone.
+. Run the original plan's external-corpus, false-positive, performance,
+  portability and release gates. Record exact corpus revisions and denominator.
+. Version the language plug-in interface, capabilities and finding schema;
+  provide conformance tests before enabling independently distributed plug-ins.
+. Add reviewed rule packs, stable finding fingerprints and scoped dismissals
+  suitable for editor/word-processor-style review. Intentional uses remain visible
+  in an auditable allowance record.
+
+== Next practical checks
+
+* CLI inventory: compare declared flags, dispatch, observed behaviour, help,
+  man pages and examples. Detect unwired options and undocumented functionality
+  through AST adapters and explicit execution contracts; never execute arbitrary
+  scanned projects without an explicit separate capability.
+* Cross-file wiring: declared but unused resources and finished components with
+  no call/registration; use symbol graphs and declared entry points to avoid
+  condemning plug-ins or library exports.
+* Repository identity: compare configured canonical name/aliases with package,
+  description, tags, README and EXPLAINME. GitHub metadata requires explicit
+  acquisition; current scan only compares entry titles with config.
+* Licence intent: parse SPDX expressions and artefact scopes, reconcile README,
+  manifest, headers and licence texts, distinguish valid multi-licensing from
+  contradictions. A code licence in a prose-only scope should ask about intent;
+  source absence is bounded by file support and exclusions, not proof of misuse.
+* Shell/spreadsheet quoting, absolute/relative dollar references, mistaken
+  constants, idempotency, unreachable service ports and confusing comments:
+  require language/domain adapters and declared intent, not universal regexes.
+* General resource budgets: resolve bounds, units, replenishment and alternative
+  paths; report intervals or "unknown" when exact arithmetic is not justified.
+  KitchenSpeak examples make advanced contracts approachable without assigning
+  metaphysical properties to ordinary words.
+* Figure/table association: resolve includes, cross-file anchors, Markdown
+  reference links, SVG title/description, captions and alt text. A file existing
+  proves neither that it is the intended figure nor that it is informative.
+
+== Asset forensics: a bounded future plug-in
+
+Use established readers before inventing a detector. ExifTool can expose
+container dimensions, EXIF/MakerNotes, software history and XMP/IPTC metadata;
+a provenance tool can separately validate C2PA signatures and report trust
+status. Preserve source tag names, derivation and provenance. Never call
+unsigned metadata a verified camera record.
+
+Pixel count (MP), raster dimensions, physical sampling density (PPI), print
+density (DPI) and camera nominal capability are different quantities. A 50 MP
+capture can be resized to 2 MP while retaining some capture metadata; EXIF
+pixel-dimension fields may instead be updated or stale. Lossy JPEG compression
+alone need not change pixel count. A mismatch is a review prompt, not proof
+of tampering. A 50 MP vector export is entirely plausible.
+
+Editing-software metadata supports "metadata records this editor". It does
+not establish a particular filter or deceptive alteration. IPTC Digital Source
+Type can declare generated or AI-edited content; absent metadata cannot establish
+human creation. C2PA validation and pixel-based AI detection are different
+capabilities. Prompt for disclosure where the project requires it, retaining
+unknown and conflicting states. Do not automatically accuse an author.
+
+Optional edge/line analysis or image-text models could suggest photo versus
+illustration, or an unrelated caption. Validate on real mixed media: photos of
+diagrams, scanned drawings, screenshots of photos, charts with textures, old
+scans and generated imagery. Compression, colour distribution, camera-shaped
+aspect ratios and high resolution are weak clues. Retain the "heads-up" tone.
+Titles, long descriptions and attribution are context-dependent; decorative
+status changes accessibility treatment, not ownership obligations.
+
+Primary references:
+
+* https://www.w3.org/WAI/tutorials/images/decorative/[W3C decorative image guidance].
+* https://www.iptc.org/std/photometadata/documentation/userguide/[IPTC Photo Metadata User Guide].
+* https://exiftool.org/exiftool_pod.html[ExifTool documentation].
+* https://c2pa.org/faqs/[C2PA FAQ].
+* https://docs.opencv.org/4.13.0/d9/db0/tutorial_hough_lines.html[OpenCV line detection].
+* https://arxiv.org/abs/2103.00020[Image/text representation research (CLIP)].
+
+== Boundaries
+
+Security scanning stays with panic-attack and other dedicated scanners;
+compiler diagnostics remain useful upstream. Pons may explain overlaps but
+does not replace those tools. Authority Watch contributes reviewed source
+changes; Invariant Path can deepen a challenge. Neither dependency should
+turn a plain-language prompt into an unearned proof or automatic legal rule.

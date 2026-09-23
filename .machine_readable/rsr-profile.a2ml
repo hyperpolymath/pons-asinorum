@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MPL-2.0
+[rsr-profile]
+version = "1.0.0"
+spec = "rsr-criteria-v2"
+declares-against = "2.0.0-draft"
+capabilities = ["rust", "bash", "cli", "library", "container", "benchmarks", "governance-tier"]
+
+[rationale]
+rust = "Four Cargo workspace crates; CLI entry point in src/main.rs."
+library = "pons-core, pons-rules and pons-protocols expose tested Rust interfaces."
+container = "Rootless offline OCI image and transactional report wrapper."
+benchmarks = "benches/pons_bench.sh measures the scanner on its fixtures."
+no-formal-proofs = "Tests are executable evidence, not mechanised proofs."
+no-api-service = "Offline CLI with no listening socket or service endpoint."
+no-abi = "No exported C ABI or Idris2 ABI. Grammar internals are encapsulated by upstream Rust bindings."
+no-reproducible-build = "Dependency and image pins exist; no Guix bit-reproducibility claim."
+no-published-package = "Development version; no release tag or registry publication."

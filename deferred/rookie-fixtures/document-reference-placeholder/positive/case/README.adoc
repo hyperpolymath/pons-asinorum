@@ -1,0 +1,2 @@
+= Example
+image::placeholder.svg[Result]

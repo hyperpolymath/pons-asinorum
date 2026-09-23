@@ -1,0 +1,2 @@
+Throughput increased by 30%.
+It takes 0.3 times the original duration.

@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MPL-2.0
+.git
+target
+dist
+.standards
+.hypatia
+*.log

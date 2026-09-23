@@ -21,4 +21,6 @@ include::descriptiles/README.adoc[]
 
 == Scripts
 
-include::scripts/README.adoc[]
+* link:scripts/lifecycle/README.adoc[Lifecycle tooling]
+* link:scripts/forge/README.adoc[Forge tooling]
+* link:scripts/verification/README.adoc[Verification tooling]

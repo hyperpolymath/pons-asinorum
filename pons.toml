@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: MPL-2.0
+[identity]
+name = "pons-asinorum"
+aliases = ["Pons"]
+
+[suppress]
+# The dedicated falsifier gate deliberately inspects these known-bad examples.
+# Suppress their findings only when scanning this repository as a whole.
+paths = ["fixtures/**"]

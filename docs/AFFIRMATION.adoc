@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Evidence and maintenance affirmation
+
+Pons undertakes to distinguish implemented, configured, wired, tested, proved
+and deployed capabilities. This development branch implements a working
+scanner and records the remaining gaps; it makes no production or complete
+RSR compliance assertion. Scope is the capabilities in
+`.machine_readable/rsr-profile.a2ml`, interpreted against the standards repo.
+
+Every built-in rule must have falsifying negative examples. A fixture pass is
+bounded test evidence, not a proof over all programs. Speculative claims remain
+visibly weaker and dismissible. Resource findings state their supplied
+contract; accessibility and rights reminders do not certify legal compliance.
+
+Before release, maintainers must review the audit, rerun applicable canonical
+gates, resolve outstanding original-plan acceptance work and verify the actual
+release artefacts. No fabricated proof, API seam or deployment scaffold may
+stand in for an unimplemented capability.

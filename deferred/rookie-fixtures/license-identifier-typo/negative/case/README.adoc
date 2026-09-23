@@ -1,0 +1,2 @@
+Code licence: MPL-2.0.
+MLP is a neural network architecture.

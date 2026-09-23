@@ -1,0 +1,114 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Development audit — 2026-09-09
+
+Scope: the pons-asinorum worktree based on origin/main
+bc7af123dfdf39865625c5724d8fb366e764966b, the locally inspected canonical
+standards and companion repositories, and the explicit checks recorded below.
+The original clone had unrelated uncommitted work; this branch was developed
+in a separate worktree without changing those files.
+
+== Findings at entry
+
+The tracked repo was a ratified plan with no executable Cargo workspace.
+README said implementation had not begun. STATE and CLADE still identified
+the repo as rsr-template-repo, including production maturity and the template's
+UUID. Existing estate CI applied capabilities that Pons had not implemented.
+A recent CodeQL run failed resolving an action SHA. Community-health files
+were in AsciiDoc locations GitHub does not recognise for those checks.
+
+== Changes
+
+Four real Rust packages now implement an advisory scanner, compiled grammars,
+27 registered checks, scoped allowances, resource contracts, trace validation,
+JSON/SARIF and bounded optional tool commands. CLI help, man and the catalogue
+share their command/rule definitions. The fixture gate rejects missing positive
+or negative corpora and catches regressions against both.
+
+The RSR profile declares Rust, Bash, CLI, library, container, benchmarks and
+governance-tier. It deliberately does not declare an ABI, API service, formal
+proof, published package or reproducible Guix build. Current identity and
+status replace inherited template assertions. Recognised community files,
+pinned Rust CI, canonical governance/Hypatia calls, profile gate and Scorecard
+configuration accompany the implementation. The former placeholder Pages
+workflow now renders actual AsciiDoc guides; it does not publish a site.
+
+== Verification record
+
+* `cargo test --workspace --locked --offline`: 20 tests passed, including the
+  all-rule positive/negative falsifier gate, all five grammar variants, CLI
+  arity/threshold/error handling and report-transaction failure controls.
+* `cargo audit` refreshed the RustSec advisory database and scanned all 79
+  locked crate dependencies successfully; no vulnerabilities were reported.
+* Rust formatting and Clippy with warnings denied passed. ShellCheck,
+  Actionlint over all 11 workflows, repository aspect checks and AsciiDoc
+  rendering passed. Man output and catalogue are generated from executable
+  definitions; catalogue drift is tested.
+* `gh actions-lock --no-fix --json`: valid=true for all 11 workflows;
+  seven advisory bare-SHA traceability warnings remain. The CodeQL pin was
+  resolved against the upstream action repository, not invented.
+* Canonical `standards/scripts/check-rsr-profile.sh`: pass for declared
+  capabilities. Hypatia's recorded v2 draft score is 97.28%, 69% measurement
+  coverage, provisional=true: 42 pass, 1 fail, 18 unverified, 13 not applicable.
+  This is not an unconditional Silver or complete RSR certification.
+* The one failed criterion, 4.1.3, is an instrument disagreement: seven
+  informational checkout-pin notices from `WorkflowAudit.check_wrong_pins`
+  are counted as failure by `RsrConformance.delegated_index`. That detector
+  compares against a local known-good table; its own documentation says an
+  unknown pin is unverified, not wrong. The independent Actions lock verifier
+  accepts the pin. No scorecard result was manually changed to pass.
+* Actual optional tools: Pandoc Markdown-to-text, Aspell miss/clean controls,
+  Hunspell en_US miss control, agrep approximate/no-match controls and Tesseract
+  English text extraction passed. Hunspell's absent en_GB dictionary correctly
+  failed instead of producing an empty result. These checks concern the
+  installed versions and dictionaries, not every supported input format.
+* Built the actual Invariant Path CLI from inspected source (2c053c9). A known
+  theorem-to-production-guarantee claim returned an unreviewed suggestion
+  through Pons. No annotations were persisted. Cargo emits invariant-path-cli;
+  the adapter supports that name and the documented invariant-path name.
+* A speculative finding's SARIF output validated against the OASIS SARIF 2.1.0
+  COS02 JSON schema. This validates the sampled report shape, not all possible
+  reports or downstream viewers.
+* Rootless OCI image built successfully. Offline, read-only, capability-dropped
+  container scans returned two self-assignment findings and exit 1 on the
+  positive fixture, zero findings and exit 0 on the negative fixture. Those
+  direct scans parse the JavaScript/Rust files; encoded fixture variants are
+  exercised by the Rust falsifier gate.
+* Strict deployment preflight on this host returned exit 2 because firewall-cmd
+  is absent. Transaction tests use labelled fake deployment commands to show
+  that failed, malformed and incomplete output, or permissive SELinux, preserve
+  the previous report. They do not prove host policy enforcement.
+* Self-scan after repairs: 320 supported text files inspected, 50 source files
+  parsed, 11 other files skipped, 24 intentional fixture findings suppressed,
+  no remaining findings or diagnostics. Eleven broken live references found
+  during the first scan were repaired. This is bounded by the implemented
+  checks; encoded fixture contents are tested separately.
+* The release-build fixture-tree benchmark completed in about 26 ms wall time
+  in one local run. It is a smoke measurement, not a representative performance
+  benchmark or speedup claim; Python/TypeScript fixture decoding is outside
+  that direct CLI benchmark.
+
+Configuration does not establish a successful remote workflow run. No release
+has been tagged or published by this work. The scorecard under
+`.machine_readable/scorecards/` retains the canonical scorer's raw verdicts.
+
+== Remaining release and operational gaps
+
+* Complete Python CFG/dataflow and source-derived typestate, plus the original
+  plan's external-corpus and v0.1 acceptance gates. Current explicit contracts
+  do not satisfy those entire milestones.
+* Rerun canonical RSR scoring and distinguish pass score from measurement
+  coverage; unverified criteria prevent an unconditional compliance claim.
+* Verify new workflows on the remote branch and inspect actual results before
+  merging. Remote protections, secrets, attestations and release publication
+  are not established by local YAML validation.
+* Firewalld is absent and host SELinux is intentionally permissive. The strict
+  transaction wrapper must refuse preflight here. An enforcing-host deployment
+  needs reviewed labels and denial logs; no host mode or firewall is changed.
+* Authority Watch production feeds, LOL native export, ExifTool/C2PA and visual
+  classification remain unwired. Invariant Path is explicitly invoked through
+  its inspected CLI, not an assumed service API.
+* Repository topics mentioning CFG/dataflow/typestate describe roadmap areas,
+  not implemented coverage. Review those public tags as release scope evolves.
+
+See SCOPE.adoc for the ordered continuation plan and INTEROPERABILITY.adoc for
+verified versus proposed companion interfaces.

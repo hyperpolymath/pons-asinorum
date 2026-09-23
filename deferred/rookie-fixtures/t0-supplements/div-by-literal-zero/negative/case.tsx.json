@@ -1,0 +1,5 @@
+{
+  "license": "MPL-2.0",
+  "language": "tsx",
+  "source": "// SPDX-License-Identifier: MPL-2.0\nfunction f(x) { return x / 2; }\n"
+}

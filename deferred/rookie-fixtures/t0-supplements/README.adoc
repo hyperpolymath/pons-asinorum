@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Falsifier corpus
+
+Each built-in rule has a nonempty positive and negative directory. Rust tests
+assert that every positive case fires that rule and every negative case does
+not. Missing corpora fail the gate. Cases may be individual source files or
+repository snapshots, with an optional pons.toml.
+
+Python and TypeScript snippets are JSON records ending in .py.json, .ts.json or .tsx.json, containing language,
+license and source string fields. The Rust harness decodes them in memory and
+assigns the original .py source identity. They are still parsed with the real
+corresponding grammar. This is the encoded-fixture option in Hypatia's estate
+scanner-suppression guidance; the project contains no Python runtime code.
+Direct CLI scanning of this directory treats those JSON files as data; use the
+falsifier test to exercise all encoded examples. The CLI integration tests separately
+materialise temporary Python inputs and invoke the actual scanner.

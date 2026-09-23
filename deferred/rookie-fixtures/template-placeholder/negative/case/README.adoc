@@ -1,0 +1,3 @@
+= Example
+
+Use {{username}} in the rendering template.

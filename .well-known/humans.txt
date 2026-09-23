@@ -1,0 +1,6 @@
+SPDX-License-Identifier: CC-BY-SA-4.0
+Project: Pons Asinorum
+Author and maintainer: Jonathan D.A. Jewell
+GitHub: hyperpolymath
+Contact: j.d.a.jewell@open.ac.uk
+Language: UK English

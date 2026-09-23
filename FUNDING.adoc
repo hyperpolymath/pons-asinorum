@@ -1,58 +1,34 @@
-// SPDX-License-Identifier: MPL-2.0
-// Copyright (c) Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
-= Funding the pons Project
+// SPDX-License-Identifier: MPL-2.0 for code
+// SPDX-License-Identifier: CC-BY-SA-4.0 for documentation
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+
+= Funding
 :toc: macro
 :toclevels: 2
 
-pons is a Free and Open Source Software (FOSS) static analysis initiative stewarded by hyperpolymath.  
-This document explains how the project is funded, how contributions are used, and why community support matters.
+This document lists the supported funding platforms for the hyperpolymath and metadatastician estates.
 
-toc::[]
+== Supported Funding Platforms
 
-== Purpose of Funding
+[cols="1,1",options="header"]
+|===
+| Platform | Username
+| Buy Me a Coffee | jonathan.jewell
+| Community Bridge | jonathan-jewell
+| GitHub Sponsors | hyperpolymath
+| IndieWeb | 
+| IssueHunt | hyperpolymath
+| Ko-fi | hyperpolymath
+| LFX Crowdfunding | hyperpolymath
+| LiberaPay | hyperpolymath
+| Open Collective | jonathan-jewell
+| Patreon | cc_studio
+| Polar | hyperpolymath
+| Thanks Dev | hyperpolymath
+|===
 
-pons exists to detect dead work, self-contradiction, and missing escape hatches in codebases with mathematical precision.  
-Maintaining a high-quality static analysis tool requires:
+== Usage
 
-* Research and design work
-* Implementation across multiple languages
-* Testing infrastructure and benchmarks
-* Documentation and accessibility
-* Continuous maintenance and updates
+These platforms provide financial support mechanisms for the projects within the hyperpolymath and metadatastician estates. Contributions through any of these platforms help sustain development, maintenance, and governance of the open source projects.
 
-Community support ensures that pons remains stable, trustworthy, and effectively maintained.
-
-== Ways to Support the Project
-
-=== Transparent Funding (Recommended)
-* **GitHub Sponsors:** `hyperpolymath`  
-  Open accounting, public budgets, and transparent stewardship.
-
-=== Other Platforms
-* **Patreon:** `hyperpolymath`  
-* **LiberaPay:** recurring micro-donations
-* **Ko-fi:** one-time contributions
-
-These platforms help sustain ongoing development and governance work.
-
-== How Funds Are Used
-
-All contributions directly support:
-
-* Developer time for implementation and maintenance
-* CI/CD infrastructure costs
-* Documentation improvements
-* Community outreach and education
-* Legal and compliance review
-
-== Recognition
-
-All sponsors are recognized in the repository's SPONSORS file (if they opt in).  
-Significant contributors may receive commit access based on sustained contributions.
-
-== Contact
-
-For funding-related questions, contact: j.d.a.jewell@open.ac.uk
-
----
-*Last updated: 2026-08-13*
+For more information about contributing or sponsoring specific projects, please refer to the project's README file or contact the maintainers directly.
