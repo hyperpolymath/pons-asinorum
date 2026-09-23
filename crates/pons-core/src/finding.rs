@@ -11,6 +11,7 @@ pub enum Tier {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum EvidenceClass {
     Heuristic,
     Dataflow,
@@ -30,6 +31,7 @@ impl From<Tier> for EvidenceClass {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum Severity {
     Info,
     Warn,
@@ -41,19 +43,48 @@ pub struct Location {
     pub file: String,
     pub byte_start: usize,
     pub byte_end: usize,
-    /// 1-based; tree-sitter's `Point` is 0-based, so callers must add 1.
+    /// 1-based line number; tree-sitter's `Point` is 0-based.
     pub line_start: usize,
+    /// 1-based column measured in **UTF-16 code units**, not bytes and not
+    /// characters. SARIF 2.1.0 admits only `utf16CodeUnits` or
+    /// `unicodeCodePoints` for `columnKind` — there is no byte option — so the
+    /// column is converted once, here, and every reporter (human, JSON, SARIF)
+    /// prints that same number. One unit, one field: a second column semantics
+    /// living anywhere else is the defect this type exists to prevent.
     pub col_start: usize,
     pub line_end: usize,
+    /// 1-based, UTF-16 code units. See [`Location::col_start`].
     pub col_end: usize,
 }
 
+/// Converts a tree-sitter column to a 1-based UTF-16 code-unit column.
+///
+/// `byte` is the boundary's absolute offset into `text`; `col_bytes` is
+/// tree-sitter's column for it, which counts **bytes since the last newline**.
+/// Their difference is therefore the absolute offset of the line's first byte,
+/// so `text[line_start..byte]` is exactly the part of the line preceding the
+/// boundary — obtained without scanning the file for newlines, and without
+/// `str::lines()`, which strips `\r` and would shift every column on a CRLF
+/// file.
+///
+/// A non-char-boundary slice cannot happen for a real tree-sitter node on valid
+/// UTF-8, but `get` is used rather than indexing so a malformed input degrades
+/// to the byte column instead of panicking mid-scan.
+fn utf16_column(text: &str, byte: usize, col_bytes: usize) -> usize {
+    let line_start = byte.saturating_sub(col_bytes);
+    text.get(line_start..byte)
+        .map_or(col_bytes + 1, |prefix| prefix.encode_utf16().count() + 1)
+}
+
 impl Location {
-    /// Builds a [`Location`] from a tree-sitter node, converting its
-    /// 0-based `Point`s to the 1-based line/column convention every rule
-    /// must use — this is the one place that conversion happens, so no
-    /// rule re-derives it by hand.
-    pub fn from_node(file: impl Into<String>, node: &tree_sitter::Node) -> Self {
+    /// Builds a [`Location`] from a tree-sitter node, converting its 0-based
+    /// `Point`s to the 1-based line convention and its byte columns to the
+    /// UTF-16 code-unit columns SARIF requires — this is the one place either
+    /// conversion happens, so no rule re-derives it by hand.
+    ///
+    /// `text` is the source the node was parsed from; the column conversion
+    /// needs the bytes of the line prefix, which the node alone does not carry.
+    pub fn from_node(file: impl Into<String>, node: &tree_sitter::Node, text: &str) -> Self {
         let start = node.start_position();
         let end = node.end_position();
         Self {
@@ -61,9 +92,12 @@ impl Location {
             byte_start: node.start_byte(),
             byte_end: node.end_byte(),
             line_start: start.row + 1,
-            col_start: start.column + 1,
+            // Computed independently from each endpoint: a node spanning more
+            // than one line ends on a different line than it starts, so the end
+            // column's prefix is a different slice, not an offset from the start.
+            col_start: utf16_column(text, node.start_byte(), start.column),
             line_end: end.row + 1,
-            col_end: end.column + 1,
+            col_end: utf16_column(text, node.end_byte(), end.column),
         }
     }
 }
@@ -244,8 +278,99 @@ mod tests {
         let assignment = second_stmt.child(0).unwrap();
         let rhs = assignment.child_by_field_name("right").unwrap();
 
-        let loc = Location::from_node("y.py", &rhs);
+        let loc = Location::from_node("y.py", &rhs, src);
         assert_eq!(loc.line_start, 2);
+    }
+
+    /// Parses `src` and returns the [`Location`] of the first node whose source
+    /// text is exactly `needle`, in pre-order.
+    ///
+    /// Deliberately keyed on text rather than on a node kind: what is under
+    /// test is the column conversion, and naming a grammar kind here would make
+    /// these controls brittle across the grammar bumps ADR-0001 anticipates.
+    fn locate(src: &str, needle: &str) -> Location {
+        let mut parser = tree_sitter::Parser::new();
+        parser
+            .set_language(&tree_sitter_python::LANGUAGE.into())
+            .unwrap();
+        let tree = parser.parse(src, None).unwrap();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.utf8_text(src.as_bytes()) == Ok(needle) {
+                return Location::from_node("probe.py", &node, src);
+            }
+            for i in (0..node.child_count()).rev() {
+                stack.push(node.child(i).expect("child index is in range"));
+            }
+        }
+        panic!("no node with text {needle:?} in {src:?}");
+    }
+
+    #[test]
+    fn a_column_is_utf16_code_units_not_bytes_and_not_code_points() {
+        // Three sources identical but for the script inside the string literal.
+        // `1 / 0` begins at the 16th *character* of all three, so the expected
+        // values below are counted by hand, not derived from the code:
+        //
+        //   literal   | bytes/char | UTF-16 units/char | correct startColumn
+        //   "aaa"     |     1      |        1          | 16   <- ASCII control
+        //   "ééé"     |     2      |        1          | 16
+        //   "😀😀😀"  |     4      |        2          | 19
+        //
+        // Each row kills a different wrong unit. Byte columns would give
+        // 16/19/25; code-point columns would give 16/16/16. Only UTF-16 code
+        // units give 16/16/19, so no other reading of the field survives all
+        // three assertions — and the ASCII row is the positive control that
+        // stops the whole test passing vacuously.
+        let ascii = locate("x = \"aaa\"; y = 1 / 0\n", "1 / 0");
+        let bmp = locate("x = \"ééé\"; y = 1 / 0\n", "1 / 0");
+        let astral = locate("x = \"😀😀😀\"; y = 1 / 0\n", "1 / 0");
+
+        assert_eq!(ascii.col_start, 16, "ASCII positive control");
+        assert_eq!(
+            bmp.col_start, 16,
+            "two-byte BMP chars must not widen a column"
+        );
+        assert_eq!(
+            astral.col_start, 19,
+            "a non-BMP char is TWO UTF-16 code units"
+        );
+
+        // Issue #30 stated as the issue states it: the ASCII and multibyte
+        // files must report the same column.
+        assert_eq!(ascii.col_start, bmp.col_start);
+        // ...and the astral case must NOT match, or `unicodeCodePoints` would
+        // satisfy the assertions above just as well. SARIF admits both kinds,
+        // so the choice between them has to be tested, not assumed.
+        assert_ne!(ascii.col_start, astral.col_start);
+    }
+
+    #[test]
+    fn byte_offsets_stay_byte_based_while_columns_do_not() {
+        // `byteOffset`/`byteLength` are bytes by definition in SARIF, so they
+        // must still differ exactly where the columns agree. Converting these
+        // too would be the mirror image of #30.
+        let ascii = locate("x = \"aaa\"; y = 1 / 0\n", "1 / 0");
+        let astral = locate("x = \"😀😀😀\"; y = 1 / 0\n", "1 / 0");
+
+        assert_eq!(ascii.byte_start, 15);
+        // Three 4-byte chars stand where three 1-byte chars stood: +9 bytes.
+        assert_eq!(astral.byte_start, 24);
+        assert_eq!(ascii.col_start, astral.col_start - 3);
+    }
+
+    #[test]
+    fn the_end_column_is_measured_on_the_line_the_node_ends_on() {
+        // A node spanning two lines. If `col_end` were derived from `col_start`
+        // plus a width, the multibyte characters on the first line would
+        // corrupt it; measured against its own line's prefix, it is unaffected.
+        let src = "x = (\"éé\" +\n     \"b\")\n";
+        let loc = locate(src, "\"éé\" +\n     \"b\"");
+
+        assert_eq!(loc.line_start, 1);
+        assert_eq!(loc.line_end, 2);
+        assert_eq!(loc.col_start, 6);
+        assert_eq!(loc.col_end, 9);
     }
 
     fn loc() -> Location {
@@ -283,5 +408,35 @@ mod tests {
         };
         let f = Finding::from(wire);
         assert_eq!(f.evidence(), EvidenceClass::Heuristic);
+    }
+
+    #[test]
+    fn a_tampered_evidence_value_on_the_wire_is_discarded_not_trusted() {
+        // The test above builds `FindingWire` directly, which proves the `From`
+        // impl but cannot prove what serde does with a real JSON document that
+        // *does* carry an `evidence` key — and that is the shape an attacker or
+        // a stale cache actually presents. So: serialize a genuine T0 finding,
+        // tamper with the serialized text, and deserialize it back.
+        let original = Finding::new("r", Tier::T0, Severity::Warn, loc(), "msg", "note", None);
+        let json = serde_json::to_string(&original).expect("serializes");
+        assert!(
+            json.contains("\"evidence\":\"HEURISTIC\""),
+            "precondition: the wire carries the derived evidence class, got {json}"
+        );
+
+        let tampered = json.replace("\"evidence\":\"HEURISTIC\"", "\"evidence\":\"PROTOCOL\"");
+        // A no-op replace would make the assertion below pass vacuously.
+        assert_ne!(
+            tampered, json,
+            "the mutation must actually have been applied"
+        );
+
+        let back: Finding = serde_json::from_str(&tampered).expect("deserializes");
+        assert_eq!(
+            back.evidence(),
+            EvidenceClass::Heuristic,
+            "the wire's PROTOCOL claim must be discarded and re-derived from tier T0"
+        );
+        assert_eq!(back, original, "nothing but the tampered field may differ");
     }
 }

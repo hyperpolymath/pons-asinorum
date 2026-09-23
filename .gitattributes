@@ -120,3 +120,8 @@ Containerfile  text eol=lf
 # Lock files
 Cargo.lock  text eol=lf -diff
 flake.lock  text eol=lf -diff
+
+# Vendored third-party schemas. Verbatim copies used by the test suite; they
+# are not this repository's code and must not skew its language statistics.
+# See crates/pons-core/tests/schemas/PROVENANCE.adoc.
+crates/pons-core/tests/schemas/** linguist-vendored

@@ -1,43 +1,45 @@
 # Maintainers
 
-This file lists the current maintainers of this project.
+Maintainers of `hyperpolymath/pons-asinorum`.
 
 ## Active Maintainers
 
 | Name | GitHub | Role | Since |
 |------|--------|------|-------|
-| Metadatastician | @metadatastician | Primary | Project Start |
+| Jonathan D.A. Jewell | @hyperpolymath | Primary | Project start |
+
+This repository is solo-maintained, which is why `.github/CODEOWNERS` carries
+no owner lines (CODEOWNERS policy, Rule 1).
 
 ## Emeritus Maintainers
 
-None at this time.
+None.
 
-## Becoming a Maintainer
+## Decision record
 
-To become a maintainer:
+Design decisions are not made in this file. They are recorded as ADRs under
+`docs/adr/`, and owner decisions in `docs/OWNER-DECISIONS.adoc`. A maintainer
+may not silently reverse a ratified ADR; reversing one means superseding it
+with a new ADR that says what changed and why.
+
+## Maintainer responsibilities
+
+- Reviewing and merging pull requests
+- Managing releases and tags
+- Triaging issues
+- Upholding the honesty invariant: evidence class is fixed by analysis tier and
+  is never overridden per finding, per `docs/PLAN.adoc` Appendix B
+- Upholding the falsification gate: a rule that fires anywhere in its own
+  negative corpus is falsified, and is demoted or removed rather than excused
+
+## Becoming a maintainer
 
 1. Demonstrate consistent, high-quality contributions
 2. Show understanding of the project's goals and architecture
-3. Be active in code reviews and community discussions
+3. Be active in code reviews and discussion
 4. Be nominated by an existing maintainer
-5. Be approved by consensus of existing maintainers
 
-## Maintainer Responsibilities
+## Contact
 
-- Reviewing and merging pull requests
-- Managing releases
-- Triaging issues
-- Enforcing code standards
-- Mentoring new contributors
-- Participating in decision-making
-
-## Maintainer Expectations
-
-- Respond to issues and PRs in a timely manner
-- Follow the code of conduct
-- Be transparent in decision-making
-- Communicate clearly and respectfully
-
----
-
-*Last updated: 2026-07-18*
+Issues: https://github.com/hyperpolymath/pons-asinorum/issues
+Email: j.d.a.jewell@open.ac.uk

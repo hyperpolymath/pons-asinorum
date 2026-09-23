@@ -79,6 +79,10 @@ impl Rule for EmptyEffectLoop {
         "empty-effect-loop"
     }
 
+    fn description(&self) -> &'static str {
+        "a loop whose body is empty or does nothing observable"
+    }
+
     fn languages(&self) -> &'static [Lang] {
         LANGUAGES
     }
@@ -114,8 +118,8 @@ impl Rule for EmptyEffectLoop {
             findings.push(RawFinding::new(
                 Tier::T0,
                 Severity::Warn,
-                Location::from_node(ctx.path.display().to_string(), &stmt),
-                "empty-effect-loop",
+                Location::from_node(ctx.path.display().to_string(), &stmt, ctx.text),
+                "loop body has no observable effect",
                 "loop body is empty or a no-op — entered and exited for nothing".to_string(),
                 Some("a deliberate spin-wait on a volatile/side-effecting condition".to_string()),
             ));

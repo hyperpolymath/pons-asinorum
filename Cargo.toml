@@ -14,8 +14,16 @@ license = "MPL-2.0"
 authors = ["Jonathan D.A. Jewell"]
 
 [workspace.dependencies]
-anyhow = "1"
-serde = { version = "1", features = ["derive"] }
-walkdir = "2"
-ignore = "0.4"
-clap = { version = "4", features = ["derive"] }
+# Exact pins per docs/PLAN.adoc Appendix F. Every version here equals what
+# Cargo.lock already resolved, so these `=` pins freeze the current tree
+# rather than moving it. `walkdir` is deliberately absent: Appendix F records
+# it as transitive (via `ignore`), and no crate here names it directly.
+anyhow = "=1.0.104"
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
+ignore = "=0.4.33"
+clap = { version = "=4.6.6", features = ["derive"] }
+# Dev-only SARIF validation. `default-features = false` drops the `rustls` +
+# HTTP reference resolver: the SARIF 2.1.0 schema is bundled and self-contained,
+# so a validator that can reach the network is pure supply-chain surface.
+jsonschema = { version = "=0.57.0", default-features = false }

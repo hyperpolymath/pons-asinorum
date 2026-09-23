@@ -7,9 +7,15 @@
 pons (after the _pons asinorum_ / Euclid I.5, the "bridge of asses") is a lightweight, 
 multi-language static scanner that flags three categories of critical code issues:
 
-* **Dead work** — Code that does nothing, is unreachable, or produces no effect
-* **Self-contradiction** — Inconsistent logic or state that cannot be reconciled
-* **Missing escape hatches** — Error paths that don't properly handle failures
+* **Wasted work** — the program computes something it then discards. Dead
+  stores, a loop whose result is never read, accidental super-linear cost.
+  "Labour for nothing."
+* **Contradiction** — the program asserts two incompatible things at once.
+  Divide by zero asserts `a/0` is defined. Suppress-output-then-prompt asserts
+  both "stay silent" and "speak". An empty-effect loop asserts "this iteration
+  matters" while producing nothing.
+* **Missing escape hatches** — a third, smaller shape: a long operation with no
+  way to interrupt it. Not waste, not contradiction, but a real defect.
 
 == Design Philosophy
 
@@ -24,32 +30,51 @@ pons is the depth companion to link:https://github.com/hyperpolymath/panic-attac
 
 Every finding carries an explicit evidence class:
 
-* `PROTOCOL` — Mathematically certain, based on formal specifications
-* `DATAFLOW` — High confidence, based on concrete dataflow analysis
-* `HEURISTIC` — Moderate confidence, based on pattern matching
-* `SPECULATIVE` — Low confidence, visually demoted in all output formats
+* `PROTOCOL` (T2) — a typestate analysis found a path on which the protocol is
+  violated. A *may* result over an approximation of the real control flow: it
+  says "a violating path exists in the model", not "this will happen". The
+  strongest class pons emits, and still not a proof.
+* `DATAFLOW` (T1) — supported by an intraprocedural dataflow analysis over a
+  real control-flow graph, within that analysis's disclosed limits.
+* `HEURISTIC` (T0) — a syntactic pattern match. No flow analysis stands behind it.
+* `SPECULATIVE` (T3) — the underlying question is undecidable, or the signal is
+  weak. Visually demoted in every output format and never counted toward a
+  `--fail-on` threshold.
+
+Evidence class is fixed by the tier that produced the finding. A rule cannot
+choose its own class, and no class claims certainty — because no analysis in
+pons delivers certainty.
 
 **Key principle:** Never dress a heuristic up as a proof.
 
 == Current Status
 
-*Planning complete; implementation not started.* This repository contains the ratified v0.1.0 plan.
+*Implementation in progress toward v0.1.0.* Milestones M0-M2 are merged: the
+Rust workspace, the scanning engine, five tree-sitter grammars, the eight-rule
+T0 catalogue and the falsifier gate all build, test and run. `pons scan <path>`
+works today.
+
+Milestones M3-M8 remain: JSON and SARIF output, the Python CFG and dataflow
+engine (T1), typestate and protocols (T2), speculative rules (T3), suppression,
+and the v0.1.0 acceptance sweep. Until a tier ships, no finding carries its
+evidence class: every rule on `main` today is T0/`HEURISTIC`.
 
 == Repository Structure
 
-include::docs/structure.adoc[]
+See link:ARCHITECTURE.adoc[ARCHITECTURE.adoc] for the directory layout and the
+component breakdown.
 
 == Quick Start
 
-See link:CONTRIBUTING.md[CONTRIBUTING.md] for development setup.
+See link:.github/CONTRIBUTING.md[CONTRIBUTING.md] for development setup.
 
 == License
 
-Code: MPL-2.0-or-later (see LICENSE)
+Code: MPL-2.0 (see LICENSE)
 Docs: CC-BY-SA-4.0
 
 == Contact
 
-* Issues: https://github.com/hyperpolymath/pons/issues
-* Discussions: https://github.com/hyperpolymath/pons/discussions
+* Issues: https://github.com/hyperpolymath/pons-asinorum/issues
+* Discussions: https://github.com/hyperpolymath/pons-asinorum/discussions
 * Email: j.d.a.jewell@open.ac.uk

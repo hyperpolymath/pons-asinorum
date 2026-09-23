@@ -31,6 +31,36 @@ whenever findings exist — collides with two facts specific to pons:
   exist, or `Engine::scan` returning `Err` (I/O or parse failure). Findings,
   however many or however severe, never produce exit `2`.
 
+
+=== Refinement, 2026-09-23 (issue #29)
+
+The clause above says exit `2` covers "`Engine::scan` returning `Err` (I/O or
+parse failure)". That was written when *any* I/O failure anywhere under the
+scan root aborted the run. It no longer does, and the boundary is now drawn
+at the root:
+
+* **The root is a precondition.** A root that does not exist, or that exists
+  but cannot be enumerated, is exit `2`. Nothing is scanned and nothing is
+  reported, because the user named a tree the tool cannot see.
+* **Everything below the root is a skip, not a failure.** An unreadable
+  subdirectory, or a file that cannot be read or parsed, is recorded in
+  `ScanReport::skipped` and surfaced in `scanned.skipped` (Appendix G) and on
+  stderr. The scan completes and exits on its findings as usual.
+
+The distinction is deliberate: a scanner that discards every finding from
+every tree that enumerated perfectly well, because of one directory it could
+not open, is not usable on a real checkout — while a scanner that silently
+exits `0` having looked at nothing is worse than one that fails. Partial
+enumeration is therefore always *visible*, never silent.
+
+⚠ The walker cannot make this distinction for us. `ignore` reports a
+nonexistent root as an ordinary error entry in the walk, indistinguishable
+from an unreadable subdirectory, so the root is checked explicitly before
+the walk begins. Note that `fs::metadata` alone is not that check: it stats
+the inode and succeeds on a mode-000 directory. Only `read_dir` answers "can
+I enumerate this", and it must be guarded by `is_dir()`, since
+`pons scan foo.py` is a valid invocation.
+
 == Rationale
 
 This extends the "never dress a heuristic as a verdict" honesty rule (ADR-

@@ -60,6 +60,10 @@ impl Rule for DivByLiteralZero {
         "div-by-literal-zero"
     }
 
+    fn description(&self) -> &'static str {
+        "division or modulo whose right-hand side is a literal zero"
+    }
+
     fn languages(&self) -> &'static [Lang] {
         LANGUAGES
     }
@@ -103,7 +107,7 @@ impl Rule for DivByLiteralZero {
             findings.push(RawFinding::new(
                 Tier::T0,
                 Severity::Warn,
-                Location::from_node(ctx.path.display().to_string(), &expr),
+                Location::from_node(ctx.path.display().to_string(), &expr, ctx.text),
                 "division or modulo by a literal zero",
                 format!("right-hand side `{rhs_text}` is a constant zero"),
                 Some(

@@ -110,6 +110,10 @@ impl Rule for WhileTrueNoBreak {
         "while-true-no-break"
     }
 
+    fn description(&self) -> &'static str {
+        "an unconditional loop with no reachable break, return or throw"
+    }
+
     fn languages(&self) -> &'static [Lang] {
         LANGUAGES
     }
@@ -157,8 +161,8 @@ impl Rule for WhileTrueNoBreak {
             findings.push(RawFinding::new(
                 Tier::T0,
                 Severity::Warn,
-                Location::from_node(ctx.path.display().to_string(), &stmt),
-                "while-true-no-break",
+                Location::from_node(ctx.path.display().to_string(), &stmt, ctx.text),
+                "no way to interrupt this loop",
                 "infinite loop with no reachable break/return/throw".to_string(),
                 Some(
                     "an intentional daemon/event loop that exits via an external \

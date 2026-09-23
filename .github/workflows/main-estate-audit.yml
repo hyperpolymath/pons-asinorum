@@ -1,6 +1,4 @@
 # SPDX-License-Identifier: MPL-2.0
-# This workflow is managed by gh actions-lock.
-
 name: Central Estate CI/CD Audit
 
 on:
@@ -10,6 +8,45 @@ on:
     branches: [ "main" ]
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
+  # Was pinned to @feat/cicd-workflow-call, a branch that no longer exists on
+  # cicd-suite. An unresolvable ref is not a failing job — the run dies at
+  # startup with jobs=0, so this audit has been reporting nothing at all.
+  #
+  # Repointed at a full commit SHA on cicd-suite main. That reusable workflow
+  # invokes all 26 estate gates from hyperpolymath/cicd-suite/actions/*, which
+  # is the canonical copy: vendoring those composites into this repo would fork
+  # a snapshot that is already stale (cicd-suite has since replaced
+  # zig-hexadeca-check with zig-unified-api-adapter-check).
+  #
+  # The SHA below is cicd-suite main as of 2026-09-22. Choosing it is necessary
+  # and NOT sufficient, and the reason is the whole point of this comment.
+  #
+  # That reusable invokes its 26 gates by BRANCH ref:
+  #
+  #     uses: hyperpolymath/cicd-suite/actions/<gate>@main
+  #
+  # Under gh-actions-lock a branch ref is trusted from the lockfile, and the
+  # runner executes THE COMMIT THE LOCKFILE NAMES, not the branch tip. So the
+  # gates this repo actually runs are chosen by cicd-suite's actions.lock AT
+  # THE SHA BELOW -- not by the SHA below.
+  #
+  # Measured, not assumed. Pinning 0c1bc9f (the head of a run whose `Gate
+  # controls` job executed 14 steps) left this audit dying EXACTLY as before:
+  # run 35787980954, Required Files Gate, 82ms, silent exit 1, 25 gates
+  # skipped. The lock at 0c1bc9f still pinned cicd-suite@main at 9adb3908 --
+  # four commits stale, carrying ZERO of the harness `-e` guards. The cure had
+  # merged and reached nobody.
+  #
+  # 6cb08dd is cicd-suite#35, which re-pinned that entry at 0c1bc9f (3 guards
+  # in required-files-check, 1 in spdx-license-check; 9adb3908 had 0 and 0).
+  #
+  # When re-pinning: check the LOCK at the candidate SHA, not the SHA's own
+  # tree, and check the STEP COUNT, not the square. cicd-suite#35 added
+  # tests/lock-transitive-closure.sh so that drift goes red there rather than
+  # silently here.
   call-estate-audit:
-    uses: hyperpolymath/cicd-suite/.github/workflows/main-estate-audit.yml@feat/cicd-workflow-call
+    uses: hyperpolymath/cicd-suite/.github/workflows/main-estate-audit.yml@6cb08dde98b70d20ad2d506e77dd6a517503eb08

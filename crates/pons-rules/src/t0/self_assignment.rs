@@ -63,6 +63,10 @@ impl Rule for SelfAssignment {
         "self-assignment"
     }
 
+    fn description(&self) -> &'static str {
+        "an identifier assigned to itself, doing no work"
+    }
+
     fn languages(&self) -> &'static [Lang] {
         LANGUAGES
     }
@@ -102,8 +106,8 @@ impl Rule for SelfAssignment {
             findings.push(RawFinding::new(
                 Tier::T0,
                 Severity::Warn,
-                Location::from_node(ctx.path.display().to_string(), &stmt),
-                "self-assignment",
+                Location::from_node(ctx.path.display().to_string(), &stmt, ctx.text),
+                "variable is assigned to itself",
                 format!("`{left_name}` is assigned to itself — this has no effect"),
                 Some(
                     "a property/attribute setter with side effects, or a volatile read \

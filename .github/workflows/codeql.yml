@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   analyze:
-    name: CodeQL Analysis
+    name: CodeQL Analysis (${{ matrix.language }})
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -26,20 +26,33 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # `actions` scans the workflows themselves.
           - language: actions
             build-mode: none
+          # `rust` is the point of this repository. It was never scanned before:
+          # the matrix listed `actions` only, so CodeQL had never once opened
+          # crates/. Rust is public preview from CodeQL 2.22.1; the bundle
+          # carried by codeql-action v4.38.1 is newer, so no experimental
+          # feature flag is needed. build-mode is deliberately omitted — the
+          # upstream Rust check (pr-checks/checks/rust.yml) passes only
+          # `languages: rust`, and an empty input reads as unset.
+          - language: rust
     steps:
       - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # Pinned to the COMMIT this tag dereferences to, not the tag object's own
+      # sha. The previous pin (29b1f65c…) resolved to nothing at all — GitHub
+      # returns 422 for it — which is why every CodeQL run died.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@29b1f65c1f735799893313399435a59f54045865 # v3
+        uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0 (4.38.1 blocked estate-wide; nexia-list#100)
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@29b1f65c1f735799893313399435a59f54045865 # v3
-
+      # No Autobuild step: both matrix entries are buildless. Autobuild under
+      # build-mode `none` is a no-op, and upstream's Rust check omits it.
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@29b1f65c1f735799893313399435a59f54045865 # v3
+        uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0 (4.38.1 blocked estate-wide; nexia-list#100)
+        with:
+          category: "/language:${{ matrix.language }}"

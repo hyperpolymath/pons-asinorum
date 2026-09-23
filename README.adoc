@@ -27,9 +27,18 @@ link:docs/adr/0004-companion-to-panic-attack.adoc[ADR-0004].
 
 == Status
 
-*Planning complete; implementation not started.* This repository currently
-contains the ratified v0.1.0 plan, written so that implementation agents can
-execute it without re-opening any design question.
+*Implementation in progress toward v0.1.0.* Milestones M0-M2 are merged: the
+Rust workspace, the scanning engine, the tree-sitter substrate for five
+languages, the eight-rule T0 catalogue and the falsifier gate all build, test
+and run. `pons scan <path>` works today and reports real findings.
+
+Milestones M3-M8 remain: machine-readable output (JSON + SARIF), the Python
+CFG and dataflow engine (T1), typestate and protocols (T2), speculative rules
+(T3), suppression, and the v0.1.0 acceptance sweep.
+
+The ratified plan is still the authority for everything not yet built, and is
+written so that implementation agents can execute it without re-opening any
+design question.
 
 Read in this order:
 

@@ -253,6 +253,10 @@ impl Rule for StringConcatInLoop {
         "string-concat-in-loop"
     }
 
+    fn description(&self) -> &'static str {
+        "repeated string concatenation inside a loop, quadratic where a join is linear"
+    }
+
     fn languages(&self) -> &'static [Lang] {
         LANGUAGES
     }
@@ -337,8 +341,8 @@ impl Rule for StringConcatInLoop {
             findings.push(RawFinding::new(
                 Tier::T0,
                 Severity::Warn,
-                Location::from_node(ctx.path.display().to_string(), &assign),
-                "string-concat-in-loop",
+                Location::from_node(ctx.path.display().to_string(), &assign, ctx.text),
+                "string built by repeated concatenation in a loop",
                 "string accumulation inside a loop rebuilds the whole string each iteration \
                  (quadratic)"
                     .to_string(),

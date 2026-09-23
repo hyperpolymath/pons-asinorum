@@ -1,0 +1,166 @@
+== Architecture
+
+=== Overview
+
+_pons-asinorum_ is a depth-first, multi-language static scanner that
+flags wasted work, self-contradiction, and missing escape hatches. The
+architecture is designed around the substrate decision (ADR-0001):
+tree-sitter native with a Rust workspace.
+
+=== Core Design Decisions
+
+==== Substrate: tree-sitter native + Rust
+
+* *Decision*: ADR-0001 accepted tree-sitter native with Rust workspace
+* *Rationale*:
+** Evidence class must be structural, not conventional
+** T2 typestate is not expressible in Semgrep
+** T1 needs custom CFG anyway
+** Deployment as single static binary (like panic-attack)
+** Avoids LGPL-2.1 licence gravity from Semgrep
+
+==== T1 Language: Python
+
+* *Decision*: ADR-0002 selects Python as the first language
+* *Rationale*: Clear CFG + dataflow design with complete specification
+
+==== Protocol Spec and Typestate: TOML format
+
+* *Decision*: ADR-0003 defines protocol spec format (TOML) and typestate
+semantics
+* *Rationale*: Standardized, machine-readable specification format
+
+=== High-Level Architecture
+
+....
+.
+├── docs/                  # Architecture Decision Records (ADRs) and planning
+│   └── adr/               # ADR-0001 through ADR-0005
+│   ├── 0001-substrate.adoc
+│   ├── 0002-t1-language-and-cfg.adoc
+│   ├── 0003-protocol-spec-and-typestate.adoc
+│   ├── 0004-companion-to-panic-attack.adoc
+│   └── 0005-cli-exit-code-contract.adoc
+├── docs/PLAN.adoc          # Milestone-by-milestone implementation plan
+├── docs/pons-kickoff.adoc  # Mission, species, decidability wall, evidence tiers
+├── .machine_readable/      # RSR compliance infrastructure
+│   ├── contractiles/      # Machine-readable contracts
+│   ├── descriptiles/      # Machine-readable descriptions
+│   └── scripts/           # Verification and lifecycle scripts
+├── tests/                 # Shell test suites (e2e runs in CI)
+│   ├── e2e.sh             # End-to-end validation of artefacts
+│   ├── aspect_tests.sh    # Cross-cutting architectural invariants
+│   └── workflows/         # CI workflow validation
+├── benches/               # Benchmarks (not yet wired into CI)
+│   └── pons_bench.sh      # Performance benchmarks
+├── LICENSE                # MPL-2.0 for source code
+├── LICENSE.adoc           # Licence documentation
+├── LICENSES/              # Full licence texts
+├── README.adoc            # Project documentation
+└── .github/               # GitHub configuration
+    ├── workflows/         # CI/CD workflows
+    ├── CODEOWNERS         # No owner lines (Rule 1 - solo maintained)
+    ├── FUNDING.yml        # Funding configuration
+    └── dependabot.yml     # Dependency updates
+....
+
+=== Component Architecture
+
+Components marked *built* exist on `main` and are exercised by the test suite.
+Components marked *planned* carry the milestone that delivers them; see
+`docs/PLAN.adoc`.
+
+[arabic]
+. *Parser Layer* — *built*
+* tree-sitter grammars for Python, JavaScript, TypeScript, TSX and Rust
+* Grammar crate versions pinned exactly (PLAN Appendix F)
+* `.jsx` maps to the JavaScript grammar; `.tsx` to the TSX grammar
+. *CFG + Dataflow Engine* — *planned (M4, ADR-0002)*
+* Per-language CFG extraction, Python first
+* Forward may-be-unbound analysis for `+read-before-init+`
+* Backward live-variables analysis for `+dead-store+`
+* The OPAQUE hatch: no T1 finding is reported for a function that can
+  rewrite its own scope (`exec`, `eval`, `locals`, wildcard import)
+. *Typestate Engine* — *planned (M5, ADR-0003)*
+* Forward per-path may-analysis over the CFG, one instance key at a time
+. *Rule Engine* — *built (T0 catalogue; higher tiers planned)*
+* Evidence class is fixed by tier and cannot be overridden per finding
+* Negative corpus for every rule (falsification testing)
+* A rule that fires anywhere in its own negative corpus is falsified, and is
+  demoted or removed
+. *Reporter*
+* Human-readable output with SPECULATIVE visually demoted — *built*
+* JSON and SARIF output — *planned (M3)*
+
+=== Evidence Classes
+
+The core architectural invariant is the evidence class taxonomy. Evidence class
+is a function of the analysis tier that produced the finding, and is never set
+per finding:
+
+* *PROTOCOL* (T2): the typestate analysis found a path on which the protocol is
+  violated. This is a *may* result over an approximation of the real control
+  flow — it means "a violating path exists in the model", not "this will
+  happen". It is the strongest class pons emits, and it is still not a proof.
+* *DATAFLOW* (T1): supported by an intraprocedural dataflow analysis over a
+  real CFG, within that analysis's disclosed limits.
+* *HEURISTIC* (T0): a syntactic pattern match. No flow analysis stands behind it.
+* *SPECULATIVE* (T3): the underlying question is undecidable or the signal is
+  weak. Always visually demoted, never counted toward a `--fail-on` threshold.
+
+*Never dress a heuristic up as a proof.* No class above claims certainty,
+because no analysis in pons delivers certainty.
+
+Every finding carries its evidence class, and the reporter enforces
+visual distinction between classes, especially demoting SPECULATIVE
+findings.
+
+=== Data Flow
+
+....
+Input Source → Parser (tree-sitter) → AST → CFG Extraction → Dataflow Analysis
+                                                      ↓
+                                               Typestate Tracking → Rule Matching
+                                                      ↓
+                                               Finding Generation → Reporter
+....
+
+=== Separation of Concerns
+
+* *Engine*: Core analysis logic (Rust)
+* *Rules*: Rule definitions and negative corpora
+* *Reporter*: Output formatting and visualization
+* *CLI*: Command-line interface
+
+=== Test Strategy
+
+* *Positive fixtures*: Test that rules fire on known-bad code
+* *Negative fixtures*: Test that rules do NOT fire on known-good code
+* *Falsification testing*: Rules that fire on negative corpus are
+demoted/removed
+* *Evidence class validation*: Verify correct classification
+
+=== Deployment
+
+* Single static binary (inherited from panic-attack design)
+* Standalone mode: scans arbitrary source on air-gapped machines
+* No external runtime dependencies (tree-sitter grammars compiled in)
+
+=== Security Considerations
+
+* No network access required for scanning
+* Grammars pinned to exact versions
+* All external dependencies audited
+* No secrets in repository
+
+=== Maintainability
+
+* All public APIs documented
+* Configuration externalized
+* Consistent style guidelines
+* Pull requests require review and CI checks
+* Issues tracked transparently
+
+'''''
+
+_Last updated: 2026-08-13_
