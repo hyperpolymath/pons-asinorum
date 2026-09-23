@@ -10,6 +10,12 @@
     "languages": [
       "python",
       "typescript"
+    ],
+    "skipped": [
+      {
+        "path": "app/broken.py",
+        "reason": "could not read: No such file or directory (os error 2)"
+      }
     ]
   },
   "counts": {

@@ -363,7 +363,10 @@ unless `--lang` forces one.
 {
   "schema_version": "0.1.0",
   "tool": { "name": "pons", "version": "<cargo pkg version>" },
-  "scanned": { "root": "<abs path>", "files": 123, "languages": ["python","rust"] },
+  "scanned": { "root": "<root exactly as given on the command line>",
+               "files": 123, "languages": ["python","rust"],
+               "skipped": [ { "path": "app/broken.py",
+                              "reason": "could not read: No such file or directory (os error 2)" } ] },
   "counts": { "by_evidence": { "HEURISTIC": 4, "DATAFLOW": 2,
                                "PROTOCOL": 1, "SPECULATIVE": 3 },
               "total": 10 },
@@ -388,3 +391,14 @@ unless `--lang` forces one.
 Field order stable (golden-file tested). `counter_condition` is `null` when
 absent, never omitted. This envelope is compatible in shape with panic-attack's
 JSON habit (`schema_version` + typed arrays), easing the ADR-0004 records sink.
+
+`scanned.skipped` names every part of the tree that was found but not analysed:
+a subdirectory the walker could not enumerate, a file that could not be read, a
+file that could not be parsed. It is an **empty array when nothing was skipped,
+never omitted** — a consumer must be able to tell "clean" from "the key is
+missing so I cannot tell". One unreadable subdirectory is a skip, not a fatal
+error (#29); an unopenable **root** is still an operational error and exits 2,
+per ADR-0005. `scanned.root` is the root exactly as the caller spelled it and is
+deliberately not canonicalised, so a relative invocation stays relative — the
+absolute form would be a build-machine detail, the same one Appendix E strips
+out of `artifactLocation.uri`.

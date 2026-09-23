@@ -18,7 +18,7 @@
 
 use serde::Serialize;
 
-use crate::engine::ScanReport;
+use crate::engine::{ScanReport, SkippedFile};
 use crate::finding::{EvidenceClass, Finding};
 
 /// Version of the envelope itself, not of the tool.
@@ -44,6 +44,12 @@ struct Scanned<'a> {
     root: &'a str,
     files: usize,
     languages: Vec<&'static str>,
+    /// What the scan did not look at, and why: a subdirectory that
+    /// could not be enumerated, a file that could not be read, a file
+    /// that could not be parsed. Empty array when nothing was skipped,
+    /// never omitted — a consumer must be able to distinguish "clean"
+    /// from "the key is missing so I cannot tell".
+    skipped: &'a [SkippedFile],
 }
 
 #[derive(Serialize)]
@@ -101,6 +107,7 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
             root: &report.root,
             files: report.files_scanned,
             languages: report.languages.iter().map(|l| l.name()).collect(),
+            skipped: &report.skipped,
         },
         counts: Counts {
             by_evidence: ByEvidence::tally(&report.findings),
@@ -177,6 +184,40 @@ mod tests {
             "Appendix G: counter_condition is null when absent, never omitted"
         );
         assert!(f["counter_condition"].is_null());
+    }
+
+    #[test]
+    fn skipped_is_an_empty_array_when_nothing_was_skipped_never_omitted() {
+        // A consumer must be able to tell "this scan skipped nothing" from
+        // "this envelope predates the field, so I cannot tell". Serde would
+        // happily omit an empty slice under `skip_serializing_if`; Appendix G
+        // says it must not, so this is the control that keeps it out.
+        let mut report = fixture::report();
+        report.skipped.clear();
+        let out = render(&report).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
+
+        let scanned = parsed["scanned"].as_object().unwrap();
+        assert!(
+            scanned.contains_key("skipped"),
+            "scanned.skipped vanished when the scan was clean"
+        );
+        assert_eq!(parsed["scanned"]["skipped"].as_array().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn a_skipped_entry_carries_the_path_and_the_reason() {
+        let out = render(&fixture::report()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
+        let first = &parsed["scanned"]["skipped"][0];
+        assert_eq!(first["path"], "app/broken.py");
+        assert!(
+            first["reason"]
+                .as_str()
+                .unwrap()
+                .starts_with("could not read"),
+            "a skip without a reason is not actionable: {first:?}"
+        );
     }
 
     #[test]
