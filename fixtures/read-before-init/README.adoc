@@ -1,0 +1,23 @@
+= Fixtures: read-before-init
+
+T1 (DATAFLOW), Python only, `WARN` uniformly: a may-analysis, so a finding
+means "on at least one path", never "on every path". One case per file, as
+in `dead-store/`.
+
+Positive fixtures: a read after an `else`-less `if` (`else_less_if.py`); a
+`for` target read after a loop that may not run
+(`for_target_after_loop.py`); `count += 1` with no prior binding, which
+Python compiles to a read (`aug_assign_unbound.py`); a handler reading a
+name the `try` body may not have bound yet (`handler_reads_try_name.py`);
+and `opaque_control.py`, the known-answer twin of `negative/opaque_exec.py`.
+
+Negative fixtures, and why each is a legitimate non-finding:
+
+* `global_name.py` — a `global` name is not a local, so it is never
+  checked.
+* `bound_on_every_path.py` — both arms bind `y` before the join.
+* `comprehension_var_shadow.py` — a comprehension's `for` target lives in
+  its own scope; the outer `x` bound afterwards is a different name.
+* `opaque_exec.py` — `exec` can bind `y`, so the function is OPAQUE. Its twin
+  in `positive/` differs only in the call and does report.
+* `module_level.py` — module-level code is not an analysis unit in v0.1.0.

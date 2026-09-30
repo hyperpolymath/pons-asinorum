@@ -245,6 +245,24 @@ impl RawFinding {
         }
     }
 
+    // Read-only views, for rule tests that must pin a severity or a
+    // counter-condition rather than only a count. There are no setters.
+    pub fn tier(&self) -> Tier {
+        self.tier
+    }
+
+    pub fn severity(&self) -> Severity {
+        self.severity
+    }
+
+    pub fn location(&self) -> &Location {
+        &self.location
+    }
+
+    pub fn counter_condition(&self) -> Option<&str> {
+        self.counter_condition.as_deref()
+    }
+
     pub(crate) fn into_finding(self, rule_id: impl Into<String>) -> Finding {
         Finding::new(
             rule_id,

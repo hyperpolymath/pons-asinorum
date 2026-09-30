@@ -1,0 +1,27 @@
+= Fixtures: dead-store
+
+T1 (DATAFLOW), Python only. The corpus is ADR-0002's, one case per file,
+because the falsifier asks each positive file for at least one finding and
+a file holding several cases would prove only one of them.
+
+Positive fixtures: a plain overwritten store (`plain.py`, `WARN`); a dead
+store whose right-hand side is a call (`rhs_call.py`, reported at `INFO`
+with the "drop the binding, not the call" counter-condition); a
+redefinition before any use (`redefined_before_use.py`); and
+`opaque_control.py`, the known-answer twin of `negative/opaque_exec.py`.
+
+Negative fixtures, and why each is a legitimate non-finding:
+
+* `underscore_target.py` — `_` and `_`-prefixed names are declared
+  throwaways; suppressing them is ADR-0002's first counter-condition.
+* `read_only_in_except.py` — both stores are read by the handler, which a
+  raise in the `try` body can reach from either point.
+* `loop_var_after_loop.py` — the loop may not run, so `return last` can read
+  the initial `None`.
+* `conditional_use.py` — read on one branch is read; liveness is a
+  may-analysis.
+* `opaque_exec.py` — `exec` can read any local by name, so the function is
+  OPAQUE and no T1 rule sees it. Silent *because of* `exec`: its twin in
+  `positive/` differs only in the call and does report.
+* `module_level.py` — module-level names are importable from elsewhere, so a
+  store to one is never provably dead; only function bodies are units.
