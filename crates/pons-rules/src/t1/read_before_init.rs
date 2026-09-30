@@ -43,6 +43,8 @@ impl Rule for ReadBeforeInit {
         LANGUAGES
     }
 
+    /// Reports possible unbound local reads in analysable functions as `WARN`,
+    /// without counter-conditions. Opaque functions produce no findings.
     fn check(&self, ctx: &RuleCtx) -> Vec<RawFinding> {
         let mut findings = Vec::new();
         for unit in ctx.units() {

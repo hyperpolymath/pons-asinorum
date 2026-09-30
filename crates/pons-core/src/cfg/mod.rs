@@ -107,19 +107,25 @@ impl FunctionCfg {
     pub fn name(&self) -> &str {
         &self.name
     }
+    /// The source span of the whole function definition, including its header.
     pub fn span(&self) -> &Location {
         &self.span
     }
+    /// Local names indexed by [`LocalId`], including parameters but excluding
+    /// names declared `global` or `nonlocal`.
     pub fn locals(&self) -> &[String] {
         &self.locals
     }
+    /// Local IDs bound by the function's parameters on entry.
     pub fn params(&self) -> &[LocalId] {
         &self.params
     }
+    /// Blocks indexed by [`BlockId`], including entry, exit and unreachable code.
     pub fn blocks(&self) -> &[BasicBlock] {
         &self.blocks
     }
 
+    /// Predecessors indexed by destination block ID, including unreachable edges.
     pub fn preds(&self) -> Vec<Vec<BlockId>> {
         let mut preds = vec![Vec::new(); self.blocks.len()];
         for (b, block) in self.blocks.iter().enumerate() {
@@ -146,6 +152,11 @@ impl FunctionCfg {
     }
 
     /// A stable, human-diffable rendering for the snapshot tests.
+    /// `text` must be the complete source used to build this CFG.
+    ///
+    /// # Panics
+    /// Panics if a stored statement byte range is out of bounds or does not
+    /// lie on UTF-8 boundaries in `text`.
     pub fn render(&self, text: &str) -> String {
         use std::fmt::Write;
         let mut out = String::new();
@@ -251,6 +262,16 @@ pub enum FunctionUnit {
 }
 
 /// Every function unit in a Python module, in source order.
+/// Includes nested functions and methods; module and class bodies and lambdas
+/// are not units. Unsupported functions are returned as opaque units with a
+/// reason, including functions with parse errors or more than [`MAX_LOCALS`].
+///
+/// `tree` must be the Python parse of `text`. `path` labels source locations;
+/// no file is read.
+///
+/// # Panics
+/// Panics if a node's byte range cannot be sliced from `text`, for example
+/// because the tree and source do not match.
 pub fn build_units(path: &Path, text: &str, tree: &Tree) -> Vec<FunctionUnit> {
     let file = path.display().to_string();
     let root = tree.root_node();
@@ -289,6 +310,7 @@ pub fn build_units(path: &Path, text: &str, tree: &Tree) -> Vec<FunctionUnit> {
         .collect()
 }
 
+/// Appends function definitions in source order, descending into nested scopes.
 fn collect_functions<'t>(node: Node<'t>, out: &mut Vec<Node<'t>>) {
     if node.kind() == "function_definition" {
         out.push(node);
@@ -312,6 +334,8 @@ fn contains_kind(node: Node<'_>, kind: &str) -> bool {
 
 const DYNAMIC_SCOPE: &[&str] = &["exec", "eval", "locals", "globals", "vars"];
 
+/// Returns the first opacity trigger, before the separate local-count check.
+/// Frame-introspection names are matched textually anywhere in the body.
 fn opaque_reason(func: Node<'_>, text: &str, module_has_wildcard: bool) -> Option<OpaqueReason> {
     if func.has_error() {
         return Some(OpaqueReason::ParseError);
@@ -375,6 +399,9 @@ fn own_body_trigger(node: Node<'_>, text: &str) -> Option<OpaqueReason> {
 ///
 /// The `*` token does survive as an anonymous child, so the discrimination is
 /// structural rather than textual.
+///
+/// # Panics
+/// Panics in debug builds if the node is not an `except_clause`.
 pub(crate) fn is_except_group(except_clause: Node<'_>) -> bool {
     debug_assert_eq!(except_clause.kind(), "except_clause");
     let mut cursor = except_clause.walk();

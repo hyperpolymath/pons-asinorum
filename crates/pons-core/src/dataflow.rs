@@ -32,12 +32,14 @@ pub struct LocalSet {
 }
 
 impl LocalSet {
+    /// An empty set for `n` locals, with capacity rounded up to 64-bit words.
     pub fn empty(n: usize) -> Self {
         Self {
             words: vec![0; n.div_ceil(64)],
         }
     }
 
+    /// Contains exactly the local IDs in `0..n`; any padding bits stay clear.
     pub fn full(n: usize) -> Self {
         let mut s = Self::empty(n);
         for id in 0..n {
@@ -46,19 +48,33 @@ impl LocalSet {
         s
     }
 
+    /// Tests membership, including IDs in the allocated padding.
+    ///
+    /// # Panics
+    /// Panics if `id / 64` is outside the allocated words.
     pub fn contains(&self, id: LocalId) -> bool {
         self.words[id / 64] & (1 << (id % 64)) != 0
     }
 
+    /// Adds a local without growing the set's capacity.
+    ///
+    /// # Panics
+    /// Panics if `id / 64` is outside the allocated words.
     pub fn insert(&mut self, id: LocalId) {
         self.words[id / 64] |= 1 << (id % 64);
     }
 
+    /// Clears a local's membership; an absent local is unchanged.
+    ///
+    /// # Panics
+    /// Panics if `id / 64` is outside the allocated words.
     pub fn remove(&mut self, id: LocalId) {
         self.words[id / 64] &= !(1 << (id % 64));
     }
 
     /// `self ∪= other`; true if `self` grew.
+    /// Only overlapping words are merged if capacities differ; `self` is
+    /// never resized and its remaining words are unchanged.
     pub fn union_with(&mut self, other: &LocalSet) -> bool {
         let mut changed = false;
         for (w, o) in self.words.iter_mut().zip(&other.words) {
@@ -81,6 +97,7 @@ pub trait Problem {
     const DIRECTION: Direction;
     /// The fact at `ENTRY`'s start (forward) or `EXIT`'s end (backward).
     fn boundary(&self, cfg: &FunctionCfg) -> LocalSet;
+    /// Updates the fact across one event in the analysis's direction.
     fn transfer(&self, event: &Event, state: &mut LocalSet);
 }
 
@@ -105,6 +122,12 @@ fn events_of<P: Problem>(cfg: &FunctionCfg, block: BlockId) -> Vec<&Event> {
     }
 }
 
+/// Solves a gen/kill problem using union at joins, returning facts indexed by
+/// block ID in program order. All blocks participate, including unreachable
+/// ones; callers must filter reachability when reporting findings.
+///
+/// The problem must use sets sized for `cfg.locals()` and monotone transfers
+/// for convergence. Panics from the problem's callbacks propagate to the caller.
 pub fn solve<P: Problem>(cfg: &FunctionCfg, problem: &P) -> Solution {
     let n_locals = cfg.locals().len();
     let n_blocks = cfg.blocks().len();
@@ -172,6 +195,12 @@ pub fn solve<P: Problem>(cfg: &FunctionCfg, problem: &P) -> Solution {
 /// Walks `block` in the analysis's direction, calling `visit` with each event
 /// and the fact *before that event's transfer* — so, in program order, the
 /// fact just before the event (forward) or just after it (backward).
+/// `solution` must come from the same CFG and problem; unreachable blocks are
+/// replayed too if requested.
+///
+/// # Panics
+/// Panics if `block` is outside the CFG or the selected solution vector.
+/// Panics from `visit` or the transfer function propagate to the caller.
 pub fn replay<'c, P: Problem>(
     cfg: &'c FunctionCfg,
     problem: &P,
@@ -234,7 +263,8 @@ impl Problem for MayUnbound {
 }
 
 /// Every reportable store whose value no path reads, one per source location.
-/// A store in a copied `finally` counts only if it is dead in every copy.
+/// A store in a copied `finally` counts only if it is dead in every reachable
+/// copy. Unreachable stores are omitted; results are ordered by byte offset.
 pub fn dead_stores(cfg: &FunctionCfg) -> Vec<(&Event, DefReport)> {
     let solution = solve(cfg, &Liveness);
     let reachable = cfg.reachable();
@@ -263,7 +293,8 @@ pub fn dead_stores(cfg: &FunctionCfg) -> Vec<(&Event, DefReport)> {
 }
 
 /// Every checkable read some path reaches with the name unbound, one per
-/// source location.
+/// source location, ordered by byte offset. Unreachable reads are omitted;
+/// a read in any reachable `finally` copy is enough to include the location.
 pub fn unbound_reads(cfg: &FunctionCfg) -> Vec<&Event> {
     let solution = solve(cfg, &MayUnbound);
     let reachable = cfg.reachable();

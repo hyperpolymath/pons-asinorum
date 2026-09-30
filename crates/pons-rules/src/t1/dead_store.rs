@@ -43,6 +43,10 @@ impl Rule for DeadStore {
         LANGUAGES
     }
 
+    /// Reports dead stores in analysable functions, suppressing `_`-prefixed
+    /// locals. A call, `await`, `yield` or walrus outside lambdas in the RHS
+    /// yields `INFO` with a counter-condition; other stores yield `WARN`.
+    /// Opaque functions produce no findings.
     fn check(&self, ctx: &RuleCtx) -> Vec<RawFinding> {
         let mut findings = Vec::new();
         for unit in ctx.units() {

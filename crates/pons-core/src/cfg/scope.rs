@@ -29,6 +29,7 @@ pub(super) fn is_nested_scope(kind: &str) -> bool {
     matches!(kind, "function_definition" | "class_definition" | "lambda")
 }
 
+/// Recognises comprehension scopes, including lazy generator expressions.
 pub(super) fn is_comprehension(kind: &str) -> bool {
     matches!(
         kind,
@@ -39,6 +40,13 @@ pub(super) fn is_comprehension(kind: &str) -> bool {
     )
 }
 
+/// Collects parameters, local bindings and conservative nested-scope captures.
+/// Global and nonlocal declarations exclude names throughout the function.
+/// `text` must be the source from which `func` was parsed.
+///
+/// # Panics
+/// Panics if `func` has no body or a node's byte range cannot be sliced from
+/// `text`.
 pub(super) fn analyse(func: Node<'_>, text: &str) -> Scope {
     let body = func
         .child_by_field_name("body")
@@ -96,6 +104,7 @@ fn named_children<'t>(node: Node<'t>) -> Vec<Node<'t>> {
     node.named_children(&mut cursor).collect()
 }
 
+/// Adds global and nonlocal declarations without entering nested scopes.
 fn collect_declared(node: Node<'_>, text: &str, out: &mut HashSet<String>) {
     match node.kind() {
         "global_statement" | "nonlocal_statement" => {
@@ -137,6 +146,7 @@ fn collect_params(params: Node<'_>, text: &str, out: &mut Vec<String>) {
     }
 }
 
+/// Finds a parameter identifier, looking through `*args` and `**kwargs` wrappers.
 fn first_identifier(node: Node<'_>) -> Option<Node<'_>> {
     for child in named_children(node) {
         if child.kind() == "identifier" {
@@ -222,6 +232,7 @@ pub(super) fn is_keyword_pattern_name(ident: Node<'_>) -> bool {
         .is_some_and(|p| p.kind() == "keyword_pattern" && p.named_child(0) == Some(ident))
 }
 
+/// Appends all identifier nodes in source order, including nested scopes.
 pub(super) fn identifiers_in<'t>(node: Node<'t>, out: &mut Vec<Node<'t>>) {
     if node.kind() == "identifier" {
         out.push(node);
@@ -236,6 +247,9 @@ fn push_all(nodes: &[Node<'_>], text: &str, out: &mut Vec<String>) {
     out.extend(nodes.iter().map(|n| text_of(*n, text).to_string()));
 }
 
+/// Appends names that establish local scope, including annotations and `del`.
+/// Nested definitions contribute their names; comprehensions contribute only
+/// walrus bindings. Repeated names are retained for the caller to deduplicate.
 fn collect_bound(node: Node<'_>, text: &str, out: &mut Vec<String>) {
     let mut targets = Vec::new();
     match node.kind() {
@@ -310,6 +324,7 @@ fn collect_bound(node: Node<'_>, text: &str, out: &mut Vec<String>) {
     push_all(&targets, text, out);
 }
 
+/// Appends walrus targets, descending into comprehensions but not nested scopes.
 fn collect_walrus(node: Node<'_>, text: &str, out: &mut Vec<String>) {
     match node.kind() {
         kind if is_nested_scope(kind) => {}
@@ -329,6 +344,8 @@ fn collect_walrus(node: Node<'_>, text: &str, out: &mut Vec<String>) {
     }
 }
 
+/// Adds every name mentioned inside a nested scope as a possible capture,
+/// without resolving whether that scope shadows it.
 fn collect_nested_mentions(node: Node<'_>, text: &str, out: &mut HashSet<String>) {
     if is_nested_scope(node.kind()) {
         let mut idents = Vec::new();

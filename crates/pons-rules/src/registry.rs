@@ -20,6 +20,7 @@ use crate::t1::read_before_init::ReadBeforeInit;
 pub struct RuleRegistry;
 
 impl RuleRegistry {
+    /// Creates the complete rule set in catalogue order, including both T1 rules.
     pub fn all() -> Vec<Box<dyn Rule>> {
         vec![
             Box::new(DivByLiteralZero::new()),
