@@ -1,0 +1,23 @@
+fn f
+locals: a b e c
+params: 
+b0 (entry) -> [b4]
+b1 (exit) -> []
+b2 -> [b1]
+  L10 `cleanup(a)` {use a}
+b3 -> [b2 b8]
+  L5 `except E as e:` {def e}
+b4 -> [b3 b2 b5]
+b5 -> [b3 b2 b6]
+  L3 `a = g()` {def!* a}
+b6 -> [b3 b2 b7]
+  L4 `b = a` {use a, def! b}
+b7 -> [b2 b9]
+  L8 `c = 1` {def! c}
+b8 -> [b2 b9]
+  L6 `print(e, a)` {use e, use a}
+  L5 `e` {kill e}
+b9 -> [b1]
+  L10 `cleanup(a)` {use a}
+  L11 `return a` {use a}
+b10 (unreachable) -> [b1]

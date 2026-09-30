@@ -1,0 +1,33 @@
+fn f
+locals: xs x
+params: xs
+b0 (entry) -> [b2]
+  L2 `xs` {use xs}
+b1 (exit) -> []
+b2 -> [b3 b18]
+b3 -> [b5]
+  L2 `x` {def x}
+b4 -> [b1]
+  L9 `return None` {}
+b5 -> [b7]
+b6 -> [b1]
+  L8 `done(x)` {use x}
+b7 -> [b6 b8]
+b8 -> [b10 b9]
+  L4 `x` {use x}
+b9 -> [b6 b14]
+b10 -> [b6 b11]
+b11 -> [b12]
+  L5 `continue` {}
+b12 -> [b2]
+  L8 `done(x)` {use x}
+b13 (unreachable) -> [b9]
+b14 -> [b15]
+  L6 `return x` {use x}
+b15 -> [b1]
+  L8 `done(x)` {use x}
+b16 (unreachable) -> [b6 b17]
+b17 (unreachable) -> [b2]
+  L8 `done(x)` {use x}
+b18 -> [b4]
+b19 (unreachable) -> [b1]
