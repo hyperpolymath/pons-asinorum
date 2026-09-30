@@ -96,6 +96,31 @@ negative corpus green; a false positive traced to reflection is a *bug in the
 opacity check*, not a reason to weaken a rule. This check is a cheap tree scan
 and MUST exist before the first T1 fixture is written.
 
+*Amendment (2026-09-30, owner-ratified).* Two more triggers mark a function
+OPAQUE. Unlike the three above, they are about the *shape the CFG builder
+receives*, not about reflection. The builder must refuse a function it cannot
+model; building a plausible but wrong CFG instead would give confident findings
+on the wrong control flow.
+
+* *An `except*` handler (PEP 654) anywhere in the body.* Measured against the
+  pinned `tree-sitter-python` 0.25.0, `except*` does *not* produce an error
+  node. The grammar parses it as an ordinary `except_clause` and demotes the `*`
+  to an *anonymous* child, so its named shape is identical to a plain
+  `except`. It cannot be found by node kind (there is no
+  `except_group_clause`), and `has_error()` does not see it. Detect it
+  structurally: an `except_clause` whose anonymous children include `*`. The
+  exception model below covers only ordinary handlers. With `except*`,
+  *several* handlers can run for a single raise, one after another, and
+  whatever no handler matched is re-raised afterwards. The one-handler join
+  below does not model that.
+* *A parse error inside the unit* (`has_error()` on the function's subtree).
+  This covers syntax the grammar does not know. Do not rely on it for
+  `except*`, which is exactly the case it misses.
+
+The runaway cap in _Widening / termination_ (4096 locals per function) is the
+remaining trigger. Every trigger is recorded as an `OpaqueReason`, so a
+suppressed function is named along with *why* it was suppressed.
+
 == CFG construction (statement-level, per function)
 
 A `Cfg` is `{ entry: BlockId, exit: BlockId, blocks: Vec<BasicBlock>, edges }`.
@@ -200,6 +225,11 @@ bound), with *uses ordered before defs within the same statement*:
 | `with cm as t:` | uses = names(cm); defs = targets(t).
 | `except E as e:` | defs = `{e}` at handler entry (and Python *unbinds* `e` at
   handler exit — model as a kill of `e` on the handler's exit edge).
+  _Amendment (2026-09-30):_ in the pinned grammar the binding is *not*
+  `except_clause.alias`, though `node-types.json` advertises that field. The
+  parser emits `value: (as_pattern … alias: (as_pattern_target …))`, one
+  level down. Reading the advertised field returns nothing, so `e` is never
+  bound and every aliased handler becomes a `read-before-init` false positive.
 | bare call / expr statement `f(a)` | uses = names in the expression; defs = `{}`.
 |===
 
