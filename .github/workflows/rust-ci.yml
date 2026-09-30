@@ -14,10 +14,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87  # stable
-        with:
-          toolchain: stable
-          components: rustfmt, clippy
+      # The toolchain comes from rust-toolchain.toml (channel + components) via the
+      # runner's own rustup, not a third-party action: this repo's Actions policy
+      # admits only GitHub-owned and verified actions, and dtolnay/rust-toolchain is
+      # neither, so it killed every run at startup from 0f53008 onwards.
+      - name: toolchain
+        run: |
+          rustup toolchain install
+          rustc --version
+          cargo fmt --version
+          cargo clippy --version
       - name: fmt
         run: cargo fmt --check
       - name: clippy
