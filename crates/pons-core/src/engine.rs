@@ -18,6 +18,20 @@ pub struct RuleCtx<'a> {
     pub tree: &'a Tree,
 }
 
+impl<'a> RuleCtx<'a> {
+    /// The only way to build a context. Construction goes through here so
+    /// that per-file analyses shared between rules (the M4 CFG) can be added
+    /// as private, lazily-built fields without touching every call site again.
+    pub fn new(path: &'a Path, lang: Lang, text: &'a str, tree: &'a Tree) -> Self {
+        Self {
+            path,
+            lang,
+            text,
+            tree,
+        }
+    }
+}
+
 /// A single check. Implementors live in `pons-rules`; `pons-core` stays
 /// rule-agnostic. `check` returns [`RawFinding`], not [`Finding`] — a rule
 /// has no way to set its own `rule_id`; only [`Engine::scan`] can, from
@@ -153,12 +167,7 @@ impl Engine {
             files_scanned += 1;
             languages.insert(src.lang);
 
-            let ctx = RuleCtx {
-                path: &src.path,
-                lang: src.lang,
-                text: &src.text,
-                tree: &tree,
-            };
+            let ctx = RuleCtx::new(&src.path, src.lang, &src.text, &tree);
 
             for rule in &self.rules {
                 if rule.languages().contains(&src.lang) {
