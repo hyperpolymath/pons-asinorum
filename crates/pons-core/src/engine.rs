@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MPL-2.0
 
+use std::cell::OnceCell;
 use std::collections::BTreeSet;
 use std::path::Path;
 
 use tree_sitter::Tree;
 
+use crate::cfg::{self, FunctionUnit};
 use crate::finding::{Finding, RawFinding};
 use crate::lang::Lang;
 use crate::source::DiscoveredFile;
@@ -16,6 +18,37 @@ pub struct RuleCtx<'a> {
     pub lang: Lang,
     pub text: &'a str,
     pub tree: &'a Tree,
+    /// Built at most once per file, on first request, and shared by every T1
+    /// (and, from M5, T2) rule. Rebuilding it per rule would be exactly the
+    /// wasted work this tool exists to flag.
+    units: OnceCell<Vec<FunctionUnit>>,
+}
+
+impl<'a> RuleCtx<'a> {
+    /// The only way to build a context. Construction goes through here so
+    /// that per-file analyses shared between rules (the M4 CFG) can be added
+    /// as private, lazily-built fields without touching every call site again.
+    /// `tree` must be the parse of `text` for `lang`; `path` labels findings.
+    pub fn new(path: &'a Path, lang: Lang, text: &'a str, tree: &'a Tree) -> Self {
+        Self {
+            path,
+            lang,
+            text,
+            tree,
+            units: OnceCell::new(),
+        }
+    }
+
+    /// Every function unit in this file (ADR-0002). Empty for anything but
+    /// Python, so a JS/TS/Rust file never pays for a Python CFG.
+    /// Builds and caches the units on first access, including opaque units.
+    /// Panics from [`cfg::build_units`] propagate to the caller.
+    pub fn units(&self) -> &[FunctionUnit] {
+        self.units.get_or_init(|| match self.lang {
+            Lang::Python => cfg::build_units(self.path, self.text, self.tree),
+            _ => Vec::new(),
+        })
+    }
 }
 
 /// A single check. Implementors live in `pons-rules`; `pons-core` stays
@@ -153,12 +186,7 @@ impl Engine {
             files_scanned += 1;
             languages.insert(src.lang);
 
-            let ctx = RuleCtx {
-                path: &src.path,
-                lang: src.lang,
-                text: &src.text,
-                tree: &tree,
-            };
+            let ctx = RuleCtx::new(&src.path, src.lang, &src.text, &tree);
 
             for rule in &self.rules {
                 if rule.languages().contains(&src.lang) {

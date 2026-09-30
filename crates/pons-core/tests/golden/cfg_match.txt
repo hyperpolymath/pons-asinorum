@@ -1,0 +1,18 @@
+fn f
+locals: s b p r a rest
+params: s
+b0 (entry) -> [b3 b4 b5]
+  L2 `s` {use s}
+b1 (exit) -> []
+b2 -> [b1]
+  L9 `return r` {use r}
+b3 -> [b2]
+  L3 `case Point(x=0, y=b) as p:` {use~ b, use~ p, weak b, weak p}
+  L4 `r = b` {use b, def! r}
+b4 -> [b2]
+  L5 `case [a, *rest] if a:` {use~ a, use~ rest, weak a, weak rest, use a}
+  L6 `r = a` {use a, def! r}
+b5 -> [b2]
+  L7 `case _:` {}
+  L8 `r = None` {def! r}
+b6 (unreachable) -> [b1]

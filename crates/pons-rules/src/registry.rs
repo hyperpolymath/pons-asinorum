@@ -10,6 +10,8 @@ use crate::t0::string_concat_in_loop::StringConcatInLoop;
 use crate::t0::swallowed_error::SwallowedError;
 use crate::t0::unreachable_after_jump::UnreachableAfterJump;
 use crate::t0::while_true_no_break::WhileTrueNoBreak;
+use crate::t1::dead_store::DeadStore;
+use crate::t1::read_before_init::ReadBeforeInit;
 
 /// Builds the full set of registered rules — the single source of truth
 /// both `pons-cli` and the falsifier gate (`tests/falsifier.rs`) read from,
@@ -18,6 +20,7 @@ use crate::t0::while_true_no_break::WhileTrueNoBreak;
 pub struct RuleRegistry;
 
 impl RuleRegistry {
+    /// Creates the complete rule set in catalogue order, including both T1 rules.
     pub fn all() -> Vec<Box<dyn Rule>> {
         vec![
             Box::new(DivByLiteralZero::new()),
@@ -28,6 +31,8 @@ impl RuleRegistry {
             Box::new(EmptyEffectLoop::new()),
             Box::new(UnreachableAfterJump::new()),
             Box::new(StringConcatInLoop::new()),
+            Box::new(DeadStore::new()),
+            Box::new(ReadBeforeInit::new()),
         ]
     }
 }
@@ -37,7 +42,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn registry_registers_the_t0_catalogue_as_it_lands() {
+    fn registry_registers_the_catalogue_in_order_as_it_lands() {
         let ids: Vec<&str> = RuleRegistry::all().iter().map(|r| r.id()).collect();
         assert_eq!(
             ids,
@@ -49,7 +54,9 @@ mod tests {
                 "while-true-no-break",
                 "empty-effect-loop",
                 "unreachable-after-jump",
-                "string-concat-in-loop"
+                "string-concat-in-loop",
+                "dead-store",
+                "read-before-init"
             ]
         );
     }

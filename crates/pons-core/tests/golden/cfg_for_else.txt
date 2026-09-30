@@ -1,0 +1,21 @@
+fn f
+locals: xs y x
+params: xs
+b0 (entry) -> [b2]
+  L2 `xs` {use xs}
+b1 (exit) -> []
+b2 -> [b3 b9]
+b3 -> [b5]
+  L2 `x` {def x}
+b4 -> [b1]
+  L8 `return x` {use x}
+b5 -> [b7 b6]
+  L3 `x` {use x}
+b6 -> [b2]
+  L5 `y = x` {use x, def! y}
+b7 -> [b4]
+  L4 `break` {}
+b8 (unreachable) -> [b6]
+b9 -> [b4]
+  L7 `y = 0` {def! y}
+b10 (unreachable) -> [b1]

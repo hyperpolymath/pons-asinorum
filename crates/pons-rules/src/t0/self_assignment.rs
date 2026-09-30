@@ -136,12 +136,7 @@ mod tests {
             text: text.to_string(),
         };
         let tree = parse::parse(&source).unwrap();
-        let ctx = RuleCtx {
-            path: &source.path,
-            lang: source.lang,
-            text: &source.text,
-            tree: &tree,
-        };
+        let ctx = RuleCtx::new(&source.path, source.lang, &source.text, &tree);
         rule.check(&ctx)
     }
 

@@ -1,0 +1,19 @@
+fn f
+locals: v
+params: 
+b0 (entry) -> [b2]
+b1 (exit) -> []
+b2 -> [b4]
+  L2 `True` {}
+b3 -> [b1]
+  L8 `return v` {use v}
+b4 -> [b6 b5]
+  L3 `v = g()` {def!* v}
+  L4 `v` {use v}
+b5 -> [b2]
+b6 -> [b3]
+  L5 `break` {}
+b7 (unreachable) -> [b5]
+b8 (unreachable) -> [b3]
+  L7 `v = 0` {def! v}
+b9 (unreachable) -> [b1]

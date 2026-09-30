@@ -1,0 +1,9 @@
+fn f
+locals: xs x n ys
+params: xs
+b0 (entry) -> [b1]
+  L2 `x = 1` {def! x}
+  L3 `ys = [x for x in xs if (n := x)]` {use xs, weak n, def!* ys}
+  L4 `return n, x, ys` {use n, use x, use ys}
+b1 (exit) -> []
+b2 (unreachable) -> [b1]
