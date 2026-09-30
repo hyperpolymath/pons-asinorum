@@ -36,7 +36,7 @@ impl Rule for DeadStore {
     }
 
     fn description(&self) -> &'static str {
-        "a value stored and then overwritten before any read"
+        "a value stored and never read before it is redefined or the function ends"
     }
 
     fn languages(&self) -> &'static [Lang] {
