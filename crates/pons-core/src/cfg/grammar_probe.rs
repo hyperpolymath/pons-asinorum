@@ -126,6 +126,10 @@ async def fetch(url):
     return result
 
 
+def typed(n: int = 0):
+    return n
+
+
 def generator():
     yield 1
     received = yield
@@ -526,6 +530,8 @@ fn the_except_as_binding_is_nested_in_an_as_pattern_not_a_field_of_the_clause() 
     );
 }
 
+/// Covers every field `cfg/` reads — `builder.rs`, `scope.rs` and `mod.rs` —
+/// not only the builder.
 #[test]
 fn the_fields_the_builder_will_use_are_all_present() {
     let tree = parse_python(CORPUS);
@@ -547,7 +553,14 @@ fn the_fields_the_builder_will_use_are_all_present() {
         ("decorated_definition", &["definition"]),
         ("attribute", &["object"]),
         ("keyword_argument", &["value"]),
-        ("default_parameter", &["value"]),
+        ("default_parameter", &["name", "value"]),
+        ("typed_default_parameter", &["name", "value"]),
+        ("class_definition", &["name", "body"]),
+        ("assignment", &["left", "right"]),
+        ("call", &["function", "arguments"]),
+        ("import_statement", &["name"]),
+        ("import_from_statement", &["module_name", "name"]),
+        ("aliased_import", &["name", "alias"]),
     ];
 
     for (kind, fields) in cases {
@@ -556,7 +569,7 @@ fn the_fields_the_builder_will_use_are_all_present() {
         assert_eq!(
             present.len(),
             fields.len(),
-            "{kind} is missing fields the builder uses: expected {fields:?}, found {present:?}"
+            "{kind} is missing fields cfg/ reads: expected {fields:?}, found {present:?}"
         );
     }
 }
@@ -591,7 +604,7 @@ fn the_fields_only_some_nodes_of_a_kind_carry_are_present() {
         let node = find_where(root, *pred).unwrap_or_else(|| panic!("corpus has no {what}"));
         assert!(
             node.child_by_field_name(field).is_some(),
-            "{what} does not expose `{field}`, which the builder reads"
+            "{what} does not expose `{field}`, which cfg/ reads"
         );
     }
 }
