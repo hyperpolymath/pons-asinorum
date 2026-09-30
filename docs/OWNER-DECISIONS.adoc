@@ -10,9 +10,18 @@ recorded defaults); they want ratifying before *v0.1.0 tag*.
 
 *Ratified 2026-07-08 by owner:* D1 name = `pons` (kept); D2 licence = `MPL-2.0`
 code / `CC-BY-SA-4.0` docs; D3 repository = *public*, independent top-level repo;
-author = Jonathan D.A. Jewell. D4 (estate CI template) remains open; D5 (Python
-as T1 language) stands as an engineering decision. The original text is kept
-below for the record.
+author = Jonathan D.A. Jewell. D5 (Python as T1 language) stands as an
+engineering decision.
+
+*Ratified by owner, recorded 2026-09-30:* D4 = *adopt the RSR Rust template
+now*, rather than deferring estate-CI onboarding until after v0.1.0.
+Adoption is a separate PR. Each adopted workflow must be shown to *spawn its
+jobs* under this repo's Actions policy (`sha_pinning_required`, selected
+actions only), not merely be present. A workflow that dies at startup
+reports nothing, and is worse than having no workflow. With D4 settled, all
+of D1–D5 are ratified before the tag.
+
+The original text is kept below for the record.
 
 == D1 — Name
 
