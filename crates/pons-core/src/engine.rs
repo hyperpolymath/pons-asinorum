@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MPL-2.0
 
+use std::cell::OnceCell;
 use std::collections::BTreeSet;
 use std::path::Path;
 
 use tree_sitter::Tree;
 
+use crate::cfg::{self, FunctionUnit};
 use crate::finding::{Finding, RawFinding};
 use crate::lang::Lang;
 use crate::source::DiscoveredFile;
@@ -16,6 +18,10 @@ pub struct RuleCtx<'a> {
     pub lang: Lang,
     pub text: &'a str,
     pub tree: &'a Tree,
+    /// Built at most once per file, on first request, and shared by every T1
+    /// (and, from M5, T2) rule. Rebuilding it per rule would be exactly the
+    /// wasted work this tool exists to flag.
+    units: OnceCell<Vec<FunctionUnit>>,
 }
 
 impl<'a> RuleCtx<'a> {
@@ -28,7 +34,17 @@ impl<'a> RuleCtx<'a> {
             lang,
             text,
             tree,
+            units: OnceCell::new(),
         }
+    }
+
+    /// Every function unit in this file (ADR-0002). Empty for anything but
+    /// Python, so a JS/TS/Rust file never pays for a Python CFG.
+    pub fn units(&self) -> &[FunctionUnit] {
+        self.units.get_or_init(|| match self.lang {
+            Lang::Python => cfg::build_units(self.path, self.text, self.tree),
+            _ => Vec::new(),
+        })
     }
 }
 
