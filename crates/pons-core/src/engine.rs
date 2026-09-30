@@ -28,6 +28,7 @@ impl<'a> RuleCtx<'a> {
     /// The only way to build a context. Construction goes through here so
     /// that per-file analyses shared between rules (the M4 CFG) can be added
     /// as private, lazily-built fields without touching every call site again.
+    /// `tree` must be the parse of `text` for `lang`; `path` labels findings.
     pub fn new(path: &'a Path, lang: Lang, text: &'a str, tree: &'a Tree) -> Self {
         Self {
             path,
@@ -40,6 +41,8 @@ impl<'a> RuleCtx<'a> {
 
     /// Every function unit in this file (ADR-0002). Empty for anything but
     /// Python, so a JS/TS/Rust file never pays for a Python CFG.
+    /// Builds and caches the units on first access, including opaque units.
+    /// Panics from [`cfg::build_units`] propagate to the caller.
     pub fn units(&self) -> &[FunctionUnit] {
         self.units.get_or_init(|| match self.lang {
             Lang::Python => cfg::build_units(self.path, self.text, self.tree),

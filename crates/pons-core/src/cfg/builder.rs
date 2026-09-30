@@ -49,6 +49,12 @@ pub(super) struct Builder<'t> {
 }
 
 impl<'t> Builder<'t> {
+    /// Builds a CFG using the scope pre-pass for `func`. The node, source text
+    /// and scope must describe the same function; opacity is checked by the caller.
+    ///
+    /// # Panics
+    /// Panics if `func` has no body or a node's byte range cannot be sliced
+    /// from `text`.
     pub(super) fn build(
         func: Node<'t>,
         name: String,
@@ -127,6 +133,7 @@ impl<'t> Builder<'t> {
 
     // ---- events ---------------------------------------------------------
 
+    /// Resolves a local unless a comprehension iteration variable shadows it.
     fn lookup(&self, ident: Node<'_>) -> Option<LocalId> {
         let name = &self.text[ident.byte_range()];
         if self.shadow.iter().any(|s| s.iter().any(|n| n == name)) {
@@ -135,6 +142,7 @@ impl<'t> Builder<'t> {
         self.scope.index.get(name).copied()
     }
 
+    /// Appends an event only for a local visible in the current scope.
     fn event(&self, ident: Node<'_>, kind: EventKind, ev: &mut Vec<Event>) {
         if let Some(local) = self.lookup(ident) {
             ev.push(Event {
@@ -162,6 +170,8 @@ impl<'t> Builder<'t> {
 
     // ---- expressions ----------------------------------------------------
 
+    /// Appends local events for an expression. `checkable` controls whether
+    /// ordinary reads may be reported as unbound; captures remain uncheckable.
     fn expr(&mut self, node: Node<'t>, ev: &mut Vec<Event>, checkable: bool) {
         match node.kind() {
             "identifier" => self.use_(node, checkable, ev),
@@ -256,6 +266,8 @@ impl<'t> Builder<'t> {
         self.shadow.pop();
     }
 
+    /// Detects a call, `await`, `yield` or walrus outside lambdas for dead-store
+    /// severity selection; a false result does not prove purity.
     fn has_effect(node: Node<'_>) -> bool {
         match node.kind() {
             "call" | "await" | "yield" | "named_expression" => true,
@@ -293,6 +305,8 @@ impl<'t> Builder<'t> {
         }
     }
 
+    /// Records the RHS reads and target bindings of a possibly chained assignment.
+    /// A bare annotation emits no events.
     fn assignment(&mut self, node: Node<'t>, ev: &mut Vec<Event>) {
         // `a = b = rhs` nests: assignment{left: a, right: assignment{left: b,
         // right: rhs}}. Collect the chain; evaluate `rhs` once; then bind.
@@ -318,6 +332,8 @@ impl<'t> Builder<'t> {
         }
     }
 
+    /// Records RHS reads and, for a bare local target, a read followed by a store.
+    /// Attribute and subscript targets contribute reads only.
     fn augmented(&mut self, node: Node<'t>, ev: &mut Vec<Event>) {
         let (Some(left), Some(right)) = (
             node.child_by_field_name("left"),
@@ -347,6 +363,8 @@ impl<'t> Builder<'t> {
         }
     }
 
+    /// Lowers a statement at the current block, adding exceptional edges where
+    /// required. Comments are ignored; code after jumps still receives blocks.
     fn stmt(&mut self, node: Node<'t>) {
         if node.kind() == "comment" {
             return;
@@ -442,6 +460,7 @@ impl<'t> Builder<'t> {
         }
     }
 
+    /// Records unbinding for local deletion targets and reads for object targets.
     fn del_target(&mut self, target: Node<'t>, ev: &mut Vec<Event>) {
         match target.kind() {
             "identifier" => self.event(target, EventKind::Kill, ev),
@@ -456,9 +475,9 @@ impl<'t> Builder<'t> {
         }
     }
 
-    /// `def` and `class` inside the unit: defaults, decorators and bases are
+    /// `def` and `class` inside the unit: defaults and bases are
     /// read now; the body's mentions of our locals are captures; then the
-    /// name is bound.
+    /// name is bound. Decorators are handled by the caller.
     fn nested_def(&mut self, node: Node<'t>, ev: &mut Vec<Event>) {
         if node.kind() == "function_definition" {
             if let Some(params) = node.child_by_field_name("parameters") {
@@ -519,6 +538,7 @@ impl<'t> Builder<'t> {
         self.cur = self.new_block();
     }
 
+    /// Builds conditional branches, retaining fallthrough when there is no `else`.
     fn if_(&mut self, node: Node<'t>) {
         let after = self.new_block();
         let mut fork = self.cur;
@@ -631,6 +651,8 @@ impl<'t> Builder<'t> {
         self.cur = after;
     }
 
+    /// Lowers a loop body with `continue` targeting `header` and `break`
+    /// targeting `after`; normal completion returns to `header`.
     fn loop_body(&mut self, node: Node<'t>, header: BlockId, after: BlockId) {
         let body_entry = self.new_block();
         self.edge(self.cur, body_entry);
@@ -656,6 +678,8 @@ impl<'t> Builder<'t> {
         self.edge(self.cur, after);
     }
 
+    /// Records context expressions and alias bindings before the body.
+    /// Context-manager exit calls and exception suppression are not modelled.
     fn with_(&mut self, node: Node<'t>) {
         let mut ev = Vec::new();
         let mut header_end = node.start_byte();
@@ -692,8 +716,8 @@ impl<'t> Builder<'t> {
     }
 
     /// `match`: the subject is read, then each arm is a successor of the
-    /// header. Every identifier in a pattern is first an uncheckable read
-    /// (value patterns read names), then each capture is a weak def. Unless
+    /// header. Pattern identifiers, excluding keyword attribute names, are
+    /// first uncheckable reads, then each capture is a weak def. Unless
     /// the last arm is irrefutable (`case _`, or a bare capture, with no
     /// guard), the header also falls through to `after`.
     fn match_(&mut self, node: Node<'t>) {
@@ -752,6 +776,7 @@ impl<'t> Builder<'t> {
         self.cur = after;
     }
 
+    /// Recognises an unguarded wildcard or bare capture as an exhaustive arm.
     fn irrefutable(case: Node<'_>) -> bool {
         if case.child_by_field_name("guard").is_some() {
             return false;
