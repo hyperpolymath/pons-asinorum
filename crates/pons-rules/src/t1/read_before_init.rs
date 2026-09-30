@@ -12,8 +12,10 @@ const LANGUAGES: &[Lang] = &[Lang::Python];
 /// bound — Python raises `UnboundLocalError`. `WARN` uniformly in v0.1.0:
 /// raising the every-path case to `ERROR` would need a must-analysis, which
 /// ADR-0002 declines. Python has no default initialisation, so the rule has
-/// no counter-condition; opacity and scope, its only false-positive sources,
-/// are handled by the OPAQUE hatch and the locals pre-pass.
+/// no counter-condition. Opacity and scope are handled by the OPAQUE hatch and
+/// the locals pre-pass; the analysis is also path-insensitive, so correlated
+/// guards and loops over non-empty literals yield infeasible-path false
+/// positives that ADR-0002 does not yet name (#47).
 pub struct ReadBeforeInit;
 
 impl ReadBeforeInit {

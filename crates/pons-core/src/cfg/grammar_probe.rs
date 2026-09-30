@@ -48,6 +48,10 @@ class Widget:
         return a + b
 
 
+class Sub(Widget):
+    pass
+
+
 def plain(a, b):
     total: int = 0
     annotated_only: int
@@ -82,7 +86,7 @@ def plain(a, b):
     else:
         total += risky
     finally:
-        cleanup()
+        cleanup(force=True)
 
     with open("f") as handle:
         data = handle.read()
@@ -537,6 +541,13 @@ fn the_fields_the_builder_will_use_are_all_present() {
         ("case_clause", &["consequence"]),
         ("match_statement", &["subject", "body"]),
         ("augmented_assignment", &["left", "operator", "right"]),
+        ("elif_clause", &["condition", "consequence"]),
+        ("else_clause", &["body"]),
+        ("with_item", &["value"]),
+        ("decorated_definition", &["definition"]),
+        ("attribute", &["object"]),
+        ("keyword_argument", &["value"]),
+        ("default_parameter", &["value"]),
     ];
 
     for (kind, fields) in cases {
@@ -546,6 +557,41 @@ fn the_fields_the_builder_will_use_are_all_present() {
             present.len(),
             fields.len(),
             "{kind} is missing fields the builder uses: expected {fields:?}, found {present:?}"
+        );
+    }
+}
+
+/// The fields above sit on the first node of their kind. These three sit only
+/// on a later one — a guarded `case`, a subclass, the `with … as` binding —
+/// so each is found by shape rather than by first occurrence.
+/// What is sought, the field it must expose, and how to recognise it.
+type ShapedCase<'a> = (&'a str, &'a str, &'a dyn Fn(Node<'_>) -> bool);
+
+#[test]
+fn the_fields_only_some_nodes_of_a_kind_carry_are_present() {
+    let tree = parse_python(CORPUS);
+    let root = tree.root_node();
+
+    let cases: &[ShapedCase] = &[
+        ("guarded case_clause", "guard", &|n| {
+            n.kind() == "case_clause" && n.utf8_text(CORPUS.as_bytes()).unwrap().contains(" if ")
+        }),
+        ("subclass class_definition", "superclasses", &|n| {
+            n.kind() == "class_definition"
+                && n.utf8_text(CORPUS.as_bytes())
+                    .unwrap()
+                    .starts_with("class Sub")
+        }),
+        ("with_item as_pattern", "alias", &|n| {
+            n.kind() == "as_pattern" && n.parent().is_some_and(|p| p.kind() == "with_item")
+        }),
+    ];
+
+    for (what, field, pred) in cases {
+        let node = find_where(root, *pred).unwrap_or_else(|| panic!("corpus has no {what}"));
+        assert!(
+            node.child_by_field_name(field).is_some(),
+            "{what} does not expose `{field}`, which the builder reads"
         );
     }
 }
