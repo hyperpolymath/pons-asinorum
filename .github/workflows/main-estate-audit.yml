@@ -22,31 +22,22 @@ jobs:
   # a snapshot that is already stale (cicd-suite has since replaced
   # zig-hexadeca-check with zig-unified-api-adapter-check).
   #
-  # The SHA below is cicd-suite main as of 2026-09-22. Choosing it is necessary
-  # and NOT sufficient, and the reason is the whole point of this comment.
+  # The SHA below is cicd-suite#36 (3bbdf75). Before it, the reusable invoked
+  # its 26 gates by BRANCH ref (`cicd-suite/actions/<gate>@main`) and relied on
+  # cicd-suite's actions.lock to pin them. That lock is honoured only inside
+  # cicd-suite. This repo's Actions policy sets sha_pinning_required, which
+  # applies to every step a called reusable runs, so from 2026-09-23 each
+  # `@main` ref killed this caller at startup with jobs=0. The earlier pin,
+  # 6cb08dd, still dies that way.
   #
-  # That reusable invokes its 26 gates by BRANCH ref:
+  # At 3bbdf75 every gate and the checkout are literal full-SHA refs, and the
+  # reusable is no longer in cicd-suite's lock. The ref we call and the
+  # composites it runs are therefore fixed by this one SHA, with no lockfile
+  # between them. Run 36696994940, on #36's head (same reusable and actions/
+  # tree), ran estate-audit 30/30 steps.
   #
-  #     uses: hyperpolymath/cicd-suite/actions/<gate>@main
-  #
-  # Under gh-actions-lock a branch ref is trusted from the lockfile, and the
-  # runner executes THE COMMIT THE LOCKFILE NAMES, not the branch tip. So the
-  # gates this repo actually runs are chosen by cicd-suite's actions.lock AT
-  # THE SHA BELOW -- not by the SHA below.
-  #
-  # Measured, not assumed. Pinning 0c1bc9f (the head of a run whose `Gate
-  # controls` job executed 14 steps) left this audit dying EXACTLY as before:
-  # run 35787980954, Required Files Gate, 82ms, silent exit 1, 25 gates
-  # skipped. The lock at 0c1bc9f still pinned cicd-suite@main at 9adb3908 --
-  # four commits stale, carrying ZERO of the harness `-e` guards. The cure had
-  # merged and reached nobody.
-  #
-  # 6cb08dd is cicd-suite#35, which re-pinned that entry at 0c1bc9f (3 guards
-  # in required-files-check, 1 in spdx-license-check; 9adb3908 had 0 and 0).
-  #
-  # When re-pinning: check the LOCK at the candidate SHA, not the SHA's own
-  # tree, and check the STEP COUNT, not the square. cicd-suite#35 added
-  # tests/lock-transitive-closure.sh so that drift goes red there rather than
-  # silently here.
+  # When re-pinning, check the STEP COUNT, not the square. The gates are only
+  # as fresh as the SHA they are pinned to inside the reusable. That drift goes
+  # red in cicd-suite's tests/lock-transitive-closure.sh, not silently here.
   call-estate-audit:
-    uses: hyperpolymath/cicd-suite/.github/workflows/main-estate-audit.yml@6cb08dde98b70d20ad2d506e77dd6a517503eb08
+    uses: hyperpolymath/cicd-suite/.github/workflows/main-estate-audit.yml@3bbdf75987d120e552f4bc384283c47ee72833eb
