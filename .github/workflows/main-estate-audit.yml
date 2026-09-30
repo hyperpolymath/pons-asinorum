@@ -49,4 +49,4 @@ jobs:
   # tests/lock-transitive-closure.sh so that drift goes red there rather than
   # silently here.
   call-estate-audit:
-    uses: hyperpolymath/cicd-suite/.github/workflows/main-estate-audit.yml@6cb08dde98b70d20ad2d506e77dd6a517503eb08
+    uses: hyperpolymath/cicd-suite/.github/workflows/main-estate-audit.yml@803544620a75f9604aea2e5a3e3169ad47909afe
