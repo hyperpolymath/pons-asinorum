@@ -4,3 +4,9 @@
 # Remove the alias and source replacement after offline verification is complete.
 [alias]
 fmt = "run --quiet --manifest-path tools/vendor-fmt/Cargo.toml --"
+
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"
