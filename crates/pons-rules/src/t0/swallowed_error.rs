@@ -150,6 +150,7 @@ mod tests {
             path: PathBuf::from("test"),
             lang,
             text: text.to_string(),
+            transcoded: false,
         };
         let tree = parse::parse(&source).unwrap();
         let ctx = RuleCtx::new(&source.path, source.lang, &source.text, &tree);

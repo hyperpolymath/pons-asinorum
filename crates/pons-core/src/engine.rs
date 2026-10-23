@@ -7,10 +7,11 @@ use std::path::Path;
 use tree_sitter::Tree;
 
 use crate::cfg::{self, FunctionUnit};
+use crate::config::CompiledConfig;
 use crate::finding::{Finding, RawFinding};
 use crate::lang::Lang;
 use crate::source::DiscoveredFile;
-use crate::{parse, source};
+use crate::{parse, source, suppress};
 
 /// Everything a [`Rule`] needs to inspect one source file.
 pub struct RuleCtx<'a> {
@@ -106,6 +107,10 @@ pub struct ScanReport {
     pub files_scanned: usize,
     pub languages: Vec<Lang>,
     pub skipped: Vec<SkippedFile>,
+    /// Files decoded from a non-UTF-8 artifact. Their byte offsets are not
+    /// artifact offsets; SARIF omits those fields rather than lie (#33).
+    pub transcoded: BTreeSet<String>,
+    pub suppressed_findings: usize,
     pub rules: Vec<RuleInfo>,
 }
 
@@ -122,11 +127,22 @@ fn sort_skips(skips: &mut [SkippedFile]) {
 /// Orchestrates discovery, parsing, and rule execution over a directory.
 pub struct Engine {
     rules: Vec<Box<dyn Rule>>,
+    config: CompiledConfig,
 }
 
 impl Engine {
     pub fn new(rules: Vec<Box<dyn Rule>>) -> Self {
-        Self { rules }
+        Self {
+            rules,
+            config: CompiledConfig::empty(),
+        }
+    }
+
+    /// An engine with validated, project-scoped suppression. The CLI compiles
+    /// the configuration against the registered rule IDs before construction,
+    /// so an unknown rule is an operational error rather than a silent no-op.
+    pub fn with_config(rules: Vec<Box<dyn Rule>>, config: CompiledConfig) -> Self {
+        Self { rules, config }
     }
 
     /// Discover every source file under `root` and scan it.
@@ -158,6 +174,8 @@ impl Engine {
         let mut findings = Vec::new();
         let mut skipped = Vec::new();
         let mut languages = BTreeSet::new();
+        let mut transcoded = BTreeSet::new();
+        let mut suppressed_findings = 0usize;
         let mut files_scanned = 0usize;
 
         for file in files {
@@ -185,16 +203,24 @@ impl Engine {
 
             files_scanned += 1;
             languages.insert(src.lang);
+            if src.transcoded {
+                transcoded.insert(src.path.display().to_string());
+            }
 
             let ctx = RuleCtx::new(&src.path, src.lang, &src.text, &tree);
 
             for rule in &self.rules {
                 if rule.languages().contains(&src.lang) {
-                    findings.extend(
-                        rule.check(&ctx)
-                            .into_iter()
-                            .map(|raw| raw.into_finding(rule.id())),
-                    );
+                    for raw in rule.check(&ctx) {
+                        let finding = raw.into_finding(rule.id());
+                        if self.config.suppressed(&finding, root)
+                            || suppress::inline_allowed(&ctx, &finding)
+                        {
+                            suppressed_findings += 1;
+                        } else {
+                            findings.push(finding);
+                        }
+                    }
                 }
             }
         }
@@ -219,6 +245,8 @@ impl Engine {
             files_scanned,
             languages: languages.into_iter().collect(),
             skipped,
+            transcoded,
+            suppressed_findings,
             rules: self
                 .rules
                 .iter()

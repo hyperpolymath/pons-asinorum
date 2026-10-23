@@ -6,17 +6,14 @@ use std::path::{Path, PathBuf};
 use crate::engine::SkippedFile;
 use crate::lang::Lang;
 
-/// Directories skipped unconditionally, mirroring panic-attack's house
-/// behaviour — these are never source we want to analyse, `.ponsignore` or
-/// not.
-const SKIP_DIRS: &[&str] = &[
-    ".git",
-    "target",
-    "node_modules",
-    "external_corpora",
-    "third_party",
-    "corpus",
-];
+/// Build and VCS directories skipped unconditionally.
+///
+/// Deliberately not a list of "uninteresting" project directories. A scanner
+/// for legacy estates must not silently ignore a directory merely called
+/// `corpus`, `third_party` or `external_corpora`; operators can opt out with
+/// `.ponsignore`, which is explicit and reviewable. The old unconditional list
+/// was a blind spot exactly where the exnovation mission looks first.
+const SKIP_DIRS: &[&str] = &[".git", "target", "node_modules"];
 
 /// A source file located by [`discover`] but **not yet read**.
 ///
@@ -35,6 +32,11 @@ pub struct SourceFile {
     pub path: PathBuf,
     pub lang: Lang,
     pub text: String,
+    /// The bytes on disk were not UTF-8 and were decoded as Latin-1.
+    /// Tree-sitter byte offsets then index this decoded string, not the
+    /// artifact. Reporters must omit artifact byte offsets for such files
+    /// rather than emit a number that points at the wrong place (#33).
+    pub transcoded: bool,
 }
 
 /// What [`discover`] found: the files to scan, and the parts of the tree it
@@ -215,16 +217,23 @@ pub fn discover(root: &Path) -> anyhow::Result<Discovery> {
 /// single unreadable file stops being able to end the whole scan.
 pub fn read(file: &DiscoveredFile) -> anyhow::Result<SourceFile> {
     let bytes = std::fs::read(&file.path)?;
-    let text = String::from_utf8(bytes).unwrap_or_else(|e| {
-        // Latin-1 fallback: every byte is a valid Unicode scalar value
-        // in 0..=255, so this never fails, unlike UTF-8 decoding.
-        e.into_bytes().into_iter().map(char::from).collect()
-    });
+    let (text, transcoded) = match String::from_utf8(bytes) {
+        Ok(text) => (text, false),
+        Err(e) => {
+            // Latin-1 fallback keeps line structure and lets the parser see
+            // legacy sources, but each 0x80..=0xFF byte becomes two UTF-8
+            // bytes. Mark the file: byte offsets are now decoded-string
+            // offsets and must not be advertised as artifact offsets (#33).
+            let text: String = e.into_bytes().into_iter().map(char::from).collect();
+            (text, true)
+        }
+    };
 
     Ok(SourceFile {
         path: file.path.clone(),
         lang: file.lang,
         text,
+        transcoded,
     })
 }
 
@@ -283,6 +292,23 @@ mod tests {
         let found = discover(&dir).unwrap().files;
         let src = read(&found[0]).unwrap();
         assert!(src.text.ends_with('\u{00FF}'));
+        assert!(
+            src.transcoded,
+            "the reporter needs to know this file's offsets were transcoded"
+        );
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_directory_named_corpus_is_not_silently_hidden() {
+        let dir = tempfile_dir();
+        std::fs::create_dir_all(dir.join("corpus")).unwrap();
+        std::fs::write(dir.join("corpus/legacy.py"), "x = 1\n").unwrap();
+
+        let found = discover(&dir).unwrap().files;
+        assert_eq!(found.len(), 1);
+        assert!(found[0].path.ends_with("corpus/legacy.py"));
 
         std::fs::remove_dir_all(&dir).unwrap();
     }

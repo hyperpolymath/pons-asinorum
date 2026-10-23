@@ -56,6 +56,7 @@ fn check_fixture(rule: &dyn Rule, fixture: &Fixture) -> Vec<pons_core::finding::
         path: fixture.path.clone(),
         lang: fixture.lang,
         text,
+        transcoded: false,
     };
     let tree = parse::parse(&source).unwrap();
     assert!(

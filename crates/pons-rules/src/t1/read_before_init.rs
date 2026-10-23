@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MPL-2.0
 
+use std::collections::{BTreeMap, BTreeSet};
+
 use pons_core::cfg::FunctionUnit;
 use pons_core::dataflow;
 use pons_core::engine::{Rule, RuleCtx};
 use pons_core::finding::{RawFinding, Severity, Tier};
 use pons_core::lang::Lang;
+use tree_sitter::Node;
 
 const LANGUAGES: &[Lang] = &[Lang::Python];
 
@@ -47,11 +50,20 @@ impl Rule for ReadBeforeInit {
     /// without counter-conditions. Opaque functions produce no findings.
     fn check(&self, ctx: &RuleCtx) -> Vec<RawFinding> {
         let mut findings = Vec::new();
+        // A bounded, explicitly documented pruning pass (#47 class A). It
+        // suppresses only a read inside a later branch guarded by the SAME
+        // pure `X is [not] None` condition that guarded an earlier branch
+        // which bound the name. Any assignment to `X` in between disables the
+        // pruning. This is not general path sensitivity or a soundness proof.
+        let correlated = correlated_guard_reads(ctx);
         for unit in ctx.units() {
             let FunctionUnit::Analysable(cfg) = unit else {
                 continue;
             };
             for event in dataflow::unbound_reads(cfg) {
+                if correlated.contains(&event.loc.byte_start) {
+                    continue;
+                }
                 let name = &cfg.locals()[event.local];
                 findings.push(RawFinding::new(
                     Tier::T1,
@@ -68,6 +80,150 @@ impl Rule for ReadBeforeInit {
             }
         }
         findings
+    }
+}
+
+
+/// A pure, attribute/identifier `is [not] None` guard. Call-bearing or
+/// otherwise impure conditions deliberately do not qualify.
+fn guard_key(cond: Node<'_>, text: &str) -> Option<(String, String)> {
+    let raw = &text[cond.byte_range()];
+    let (base, polarity) = if let Some(base) = raw.strip_suffix(" is not None") {
+        (base, "not-none")
+    } else if let Some(base) = raw.strip_suffix(" is None") {
+        (base, "none")
+    } else {
+        return None;
+    };
+    let base = base.trim();
+    if base.is_empty()
+        || !base
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.'))
+    {
+        return None;
+    }
+    Some((base.to_string(), polarity.to_string()))
+}
+
+fn children(node: Node<'_>) -> Vec<Node<'_>> {
+    let mut cursor = node.walk();
+    node.named_children(&mut cursor).collect()
+}
+
+fn assigned_names(node: Node<'_>, text: &str, out: &mut BTreeSet<String>) {
+    if node.kind() == "assignment" {
+        if let Some(left) = node.child_by_field_name("left") {
+            if left.kind() == "identifier" {
+                out.insert(text[left.byte_range()].to_string());
+            }
+        }
+    }
+    for child in children(node) {
+        assigned_names(child, text, out);
+    }
+}
+
+fn identifier_offsets(node: Node<'_>, text: &str, names: &BTreeSet<String>, out: &mut BTreeSet<usize>) {
+    if node.kind() == "identifier" && names.contains(&text[node.byte_range()]) {
+        out.insert(node.start_byte());
+    }
+    for child in children(node) {
+        identifier_offsets(child, text, names, out);
+    }
+}
+
+/// Conservative invalidation: any assignment/delete whose target is the guard
+/// base itself, or an attribute of it, disables the correlation.
+fn base_mutated_between(node: Node<'_>, start: usize, end: usize, base: &str, text: &str) -> bool {
+    if node.start_byte() >= end {
+        return false;
+    }
+    if node.start_byte() >= start
+        && matches!(node.kind(), "assignment" | "augmented_assignment" | "delete_statement")
+    {
+        let left = node.child_by_field_name("left");
+        if let Some(left) = left {
+            let target = &text[left.byte_range()];
+            if target == base || target.starts_with(&format!("{base}.")) {
+                return true;
+            }
+        }
+    }
+    children(node)
+        .into_iter()
+        .any(|child| base_mutated_between(child, start, end, base, text))
+}
+
+#[derive(Clone)]
+struct GuardIf<'t> {
+    key: String,
+    base: String,
+    start: usize,
+    end: usize,
+    consequence: Node<'t>,
+}
+
+/// Byte offsets of reads that the bounded correlated-guard pass may prune.
+fn correlated_guard_reads(ctx: &RuleCtx<'_>) -> BTreeSet<usize> {
+    let mut out = BTreeSet::new();
+    visit_functions(ctx.tree.root_node(), ctx.text, &mut out);
+    out
+}
+
+fn visit_functions(node: Node<'_>, text: &str, out: &mut BTreeSet<usize>) {
+    if node.kind() == "function_definition" {
+        prune_function(node, text, out);
+        // Nested functions are separate analysis units; recurse to find them.
+        for child in children(node) {
+            visit_functions(child, text, out);
+        }
+        return;
+    }
+    for child in children(node) {
+        visit_functions(child, text, out);
+    }
+}
+
+fn prune_function(func: Node<'_>, text: &str, out: &mut BTreeSet<usize>) {
+    let mut guards = Vec::new();
+    let mut stack = vec![func];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "function_definition" && node.start_byte() != func.start_byte() {
+            continue;
+        }
+        if node.kind() == "if_statement" {
+            let Some(cond) = node.child_by_field_name("condition") else {
+                continue;
+            };
+            if let Some((base, polarity)) = guard_key(cond, text) {
+                let key = format!("{base}::{polarity}");
+                if let Some(consequence) = node.child_by_field_name("consequence") {
+                    guards.push(GuardIf {
+                        key,
+                        base: base.clone(),
+                        start: node.start_byte(),
+                        end: node.end_byte(),
+                        consequence,
+                    });
+                }
+            }
+        }
+        stack.extend(children(node));
+    }
+
+    let mut first: BTreeMap<String, GuardIf<'_>> = BTreeMap::new();
+    for guard in guards {
+        if let Some(earlier) = first.get(&guard.key).cloned() {
+            if base_mutated_between(func, earlier.end, guard.start, &earlier.base, text) {
+                continue;
+            }
+            let mut names = BTreeSet::new();
+            assigned_names(earlier.consequence, text, &mut names);
+            identifier_offsets(guard.consequence, text, &names, out);
+        } else {
+            first.insert(guard.key.clone(), guard);
+        }
     }
 }
 
@@ -101,6 +257,21 @@ mod tests {
     #[test]
     fn a_global_name_is_never_checked() {
         assert!(check("def f():\n    global n\n    n += 1\n    return n\n").is_empty());
+    }
+
+    #[test]
+    fn a_correlated_guard_read_is_pruned_but_a_mismatched_guard_is_not() {
+        let correlated = "def pack(self):\n    if self.name is not None:\n        name = 1\n    if self.name is not None:\n        MonsterAddName(name)\n";
+        assert!(check(correlated).is_empty(), "identical pure guard was not pruned");
+
+        let mismatched = "def pack(self):\n    if self.name is not None:\n        name = 1\n    if self.other is not None:\n        MonsterAddName(name)\n";
+        assert_eq!(check(mismatched).len(), 1, "a different guard is a real may-unbound path");
+    }
+
+    #[test]
+    fn a_mutation_between_identical_guards_disables_pruning() {
+        let src = "def pack(self):\n    if self.name is not None:\n        name = 1\n    self = other\n    if self.name is not None:\n        MonsterAddName(name)\n";
+        assert_eq!(check(src).len(), 1, "the guard base was rebound between branches");
     }
 
     #[test]

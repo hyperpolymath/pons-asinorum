@@ -202,6 +202,36 @@ struct Run {
     #[serde(rename = "columnKind")]
     column_kind: &'static str,
     results: Vec<SarifResult>,
+    /// Always present, even with zero notifications: a consumer must be able
+    /// to distinguish "nothing was skipped" from "this producer cannot tell".
+    invocations: Vec<Invocation>,
+}
+
+#[derive(Serialize)]
+struct Invocation {
+    #[serde(rename = "executionSuccessful")]
+    execution_successful: bool,
+    #[serde(rename = "toolExecutionNotifications")]
+    tool_execution_notifications: Vec<Notification>,
+}
+
+#[derive(Serialize)]
+struct Notification {
+    level: &'static str,
+    message: Text,
+    locations: Vec<NotificationLocation>,
+}
+
+#[derive(Serialize)]
+struct NotificationLocation {
+    #[serde(rename = "physicalLocation")]
+    physical_location: NotificationPhysicalLocation,
+}
+
+#[derive(Serialize)]
+struct NotificationPhysicalLocation {
+    #[serde(rename = "artifactLocation")]
+    artifact_location: ArtifactLocation,
 }
 
 #[derive(Serialize)]
@@ -287,10 +317,13 @@ struct Region {
     end_line: usize,
     #[serde(rename = "endColumn")]
     end_column: usize,
-    #[serde(rename = "byteOffset")]
-    byte_offset: usize,
-    #[serde(rename = "byteLength")]
-    byte_length: usize,
+    /// Omitted for a Latin-1-transcoded file: the tree-sitter byte offset is
+    /// then an offset into the decoded string, not into the artifact (#33).
+    /// Line and UTF-16 columns remain valid, so annotation still works.
+    #[serde(rename = "byteOffset", skip_serializing_if = "Option::is_none")]
+    byte_offset: Option<usize>,
+    #[serde(rename = "byteLength", skip_serializing_if = "Option::is_none")]
+    byte_length: Option<usize>,
 }
 
 #[derive(Serialize)]
@@ -380,8 +413,10 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
                             start_column: loc.col_start,
                             end_line: loc.line_end,
                             end_column: loc.col_end,
-                            byte_offset: loc.byte_start,
-                            byte_length: loc.byte_end.saturating_sub(loc.byte_start),
+                            byte_offset: (!report.transcoded.contains(&loc.file))
+                                .then_some(loc.byte_start),
+                            byte_length: (!report.transcoded.contains(&loc.file))
+                                .then(|| loc.byte_end.saturating_sub(loc.byte_start)),
                         },
                     },
                 }],
@@ -409,6 +444,29 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
             },
             column_kind: COLUMN_KIND,
             results,
+            invocations: vec![Invocation {
+                // The scan itself completed: per ADR-0005 a skipped subtree is
+                // a partial result, not an operational failure. Consumers can
+                // opt into `--fail-on-skips` at the CLI for a hard gate.
+                execution_successful: true,
+                tool_execution_notifications: report
+                    .skipped
+                    .iter()
+                    .map(|s| Notification {
+                        level: "warning",
+                        message: Text {
+                            text: s.reason.clone(),
+                        },
+                        locations: vec![NotificationLocation {
+                            physical_location: NotificationPhysicalLocation {
+                                artifact_location: ArtifactLocation {
+                                    uri: artifact_uri(&s.path, &report.root),
+                                },
+                            },
+                        }],
+                    })
+                    .collect(),
+            }],
         }],
     };
 
@@ -458,6 +516,8 @@ mod tests {
             files_scanned: 1,
             languages: vec![Lang::Python],
             skipped: Vec::new(),
+            transcoded: BTreeSet::new(),
+            suppressed_findings: 0,
             rules: vec![RuleInfo {
                 id: "div-by-literal-zero",
                 description: "division or modulo whose right-hand side is a literal zero",
@@ -630,6 +690,54 @@ mod tests {
             validator().iter_errors(&other).next().is_some(),
             "the validator accepted version 9.9.9: it is not actually validating"
         );
+    }
+
+    #[test]
+    fn skipped_paths_are_visible_in_sarif_invocation_notifications() {
+        let out = render(&fixture::report()).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+        let invocation = &v["runs"][0]["invocations"][0];
+        assert_eq!(invocation["executionSuccessful"], true);
+        let notifications = invocation["toolExecutionNotifications"].as_array().unwrap();
+        assert_eq!(notifications.len(), 1);
+        assert_eq!(
+            notifications[0]["locations"][0]["physicalLocation"]["artifactLocation"]["uri"],
+            "app/broken.py"
+        );
+        assert!(notifications[0]["message"]["text"]
+            .as_str()
+            .unwrap()
+            .starts_with("could not read"));
+        assert!(validator().validate(&v).is_ok());
+    }
+
+    #[test]
+    fn invocations_remains_present_when_nothing_was_skipped() {
+        let mut report = fixture::report();
+        report.skipped.clear();
+        let out = render(&report).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+        let invocation = &v["runs"][0]["invocations"][0];
+        assert_eq!(invocation["executionSuccessful"], true);
+        assert_eq!(
+            invocation["toolExecutionNotifications"].as_array().unwrap().len(),
+            0,
+            "an empty notification array must still be emitted"
+        );
+    }
+
+    #[test]
+    fn a_transcoded_file_omits_artifact_byte_offsets() {
+        let mut report = fixture::report();
+        report.transcoded.insert("app/svc.py".to_string());
+        let out = render(&report).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+        let region = &v["runs"][0]["results"][0]["locations"][0]["physicalLocation"]["region"];
+        assert_eq!(region["startLine"], 41);
+        assert_eq!(region["startColumn"], 5);
+        assert!(region.get("byteOffset").is_none());
+        assert!(region.get("byteLength").is_none());
+        assert!(validator().validate(&v).is_ok());
     }
 
     #[test]

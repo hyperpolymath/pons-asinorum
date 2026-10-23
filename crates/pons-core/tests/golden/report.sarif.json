@@ -196,6 +196,28 @@
             "evidenceNote": "two loops over collections derived from the same source"
           }
         }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "toolExecutionNotifications": [
+            {
+              "level": "warning",
+              "message": {
+                "text": "could not read: No such file or directory (os error 2)"
+              },
+              "locations": [
+                {
+                  "physicalLocation": {
+                    "artifactLocation": {
+                      "uri": "app/broken.py"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
       ]
     }
   ]

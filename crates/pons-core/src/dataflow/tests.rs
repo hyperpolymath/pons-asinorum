@@ -202,3 +202,31 @@ fn a_read_in_a_nested_function_is_not_judged_here() {
     let src = "def f():\n    def g():\n        return y\n    y = 1\n    return g\n";
     assert_eq!(unbound(src), Vec::<String>::new());
 }
+
+#[test]
+fn a_handler_ending_in_raise_does_not_poison_the_live_join() {
+    // #50: the implicit `del e` lives on an unreachable tail after `raise`.
+    // It must not reach `return e` through the forward meet.
+    let negative = "def f():\n    e = None\n    try:\n        g()\n    except E as e:\n        raise\n    return e\n";
+    let positive = "def f():\n    e = None\n    try:\n        g()\n    except E as e:\n        pass\n    return e\n";
+    assert_eq!(unbound(negative), Vec::<String>::new());
+    assert_eq!(unbound(positive), ["e@7"]);
+}
+
+#[test]
+fn a_with_that_can_suppress_keeps_the_earlier_store_live() {
+    let src = "import contextlib\ndef f(d, k):\n    x = None\n    with contextlib.suppress(KeyError):\n        x = d[k]\n    return x\n";
+    assert_eq!(dead(src), Vec::<String>::new());
+    assert_eq!(unbound(src), Vec::<String>::new());
+    // Control: the fix did not create a normal body-entry -> after edge.
+    let control = "def f(p):\n    with open(p) as fh:\n        data = fh.read()\n    return data\n";
+    assert_eq!(unbound(control), Vec::<String>::new());
+}
+
+#[test]
+fn a_for_loop_over_a_non_empty_literal_has_no_zero_trip_exit() {
+    let negative = "def f():\n    for sizePrefix in [True, False]:\n        b1 = 1\n    return b1\n";
+    let positive = "def f(items):\n    for sizePrefix in items:\n        b1 = 1\n    return b1\n";
+    assert_eq!(unbound(negative), Vec::<String>::new());
+    assert_eq!(unbound(positive), ["b1@4"]);
+}

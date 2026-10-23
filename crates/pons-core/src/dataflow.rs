@@ -132,10 +132,26 @@ pub fn solve<P: Problem>(cfg: &FunctionCfg, problem: &P) -> Solution {
     let n_locals = cfg.locals().len();
     let n_blocks = cfg.blocks().len();
     let preds = cfg.preds();
+    let reachable = cfg.reachable();
+    // A `Kill` in dead code must not invent an unbound fact at a live join
+    // (#50). Filtering forward predecessors is less invasive than pruning CFG
+    // edges: unreachable blocks remain visible for `render` and for the
+    // dedicated `unreachable-after-jump` rule. Backward liveness keeps every
+    // successor because a use in a copied/exceptional successor is a real
+    // reason for an earlier store to stay live.
+    let reachable_preds: Vec<Vec<BlockId>> = preds
+        .iter()
+        .map(|ps| {
+            ps.iter()
+                .copied()
+                .filter(|p| reachable[*p])
+                .collect()
+        })
+        .collect();
     // `into[b]` is where facts enter `b`; `from[b]` where they leave it.
     let (into_of, flows_to): (Vec<Vec<BlockId>>, Vec<Vec<BlockId>>) = match P::DIRECTION {
         Direction::Forward => (
-            preds,
+            reachable_preds,
             cfg.blocks().iter().map(|b| b.succs.clone()).collect(),
         ),
         Direction::Backward => (
