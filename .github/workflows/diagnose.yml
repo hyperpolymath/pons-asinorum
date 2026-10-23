@@ -1,0 +1,51 @@
+name: diagnose
+
+# TEMPORARY remote build oracle for this branch; remove before merge.
+on:
+  push:
+    branches:
+      - arena/4457fb85-pons-asinorum
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: diagnose-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  cargo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Capture cargo diagnostics
+        shell: bash
+        run: |
+          set +e
+          {
+            echo "### rustc"; rustc --version
+            echo "### fmt"; cargo fmt --all -- --check
+            echo "### clippy"; cargo clippy --workspace --all-targets -- -D warnings
+            echo "### test"; cargo test --workspace
+            echo "### build release"; cargo build --release
+          } > diagnostics.txt 2>&1
+          echo "cargo diagnostics captured"
+      - name: Commit diagnostics
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add diagnostics.txt
+          if git diff --cached --quiet; then
+            echo "diagnostics unchanged"
+          else
+            git commit -m "ci: capture cargo diagnostics"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
