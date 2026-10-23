@@ -9,7 +9,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -138,9 +138,10 @@ impl Protocol {
             {
                 bail!("unknown event call {} in protocol {}", event.call, self.id);
             }
-            let entry = instances
-                .entry(&event.instance)
-                .or_insert((&self.initial, event.line, false));
+            let entry =
+                instances
+                    .entry(&event.instance)
+                    .or_insert((&self.initial, event.line, false));
             for op in self
                 .operation
                 .iter()

@@ -47,8 +47,8 @@ mod tests {
     use super::*;
     use crate::finding::{Location, Severity, Tier};
     use crate::lang::Lang;
-    use crate::source::SourceFile;
     use crate::parse;
+    use crate::source::SourceFile;
     use std::path::PathBuf;
 
     fn finding(line: usize) -> Finding {

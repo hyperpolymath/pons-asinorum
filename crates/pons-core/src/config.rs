@@ -11,7 +11,7 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use globset::{Glob, GlobMatcher};
 use serde::Deserialize;
 
@@ -62,8 +62,7 @@ impl Config {
     pub fn load(path: &Path) -> Result<Self> {
         let text = std::fs::read_to_string(path)
             .with_context(|| format!("cannot read configuration {}", path.display()))?;
-        toml::from_str(&text)
-            .with_context(|| format!("invalid configuration {}", path.display()))
+        toml::from_str(&text).with_context(|| format!("invalid configuration {}", path.display()))
     }
 
     /// Validates rule IDs and globs once, before any file is scanned. A bad
@@ -161,9 +160,7 @@ paths = ["fixtures/**"]
 "#,
         )
         .unwrap();
-        let compiled = cfg
-            .compile(&["div-by-literal-zero"])
-            .unwrap();
+        let compiled = cfg.compile(&["div-by-literal-zero"]).unwrap();
         assert!(compiled.suppressed(&finding("repo/fixtures/positive/a.py"), Path::new("repo")));
         assert!(!compiled.suppressed(&finding("repo/src/a.py"), Path::new("repo")));
     }

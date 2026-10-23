@@ -225,7 +225,8 @@ fn a_with_that_can_suppress_keeps_the_earlier_store_live() {
 
 #[test]
 fn a_for_loop_over_a_non_empty_literal_has_no_zero_trip_exit() {
-    let negative = "def f():\n    for sizePrefix in [True, False]:\n        b1 = 1\n    return b1\n";
+    let negative =
+        "def f():\n    for sizePrefix in [True, False]:\n        b1 = 1\n    return b1\n";
     let positive = "def f(items):\n    for sizePrefix in items:\n        b1 = 1\n    return b1\n";
     assert_eq!(unbound(negative), Vec::<String>::new());
     assert_eq!(unbound(positive), ["b1@4"]);

@@ -141,12 +141,7 @@ pub fn solve<P: Problem>(cfg: &FunctionCfg, problem: &P) -> Solution {
     // reason for an earlier store to stay live.
     let reachable_preds: Vec<Vec<BlockId>> = preds
         .iter()
-        .map(|ps| {
-            ps.iter()
-                .copied()
-                .filter(|p| reachable[*p])
-                .collect()
-        })
+        .map(|ps| ps.iter().copied().filter(|p| reachable[*p]).collect())
         .collect();
     // `into[b]` is where facts enter `b`; `from[b]` where they leave it.
     let (into_of, flows_to): (Vec<Vec<BlockId>>, Vec<Vec<BlockId>>) = match P::DIRECTION {

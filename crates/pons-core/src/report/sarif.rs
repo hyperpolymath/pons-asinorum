@@ -720,7 +720,10 @@ mod tests {
         let invocation = &v["runs"][0]["invocations"][0];
         assert_eq!(invocation["executionSuccessful"], true);
         assert_eq!(
-            invocation["toolExecutionNotifications"].as_array().unwrap().len(),
+            invocation["toolExecutionNotifications"]
+                .as_array()
+                .unwrap()
+                .len(),
             0,
             "an empty notification array must still be emitted"
         );

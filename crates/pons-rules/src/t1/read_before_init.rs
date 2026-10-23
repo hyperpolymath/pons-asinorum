@@ -83,7 +83,6 @@ impl Rule for ReadBeforeInit {
     }
 }
 
-
 /// A pure, attribute/identifier `is [not] None` guard. Call-bearing or
 /// otherwise impure conditions deliberately do not qualify.
 fn guard_key(cond: Node<'_>, text: &str) -> Option<(String, String)> {
@@ -124,7 +123,12 @@ fn assigned_names(node: Node<'_>, text: &str, out: &mut BTreeSet<String>) {
     }
 }
 
-fn identifier_offsets(node: Node<'_>, text: &str, names: &BTreeSet<String>, out: &mut BTreeSet<usize>) {
+fn identifier_offsets(
+    node: Node<'_>,
+    text: &str,
+    names: &BTreeSet<String>,
+    out: &mut BTreeSet<usize>,
+) {
     if node.kind() == "identifier" && names.contains(&text[node.byte_range()]) {
         out.insert(node.start_byte());
     }
@@ -140,7 +144,10 @@ fn base_mutated_between(node: Node<'_>, start: usize, end: usize, base: &str, te
         return false;
     }
     if node.start_byte() >= start
-        && matches!(node.kind(), "assignment" | "augmented_assignment" | "delete_statement")
+        && matches!(
+            node.kind(),
+            "assignment" | "augmented_assignment" | "delete_statement"
+        )
     {
         let left = node.child_by_field_name("left");
         if let Some(left) = left {
@@ -262,16 +269,27 @@ mod tests {
     #[test]
     fn a_correlated_guard_read_is_pruned_but_a_mismatched_guard_is_not() {
         let correlated = "def pack(self):\n    if self.name is not None:\n        name = 1\n    if self.name is not None:\n        MonsterAddName(name)\n";
-        assert!(check(correlated).is_empty(), "identical pure guard was not pruned");
+        assert!(
+            check(correlated).is_empty(),
+            "identical pure guard was not pruned"
+        );
 
         let mismatched = "def pack(self):\n    if self.name is not None:\n        name = 1\n    if self.other is not None:\n        MonsterAddName(name)\n";
-        assert_eq!(check(mismatched).len(), 1, "a different guard is a real may-unbound path");
+        assert_eq!(
+            check(mismatched).len(),
+            1,
+            "a different guard is a real may-unbound path"
+        );
     }
 
     #[test]
     fn a_mutation_between_identical_guards_disables_pruning() {
         let src = "def pack(self):\n    if self.name is not None:\n        name = 1\n    self = other\n    if self.name is not None:\n        MonsterAddName(name)\n";
-        assert_eq!(check(src).len(), 1, "the guard base was rebound between branches");
+        assert_eq!(
+            check(src).len(),
+            1,
+            "the guard base was rebound between branches"
+        );
     }
 
     #[test]

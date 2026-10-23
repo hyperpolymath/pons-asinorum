@@ -4,7 +4,7 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use pons_core::config::Config;
 use pons_core::engine::{Engine, ScanReport};
@@ -208,10 +208,7 @@ fn run(cli: Cli) -> Result<u8> {
                 "scope": "Only the supplied events, their order and instance keys; no source analysis or alias inference.",
                 "violations": violations,
             });
-            emit(&format!(
-                "{}\n",
-                serde_json::to_string_pretty(&envelope)?
-            ))?;
+            emit(&format!("{}\n", serde_json::to_string_pretty(&envelope)?))?;
             Ok(u8::from(!violations.is_empty()))
         }
     }
@@ -221,7 +218,14 @@ fn doctor() -> String {
     let mut out = String::from(
         "Optional adapters (presence only; availability is not an integration test):\n",
     );
-    for name in ["invariant-path", "pandoc", "aspell", "hunspell", "agrep", "tesseract"] {
+    for name in [
+        "invariant-path",
+        "pandoc",
+        "aspell",
+        "hunspell",
+        "agrep",
+        "tesseract",
+    ] {
         let location = std::env::var_os("PATH")
             .and_then(|paths| {
                 std::env::split_paths(&paths)
