@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: MPL-2.0
+name: autoformat
+
+on:
+  push:
+    branches:
+      - arena/4457fb85-pons-asinorum
+
+permissions:
+  contents: write
+
+jobs:
+  rustfmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - name: toolchain
+        run: |
+          rustup toolchain install
+          cargo fmt --version
+      - name: format
+        run: cargo fmt --all
+      - name: commit formatting
+        run: |
+          git config user.name "Arena Agent"
+          git config user.email "arena-agent@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "rustfmt found no changes"
+          else
+            git commit -m "style: apply rustfmt"
+            git push origin HEAD:arena/4457fb85-pons-asinorum
+          fi
