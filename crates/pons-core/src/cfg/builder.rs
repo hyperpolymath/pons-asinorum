@@ -5,6 +5,8 @@
 //! ADR-0002 is the authority. Where it is silent the choice made here is
 //! marked **gap-fill** and pinned by a snapshot test in `cfg::tests`.
 
+use std::collections::BTreeSet;
+
 use tree_sitter::Node;
 
 use super::scope::{self, Scope};
@@ -46,6 +48,12 @@ pub(super) struct Builder<'t> {
     /// A comprehension's own iteration variables, innermost last. They
     /// shadow a same-named local inside the comprehension.
     shadow: Vec<Vec<String>>,
+    /// Locals with a strong definition already emitted before the current
+    /// statement. A `with` context manager may suppress an exception raised
+    /// by any statement in its body, so a rebinding of one of these locals
+    /// inside the body is only a *weak* definition for liveness (#48).
+    seen_defs: BTreeSet<LocalId>,
+    in_with_body: bool,
 }
 
 impl<'t> Builder<'t> {
@@ -72,6 +80,8 @@ impl<'t> Builder<'t> {
             frames: Vec::new(),
             raise_to: vec![FunctionCfg::EXIT],
             shadow: Vec::new(),
+            seen_defs: BTreeSet::new(),
+            in_with_body: false,
         };
         let body = func
             .child_by_field_name("body")
@@ -160,12 +170,26 @@ impl<'t> Builder<'t> {
     /// A strong definition. `report` is dropped for a captured local: a
     /// closure reads it when *called*, so the store is never provably dead
     /// (the late-binding closure false positive).
-    fn def(&self, ident: Node<'_>, report: Option<DefReport>, ev: &mut Vec<Event>) {
-        let report = report.filter(|_| {
-            self.lookup(ident)
-                .is_some_and(|id| !self.scope.captured.contains(&id))
-        });
-        self.event(ident, EventKind::Def { report }, ev);
+    ///
+    /// Inside a `with`, a rebinding of a name that was already strongly
+    /// defined is downgraded to `WeakDef`: it still clears may-unbound, but
+    /// does not end the earlier value's live range. `__exit__` may return
+    /// truthy and resume after the block from *any* point in it (#48). This
+    /// deliberately loses some dead-store reports rather than inventing one.
+    fn def(&mut self, ident: Node<'_>, report: Option<DefReport>, ev: &mut Vec<Event>) {
+        let local = self.lookup(ident);
+        // Check membership BEFORE recording the definition, or every in-`with`
+        // definition would weaken itself.
+        let weak = self.in_with_body && local.is_some_and(|id| self.seen_defs.contains(&id));
+        if let Some(id) = local {
+            self.seen_defs.insert(id);
+        }
+        let report = report.filter(|_| local.is_some_and(|id| !self.scope.captured.contains(&id)));
+        if weak {
+            self.event(ident, EventKind::WeakDef, ev);
+        } else {
+            self.event(ident, EventKind::Def { report }, ev);
+        }
     }
 
     // ---- expressions ----------------------------------------------------
@@ -626,12 +650,19 @@ impl<'t> Builder<'t> {
     /// `for`: the iterable is evaluated once, before the loop. The target is
     /// defined on the iterate edge, in a synthetic block of its own, so that a
     /// read of the loop variable after a loop that never ran is may-unbound.
+    /// Recognised non-empty literals omit the zero-trip exit edge.
     fn for_(&mut self, node: Node<'t>) {
-        if let Some(right) = node.child_by_field_name("right") {
+        let right = node.child_by_field_name("right");
+        if let Some(right) = right {
             let mut ev = Vec::new();
             self.expr(right, &mut ev, true);
             self.emit_node(right, ev);
         }
+        // A literal, non-empty sequence has no zero-trip exit (#47 class B).
+        // Give it a post-iteration header, so the exhausted edge carries a
+        // state in which the loop target and body definitions have happened.
+        // An ordinary iterable keeps the conservative zero-trip edge.
+        let literal_non_empty = Self::literal_non_empty(right, self.text);
         let header = self.new_block();
         self.edge(self.cur, header);
         let iterate = self.new_block();
@@ -643,29 +674,73 @@ impl<'t> Builder<'t> {
             self.emit_node(left, ev);
         }
         let after = self.new_block();
-        self.loop_body(node, header, after);
+        let repeat = if literal_non_empty {
+            self.new_block()
+        } else {
+            header
+        };
+        self.loop_body(node, repeat, after);
+        if literal_non_empty {
+            self.edge(repeat, iterate);
+        }
         let exhausted = self.new_block();
-        self.edge(header, exhausted);
+        self.edge(repeat, exhausted);
         self.cur = exhausted;
         self.else_body(node, after);
         self.cur = after;
     }
 
-    /// Lowers a loop body with `continue` targeting `header` and `break`
-    /// targeting `after`; normal completion returns to `header`.
-    fn loop_body(&mut self, node: Node<'t>, header: BlockId, after: BlockId) {
+    /// Whether the iterable is recognised as a directly written non-empty
+    /// literal: a collection with a non-comment, non-splat child, or a string
+    /// with non-empty content and no interpolation. Missing nodes and other
+    /// expressions are left conservative; `text` must contain the node's source.
+    fn literal_non_empty(node: Option<Node<'t>>, text: &str) -> bool {
+        let Some(node) = node else {
+            return false;
+        };
+        match node.kind() {
+            "list" | "tuple" | "set" | "dictionary" => {
+                let mut cursor = node.walk();
+                node.named_children(&mut cursor).any(|c| {
+                    !matches!(
+                        c.kind(),
+                        "comment" | "list_splat" | "parenthesized_list_splat" | "dictionary_splat"
+                    )
+                })
+            }
+            "string" => {
+                let mut cursor = node.walk();
+                let has_interpolation = node
+                    .named_children(&mut cursor)
+                    .any(|c| c.kind() == "interpolation");
+                if has_interpolation {
+                    return false;
+                }
+                let raw = &text[node.byte_range()];
+                let content = raw.trim_start_matches(['f', 'F', 'r', 'R', 'b', 'B', 'u', 'U']);
+                !content.trim_matches('"').trim_matches('\'').is_empty()
+            }
+            _ => false,
+        }
+    }
+
+    /// Lowers a loop body with `continue` targeting `iteration_header` and
+    /// `break` targeting `after`; normal completion returns to
+    /// `iteration_header`. For a non-empty literal `for`, that is a separate
+    /// post-iteration block, which distinguishes loop exit from zero trips.
+    fn loop_body(&mut self, node: Node<'t>, iteration_header: BlockId, after: BlockId) {
         let body_entry = self.new_block();
         self.edge(self.cur, body_entry);
         self.cur = body_entry;
         self.frames.push(Frame::Loop {
             brk: after,
-            cont: header,
+            cont: iteration_header,
         });
         if let Some(body) = node.child_by_field_name("body") {
             self.block(body);
         }
         self.frames.pop();
-        self.edge(self.cur, header);
+        self.edge(self.cur, iteration_header);
     }
 
     /// The `else` of a loop runs when the loop ends without `break`.
@@ -679,7 +754,9 @@ impl<'t> Builder<'t> {
     }
 
     /// Records context expressions and alias bindings before the body.
-    /// Context-manager exit calls and exception suppression are not modelled.
+    /// Context-manager exit calls are not executed, but exception suppression
+    /// is modelled conservatively for liveness: strong re-definitions of
+    /// already-bound locals become weak definitions (see [`Builder::def`]).
     fn with_(&mut self, node: Node<'t>) {
         let mut ev = Vec::new();
         let mut header_end = node.start_byte();
@@ -710,9 +787,12 @@ impl<'t> Builder<'t> {
             }
         }
         self.emit(node.start_byte(), header_end, ev);
+        let outer = self.in_with_body;
+        self.in_with_body = true;
         if let Some(body) = node.child_by_field_name("body") {
             self.block(body);
         }
+        self.in_with_body = outer;
     }
 
     /// `match`: the subject is read, then each arm is a successor of the

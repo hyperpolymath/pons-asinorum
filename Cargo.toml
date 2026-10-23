@@ -27,3 +27,7 @@ clap = { version = "=4.6.6", features = ["derive"] }
 # HTTP reference resolver: the SARIF 2.1.0 schema is bundled and self-contained,
 # so a validator that can reach the network is pure supply-chain surface.
 jsonschema = { version = "=0.57.0", default-features = false }
+# Explicit operator configuration and scoped suppression.
+globset = "=0.4.18"
+toml = "=0.8.23"
+clap_mangen = "=0.2.33"

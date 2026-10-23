@@ -2,26 +2,83 @@
 = Using Pons
 :toc:
 
-== Commands and limits
+This page describes the binary on the current branch. Anything marked
+*planned* is a design intention, not a command the executable accepts. A
+machine drift test compares the commands and flags below with `pons --help`
+and `pons scan --help`; a fake documented flag fails CI.
 
-`pons scan PATH` selects source grammars by extension and checks supported
-text documents/configuration. For an extensionless single source file, use
-`--lang python` (or javascript, typescript, tsx, rust). A forced grammar is
-rejected for a directory. Unknown extensions in a tree are counted as skipped;
-explicitly requesting an unsupported file is an error. Text is UTF-8, at most
-2 MiB per file. Use `--rule ID` repeatedly to choose rules, `--no-speculative`
-to omit speculative prompts, and `--explain` for supporting detail.
+== Commands
 
-`--format human|json|sarif` changes presentation. `--fail-on never|info|warn|error`
-sets the CI threshold; never is the default. Errors and incomplete scans exit 2
-regardless of threshold. Inspect the scanned counts and diagnostics alongside
-any zero-finding result.
+[source,shell]
+----
+pons scan <PATH> [--format human|json|sarif] [--fail-on info|warn|error]
+                 [--config FILE] [--rule ID]... [--lang python|javascript|typescript|tsx|rust]
+                 [--no-speculative] [--explain] [--fail-on-skips]
+pons catalogue
+pons man
+pons doctor
+pons trace <EVENTS.json> --protocol <PROTOCOL.toml>
+----
+
+`scan` discovers files by extension and runs the registered rules. `.gitignore`
+and `.ponsignore` are honoured. Build/VCS directories `.git`, `target` and
+`node_modules` are skipped; directories named `corpus`, `third_party` or
+`external_corpora` are *not* hidden by default, because a legacy-code exnovation
+scanner must not silently ignore the estate it was built to inspect. Use
+`.ponsignore` for an explicit exclusion.
+
+`--lang` forces one grammar for a single file, including an extensionless file.
+It is rejected for a directory. `catalogue` prints the live rule registry.
+`man` renders a groff page from the same clap command model as `--help`.
+`doctor` reports whether named optional adapter executables are on `PATH`; it
+does not claim those adapters are integrated or tested.
+
+`pons trace` checks an explicitly supplied, ordered JSON event trace against a
+TOML finite-state protocol. It does **not** infer events from source code.
+Events have non-empty `instance`, known `call`, positive non-decreasing `line`
+fields. Unknown calls are errors, so a misspelt event cannot quietly make a
+trace look complete. Exit 1 means protocol violations were found.
+
+== Scan output and exit codes
+
+`--format human` is the default. `--format json` emits the versioned envelope
+from PLAN Appendix G; `--format sarif` emits SARIF 2.1.0 with an `invocations`
+array. Skipped files/subtrees appear on stderr, in JSON
+`scanned.skipped`, and in SARIF
+`runs[0].invocations[0].toolExecutionNotifications`. A scan with skips still
+exits 0 by default (ADR-0005), because it did complete; `--fail-on-skips`
+turns any skip into exit 2 for estates that require complete coverage.
+
+Exit codes:
+
+* `0` — scan completed and no selected threshold was reached.
+* `1` — a non-`SPECULATIVE` finding reached `--fail-on`; without `--fail-on`,
+  output is advisory.
+* `2` — invalid input, unopenable root, configuration/protocol error, or
+  `--fail-on-skips` with at least one skip.
+
+`--no-speculative` omits T3 findings and records them as filtered.
+`--explain` adds evidence class and tier to human output. `SPECULATIVE`
+findings are always demoted in all formats and never count toward a threshold.
+
+== Encoding and locations
+
+UTF-8 is the normal path. If a supported file is not UTF-8, Pons decodes it as
+Latin-1 so its line structure survives, marks it as `transcoded`, and reports
+that fact. Tree-sitter byte offsets then index the decoded string, not the
+artifact. SARIF therefore *omits* `byteOffset`/`byteLength` for a transcoded
+file; line and UTF-16 columns remain valid. The JSON envelope lists transcoded
+paths. This is deliberately less impressive and more truthful than emitting an
+offset that points at the wrong bytes.
+
+Parse trees with tree-sitter error recovery are rejected as skipped files, not
+treated as clean parses. A partial scan must never read as a clean one.
 
 == Configuration and dismissals
 
-Pons reads `pons.toml` at the scan root, or the file supplied with `--config`.
-Unknown keys and rule IDs fail explicitly. `.ponsignore` uses ignore-file
-patterns, including outside a Git repository; `.gitignore` is also honoured.
+Pons reads `pons.toml` at the scan root (or the parent of a single-file scan),
+or the file supplied with `--config`. Unknown keys, unknown suppressed rule
+IDs and invalid globs are operational errors. This is the accepted schema:
 
 [source,toml]
 ----
@@ -30,121 +87,47 @@ name = "pons-asinorum"
 aliases = ["Pons"]
 
 [suppress]
-rules = []
-paths = ["generated/**"]
+rules = []                    # suppress one rule everywhere
+paths = ["fixtures/**"]       # suppress every rule on matching paths
 
 [[suppress.allow]]
 rule = "while-true-no-break"
 path = "examples/service.rs"
 reason = "Intentional service loop; termination is external"
-
-[[pattern]]
-id = "user-placeholder-account"
-path = "docs/**"
-regex = "ACCOUNT_NAME_HERE"
-message = "The account name still needs filling in"
-counter_condition = "A template example may deliberately retain this marker"
 ----
 
-In supported source languages, an actual comment on the finding's start line
-can contain `pons:allow self-assignment -- deliberate binding example`.
-A string containing that text cannot suppress a finding. Document and asset
-findings use configuration allowances. A word-processor-style dismissal UI
-and baseline fingerprints are planned; the CLI currently edits no source.
+`identity` is reserved for future document-identity checks; it is parsed and
+validated but does not currently generate findings. The `pattern`, `budget`,
+`i18n` and `asset` tables described by the deferred 2026-09-09 rookie-scanner
+fork are *planned*, not accepted by the current configuration parser.
 
-== Consumable resources
+In supported source languages, an actual comment on the finding's start line,
+or the immediately preceding line, can contain:
 
-[source,toml]
+[source,python]
 ----
-[[budget]]
-path = "breakfast.py"
-resource = "eggs"
-available = 4
-consume = "eat"
-units = 1
+# pons:allow self-assignment -- deliberate binding example
+x = x
 ----
 
-For a Python loop with `range(2245)` and the call `eat(egg)`, this states that
-each call consumes one egg. If that loop completes, the checker reports 2245
-needed and 2241 short. It handles nested literal one-argument ranges and
-checked arithmetic; branches, unknown calls, exits and unresolved bounds do
-not yield a purported exact count. This is a user assertion about consumption,
-not an inference from the word "egg". No runtime availability is observed.
+Only comment nodes count. A string containing `pons:allow` cannot suppress a
+finding. Suppressed findings are counted in `scanned.suppressed_findings`, not
+silently erased. Baseline fingerprints and editor/word-processor-style review
+remain planned.
 
-For explicit event traces, run `pons trace events.json --protocol
-protocols/linear-egg.toml`. Events have `instance`, `call` and positive `line`
-fields in nondecreasing order. This checks the supplied events only.
+== Planned commands (not in this binary)
 
-== Localisation
+The following belong to the deferred adapter slice and are marked explicitly;
+they are not accepted by `--help`:
 
-[source,toml]
-----
-[i18n]
-base = "locales/eng.json"
-translations = ["locales/fra.json"]
-lol_catalogue = "locale-catalogue.json"
-----
+* `pons challenge FILE` — planned (M9): local Invariant Path hand-off, no
+  annotation persistence.
+* `pons extract FILE --via pandoc|ocr` — planned (M9): bounded document/image
+  text extraction.
+* `pons spell FILE --via aspell|hunspell` — planned (M9): dictionary misses,
+  no automatic rewrites.
+* `pons search PATTERN FILE --errors N` — planned (M9): approximate text search
+  through `agrep`.
 
-Nested JSON keys and named interpolation placeholders are compared. The
-optional catalogue is a Pons import array of records such as
-`{"code":"eng","name":"English"}`; locale filename stems must match its
-codes. This is not a claim that LOL already exports this format. Detection of
-mixed prose languages, plural rules and semantic translation errors remains
-future work. Intentional bilingual documents should be explicitly declared
-when that support is added, never penalised merely for being multilingual.
-
-== Images and publishing reminders
-
-[source,toml]
-----
-[[asset]]
-path = "images/border.svg"
-decorative = true
-
-[[asset]]
-path = "images/process.svg"
-rights_required = true
-rights = "Original work owned by the project; CC-BY-SA-4.0"
-attribution_required = true
-attribution = "Example Artist, Process diagram, CC-BY-SA-4.0"
-ai_generated = false
-description_required = true
-description = "The three stages and their transitions are described in the adjacent text"
-title_required = false
-----
-
-The HTML checker prompts on an img element with no alt attribute. An explicit
-empty `alt=""` is allowed; a declared decorative asset with nonempty or absent
-alt produces a review prompt. Decorative declarations currently apply to all
-matched HTML uses in the scan: scope them to separate scans if intent differs
-between pages. HTML comments, scripts and styles are excluded. This is a
-literal markup check, not complete HTML parsing or accessibility certification.
-
-Asset requirements are opt-in author declarations. Empty required rights,
-attribution, description, title, or an empty `ai_disclosure` when
-`ai_generated=true`, produce a prompt. Populating a manifest is not proof that
-attribution/disclosure appears on the published page, nor proof of permission.
-A decorative declaration never waives rights or attribution requirements.
-Missing fields are not automatically illegal. File metadata, photo/edit/AI
-classification and provenance verification are not yet implemented.
-
-== Optional tools
-
-`pons doctor` reports executable presence only. Commands below require GNU
-`timeout` and the selected tool. Child execution is capped at 15 seconds and
-4 MiB each for stdout/stderr; document input is capped at 32 MiB. No remote
-uploads are performed by Pons. Installed tools and dictionaries remain the
-operator's responsibility.
-
-* `pons extract guide.docx --via pandoc`: explicit Pandoc sandbox conversion
-  for Markdown, HTML, DOCX, ODT and reStructuredText inputs.
-* `pons extract figure.png --via ocr --language eng`: Tesseract OCR for PNG,
-  JPEG, TIFF and BMP. OCR may be wrong; it is extracted text, not a verified caption.
-* `pons spell guide.txt --via aspell --dictionary en_GB`, or `--via hunspell`:
-  dictionary misses, with no automatic rewrites.
-* `pons search misspelt guide.txt --errors 1`: agrep approximate search.
-* `pons challenge claims.adoc`: explicit local Invariant Path JSON hand-off;
-  no annotations are accepted or persisted by this command.
-
-No substitute is used when a requested tool is missing. Default scanning
-remains independent of these adapters.
+Optional adapters must remain explicit, locally invoked, time/output bounded,
+and never run scanned project code by default.

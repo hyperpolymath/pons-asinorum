@@ -1,7 +1,16 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
 = ADR-0005: executable rookie-scanner development slice
-:status: accepted
+:status: historical — superseded by PR #39 conflict resolution
 :date: 2026-09-09
+
+[WARNING]
+====
+Historical document. The owner expanded the *vision*, but PR #39's merge
+deferred this fork's executable implementation. The present branch retains the
+M0–M4 core architecture and has selectively harvested suppression, trace and
+CLI ideas with new tests. This ADR is not evidence that pattern/budget/i18n/
+asset rules or optional adapters are currently registered.
+====
 
 The owner expanded scope to repository/prose/asset mistakes, custom contracts,
 local tool integration, RSR maintenance and secure container operation. Retain

@@ -21,6 +21,11 @@ e2e:
     cargo build --release
     bash tests/e2e.sh
 
+# Prove the documented command/flag/rule surface matches the binary.
+doc-drift:
+    cargo build
+    PONS_BIN=target/debug/pons bash tests/doc_drift.sh
+
 # Proves the e2e suite is not vacuous: against a stub binary it must go red.
 e2e-mutant:
     #!/usr/bin/env bash
@@ -30,4 +35,4 @@ e2e-mutant:
         echo "e2e suite correctly rejects a stub binary"
     fi
 
-check: fmt lint test e2e
+check: fmt lint test doc-drift e2e

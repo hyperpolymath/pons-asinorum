@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 pub mod cfg;
+pub mod config;
 pub mod dataflow;
 pub mod engine;
 pub mod finding;

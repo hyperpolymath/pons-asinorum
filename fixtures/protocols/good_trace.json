@@ -1,0 +1,4 @@
+[
+  { "instance": "breakfast.egg", "call": "acquire", "line": 1 },
+  { "instance": "breakfast.egg", "call": "eat", "line": 2 }
+]

@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.2.0",
+  "schema_version": "0.3.0",
   "tool": {
     "name": "pons",
     "version": "0.1.0"
@@ -7,10 +7,12 @@
   "scanned": {
     "root": ".",
     "files": 7,
+    "suppressed_findings": 0,
     "languages": [
       "python",
       "typescript"
     ],
+    "transcoded": [],
     "skipped": [
       {
         "path": "app/broken.py",

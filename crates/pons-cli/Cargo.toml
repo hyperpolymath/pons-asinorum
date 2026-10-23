@@ -13,5 +13,9 @@ path = "src/main.rs"
 [dependencies]
 pons-core = { path = "../pons-core" }
 pons-rules = { path = "../pons-rules" }
+pons-protocols = { path = "../pons-protocols" }
 anyhow = { workspace = true }
 clap = { workspace = true }
+clap_mangen.workspace = true
+serde_json = { workspace = true }
+toml.workspace = true

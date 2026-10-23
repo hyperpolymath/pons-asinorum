@@ -203,6 +203,39 @@ else
     HELP_OUT=$(run_pons --help); HELP_RC=$RC
     expect_rc "--help exits 0" 0 "$HELP_RC"
     check "--help documents the scan subcommand" "scan" "$HELP_OUT"
+    check "--help documents the trace subcommand" "trace" "$HELP_OUT"
+    check "--help documents the catalogue subcommand" "catalogue" "$HELP_OUT"
+
+    CATALOGUE_OUT=$(run_pons catalogue); CATALOGUE_RC=$RC
+    expect_rc "catalogue exits 0" 0 "$CATALOGUE_RC"
+    check "catalogue lists a registered rule" "dead-store" "$CATALOGUE_OUT"
+
+    MAN_OUT=$(run_pons man); MAN_RC=$RC
+    expect_rc "man exits 0" 0 "$MAN_RC"
+    check "man documents scan" "scan" "$MAN_OUT"
+
+    TRACE_OUT=$(run_pons trace "$PROJECT_DIR/fixtures/protocols/good_trace.json" --protocol "$PROJECT_DIR/protocols/linear-egg.toml"); TRACE_RC=$RC
+    expect_rc "a valid protocol trace exits 0" 0 "$TRACE_RC"
+    check "trace names its protocol" "linear-egg" "$TRACE_OUT"
+
+    run_pons trace "$PROJECT_DIR/fixtures/protocols/bad_trace.json" --protocol "$PROJECT_DIR/protocols/linear-egg.toml" >/dev/null; TRACE_BAD_RC=$RC
+    expect_rc "a violating protocol trace exits 1" 1 "$TRACE_BAD_RC"
+
+    if PONS_BIN="$PONS_BIN" bash "$SCRIPT_DIR/doc_drift.sh" >/dev/null 2>&1; then
+        ok "docs, help and catalogue agree"
+    else
+        bad "docs/help/catalogue drift gate failed"
+    fi
+
+    DRIFT_TMP=$(mktemp -d)
+    cp "$PROJECT_DIR/docs/USAGE.adoc" "$DRIFT_TMP/USAGE.adoc"
+    printf '\n--definitely-not-a-real-flag\n' >> "$DRIFT_TMP/USAGE.adoc"
+    if PONS_BIN="$PONS_BIN" PONS_USAGE="$DRIFT_TMP/USAGE.adoc" bash "$SCRIPT_DIR/doc_drift.sh" >/dev/null 2>&1; then
+        bad "doc drift gate accepted a fake flag (vacuous)"
+    else
+        ok "doc drift gate rejects a fake flag"
+    fi
+    rm -rf "$DRIFT_TMP"
 
     # --- 2. Known-answer positive corpus -------------------------------
     # fixtures/<rule>/positive is the committed known-answer control: the rule

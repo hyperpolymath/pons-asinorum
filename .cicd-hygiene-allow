@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: MPL-2.0
+# Cargo's vendored dependencies retain upstream debt markers. Keep the hygiene
+# gate focused on this repository's implementation without altering dependencies.
+vendor/**

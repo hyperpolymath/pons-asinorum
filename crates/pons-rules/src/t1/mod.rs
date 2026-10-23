@@ -27,6 +27,7 @@ pub(crate) mod test_util {
             path: PathBuf::from("test.py"),
             lang: Lang::Python,
             text: text.to_string(),
+            transcoded: false,
         };
         let tree = parse::parse(&source).unwrap();
         let ctx = RuleCtx::new(&source.path, source.lang, &source.text, &tree);

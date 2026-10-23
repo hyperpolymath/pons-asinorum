@@ -2,19 +2,44 @@
 
 use std::fmt::Write as _;
 
+use crate::engine::ScanReport;
 use crate::finding::{EvidenceClass, Finding, Severity};
 use crate::report::SPECULATIVE_SUFFIX;
 
 /// Deterministic, colour-free rendering of findings for terminal/CI output.
 pub fn render(findings: &[Finding]) -> String {
+    render_detailed(findings, false)
+}
+
+/// Full terminal report, including the accounting a reader needs to know
+/// whether a clean result was a complete scan. `--explain` adds the evidence
+/// class and tier that back (or qualify) each finding.
+pub fn render_report(report: &ScanReport, explain: bool) -> String {
+    let mut out = render_detailed(&report.findings, explain);
+    let _ = writeln!(
+        out,
+        "scanned: {} file(s), {} finding(s), {} suppressed, {} skipped, {} transcoded",
+        report.files_scanned,
+        report.findings.len(),
+        report.suppressed_findings,
+        report.skipped.len(),
+        report.transcoded.len()
+    );
+    out
+}
+
+/// Deterministic rendering with optional evidence/tier annotations.
+pub fn render_detailed(findings: &[Finding], explain: bool) -> String {
     let mut out = String::new();
     for f in findings {
-        render_one(f, &mut out);
+        render_one(f, &mut out, explain);
     }
     out
 }
 
-fn render_one(f: &Finding, out: &mut String) {
+/// Append one finding, its evidence note and any counter-condition to `out`.
+/// `explain` also includes its evidence class and tier.
+fn render_one(f: &Finding, out: &mut String, explain: bool) {
     let severity = match f.severity() {
         Severity::Info => "INFO",
         Severity::Warn => "WARN",
@@ -40,6 +65,14 @@ fn render_one(f: &Finding, out: &mut String) {
         suffix
     );
     let _ = writeln!(out, "    evidence: {}", f.evidence_note());
+    if explain {
+        let _ = writeln!(
+            out,
+            "    evidence class: {:?}, tier: {:?}",
+            f.evidence(),
+            f.tier()
+        );
+    }
     if let Some(cond) = f.counter_condition() {
         let _ = writeln!(out, "    when fine: {cond}");
     }

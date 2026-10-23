@@ -1,49 +1,105 @@
-.ie \n(.g .ds Aq \(aq
-.el .ds Aq '
-.TH pons 1  "pons 0.1.0-dev.1"
+.\" SPDX-License-Identifier: CC-BY-SA-4.0
+.TH PONS 1 "2026-10-23" "pons 0.1.0" "Pons Asinorum"
 .SH NAME
-pons \- Spot rookie mistakes beyond successful compilation
+pons \- falsifier-first static analyzer with explicit evidence tiers
 .SH SYNOPSIS
-\fBpons\fR [\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] <\fIsubcommands\fR>
+.B pons
+.I COMMAND
+.RI [ OPTIONS ]
+.br
+.B pons scan
+.I PATH
+.RB [ --format
+.IR human | json | sarif ]
+.RB [ --fail-on
+.IR info | warn | error ]
+.RB [ --config
+.IR FILE ]
+.RB [ --rule
+.IR ID ]
+.RB [ --lang
+.IR python | javascript | typescript | tsx | rust ]
+.RB [ --no-speculative ]
+.RB [ --explain ]
+.RB [ --fail-on-skips ]
 .SH DESCRIPTION
-Pons scans source and repository documents without executing project code. Findings are evidence\-labelled suggestions. Exit codes: 0 completed below the chosen failure threshold, 1 threshold reached, 2 invalid input or incomplete scan.
-.SH OPTIONS
+Pons scans source without executing project code. Findings carry a tier and an
+evidence class derived from that tier.
+.B SPECULATIVE
+findings are demoted in every output format and never satisfy a
+.B --fail-on
+threshold. A skipped file or subtree is reported on stderr, in JSON
+.BR scanned.skipped ,
+and in SARIF invocation notifications; it is not silently treated as a pass.
+.SH COMMANDS
 .TP
-\fB\-h\fR, \fB\-\-help\fR
-Print help (see a summary with \*(Aq\-h\*(Aq)
+.B scan
+Scan a file or directory. Optional flags:
+.BR --format ,
+.BR --fail-on ,
+.BR --config ,
+.BR --rule ,
+.BR --lang ,
+.BR --no-speculative ,
+.BR --explain ,
+.BR --fail-on-skips .
 .TP
-\fB\-V\fR, \fB\-\-version\fR
-Print version
-.SH SUBCOMMANDS
+.B catalogue
+Print the rule catalogue generated from the live registry.
 .TP
-pons\-scan(1)
-Scan a file or tree. Does not execute scanned code or external plug\-ins
+.B man
+Generate a man page from the same clap command model as
+.BR --help .
 .TP
-pons\-catalogue(1)
-Print the built\-in rule catalogue (generated from the registry)
+.B doctor
+Report optional adapter executables on
+.BR PATH ;
+do not claim they are tested.
 .TP
-pons\-man(1)
-Generate a man page from the same command model as \-\-help
+.B trace
+Check an explicitly supplied ordered JSON trace against a TOML protocol:
+.B pons trace EVENTS.json --protocol PROTOCOL.toml .
+No source-code event inference is performed.
+.SH EXIT STATUS
 .TP
-pons\-doctor(1)
-Show installed optional tools without claiming they are tested
+.B 0
+Scan or command completed below the selected threshold.
 .TP
-pons\-challenge(1)
-Ask the separately installed Invariant Path to examine a document\*(Aqs claims. Produces JSON; does not persist or accept annotations
+.B 1
+A non-speculative finding reached
+.B --fail-on
+or a trace contained protocol violations.
 .TP
-pons\-extract(1)
-Convert a document/image to text using a named optional local tool
-.TP
-pons\-spell(1)
-List dictionary misses using aspell or hunspell; no automatic rewrites
-.TP
-pons\-search(1)
-Approximate text search via the installed agrep executable
-.TP
-pons\-trace(1)
-Check an explicit ordered JSON event trace against a supplied TOML contract. Does not infer events or control flow from source code
-.TP
-pons\-help(1)
-Print this message or the help of the given subcommand(s)
-.SH VERSION
-v0.1.0\-dev.1
+.B 2
+Invalid input, configuration/protocol error, unopenable scan root, or
+.B --fail-on-skips
+with at least one skipped path.
+.SH CONFIGURATION
+.B pons.toml
+at the scan root, or
+.BR --config ,
+accepts
+.B [identity]
+and
+.B [suppress]
+with
+.BR rules ,
+.BR paths ,
+and
+.BR [[suppress.allow]] .
+Unknown keys and unknown suppressed rule IDs fail. Inline source suppressions
+use a real comment containing
+.BR "pons:allow <rule-id>" .
+.SH PLANNED COMMANDS
+The following are planned and are not accepted by this binary:
+.BR "pons challenge" ,
+.BR "pons extract" ,
+.BR "pons spell" ,
+.BR "pons search" .
+.SH SEE ALSO
+.BR docs/USAGE.adoc ,
+.BR docs/catalogue.adoc ,
+.BR PROOF-PROGRESS.adoc ,
+.BR docs/EXNOVATION-ROADMAP.adoc .
+.SH AUTHOR
+Jonathan D.A. Jewell.

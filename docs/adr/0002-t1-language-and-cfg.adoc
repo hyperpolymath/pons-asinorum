@@ -292,11 +292,16 @@ at entry to its enclosing region with no def before the use on any path) may be
 raised to `ERROR`; v0.1.0 keeps `WARN` uniformly to avoid a must-analysis.
 
 *Counter-conditions:* Python has essentially none for this rule (no default
-init). The only false-positive sources are (a) opacity — handled by the OPAQUE
+init). Known false-positive sources are (a) opacity — handled by the OPAQUE
 hatch; (b) scope confusion — handled by the scope model (a name that is actually
-`global`/`nonlocal`/free is not in `Locals` and is never checked). Augmented
-assignment `x += e` where `x ∈ U` is a *genuine* read-before-init (it reads `x`)
-and is correctly flagged — a deliberate positive-corpus case.
+`global`/`nonlocal`/free is not in `Locals` and is never checked); (c)
+infeasible paths arising from path-insensitive branch correlation or a
+guaranteed non-empty loop; (d) control effects of `with`/`__exit__`
+suppression for `dead-store`; and (e) unreachable predecessors leaking `Kill`
+facts into a forward meet. Sources (c)–(e) are bounded below by the 2026-10-23
+amendment. Augmented assignment `x += e` where `x ∈ U` is a *genuine*
+read-before-init (it reads `x`) and is correctly flagged — a deliberate
+positive-corpus case.
 
 == Widening / termination
 
@@ -323,3 +328,46 @@ function exceeding it is marked OPAQUE with a logged note.
   Negative corpus MUST include: a `global`-declared name; a name bound on every
   predecessor path; a comprehension variable of the same name as an unbound
   outer name.
+
+
+== Amendment 2026-10-23: measured false-positive classes and bounded repairs
+
+Issue #47 measured `read-before-init` on `google-flatbuffers-bounty`: 78
+findings, 3 true positives and 75 infeasible-path false positives (precision
+3/78). The ADR's former claim that opacity and scope were the *only* sources
+was false. The following decisions are now part of the design.
+
+. *Unreachable predecessors (#50).* `dataflow::solve` ignores predecessors not
+  reachable from `ENTRY` in the forward meet. The CFG still retains those
+  blocks and edges so `FunctionCfg::render` and `unreachable-after-jump` remain
+  informative. Control: a handler ending in `raise` is silent; the same handler
+  ending in `pass` still reports the implicit `del e` at the later read.
+. *Non-empty literal loops (#47 class B).* A `for` whose iterable is a directly
+  written, non-empty list/tuple/set/string/dictionary literal is given a
+  post-iteration header. Its exhausted edge carries a state after at least one
+  iteration, so the zero-trip path is removed. Named, parenthesized,
+  concatenated and call-derived iterables keep the conservative zero-trip edge.
+  Positive and negative corpus pairs pin the distinction.
+. *Correlated pure guards (#47 class A).* The rule performs a deliberately
+  narrow pruning pass: a read in a later branch guarded by the same pure
+  `X is [not] None` condition that guarded an earlier branch binding the name
+  is suppressed, provided an intervening assignment/delete of `X` or an
+  attribute of `X` is not observed. This is a reviewable heuristic layered over
+  the path-insensitive dataflow solution, *not* a general claim of path
+  sensitivity, alias analysis, or soundness. Mismatched guards and intervening
+  rebindings remain reportable. The three flexbuffers true positives are a
+  required control in any re-scan.
+. *Exception suppression in `with` (#48).* The `with` row is no longer purely
+  linear for liveness. A strong re-definition, inside a `with` body, of a local
+  that was already strongly defined is emitted as `WeakDef`: it clears
+  may-unbound but does not end the earlier live range. This models a truthy
+  `__exit__` resuming after the block from any point, without adding a normal
+  body-entry → after edge that would make ordinary `with open(...) as fh`
+  bindings look unbound. The model is conservative for bug-finding: it may miss
+  dead stores, but must not invent one.
+. *Epistemic limit.* None of the above converts T1 into a proof of absence.
+  The analysis remains a may-analysis over a finite abstract CFG. Claims must
+  state the abstraction, the opacity conditions, and the measured corpus. Any
+  future path-sensitive or CEGAR-style extension needs its own ADR, fixtures,
+  a non-vacuous mutant, and a precision/recall report with confidence
+  intervals.

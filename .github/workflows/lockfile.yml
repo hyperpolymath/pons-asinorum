@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: MPL-2.0
+name: lockfile
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - arena/4457fb85-pons-asinorum
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - name: toolchain
+        run: |
+          rustup toolchain install
+          cargo --version
+      - name: generate lockfile
+        run: cargo generate-lockfile
+      - name: commit updated lockfile
+        run: |
+          git config user.name "Arena Agent"
+          git config user.email "arena-agent@users.noreply.github.com"
+          git add Cargo.lock
+          if git diff --cached --quiet; then
+            echo "Cargo.lock already current"
+          else
+            git commit -m "chore: regenerate Cargo.lock for config and protocol crates"
+            git push origin HEAD:arena/4457fb85-pons-asinorum
+          fi

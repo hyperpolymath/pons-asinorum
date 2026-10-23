@@ -32,7 +32,7 @@ use crate::finding::{EvidenceClass, Finding};
 ///
 /// Not to be confused with the `schema_version` in a protocol TOML
 /// (ADR-0003), which versions a different file entirely.
-pub const SCHEMA_VERSION: &str = "0.2.0";
+pub const SCHEMA_VERSION: &str = "0.3.0";
 
 #[derive(Serialize)]
 struct Envelope<'a> {
@@ -53,7 +53,9 @@ struct Tool {
 struct Scanned<'a> {
     root: &'a str,
     files: usize,
+    suppressed_findings: usize,
     languages: Vec<&'static str>,
+    transcoded: Vec<&'a str>,
     /// What the scan did not look at, and why: a subdirectory that
     /// could not be enumerated, a file that could not be read, a file
     /// that could not be parsed. Empty array when nothing was skipped,
@@ -116,7 +118,9 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
         scanned: Scanned {
             root: &report.root,
             files: report.files_scanned,
+            suppressed_findings: report.suppressed_findings,
             languages: report.languages.iter().map(|l| l.name()).collect(),
+            transcoded: report.transcoded.iter().map(String::as_str).collect(),
             skipped: &report.skipped,
         },
         counts: Counts {
@@ -258,7 +262,17 @@ mod tests {
                 &["counts", "findings", "scanned", "schema_version", "tool"],
             ),
             ("tool", &["name", "version"]),
-            ("scanned", &["files", "languages", "root", "skipped"]),
+            (
+                "scanned",
+                &[
+                    "files",
+                    "languages",
+                    "root",
+                    "skipped",
+                    "suppressed_findings",
+                    "transcoded",
+                ],
+            ),
             ("counts", &["by_evidence", "total"]),
             (
                 "counts.by_evidence",

@@ -27,18 +27,22 @@ link:docs/adr/0004-companion-to-panic-attack.adoc[ADR-0004].
 
 == Status
 
-*Implementation in progress toward v0.1.0.* Milestones M0-M2 are merged: the
-Rust workspace, the scanning engine, the tree-sitter substrate for five
-languages, the eight-rule T0 catalogue and the falsifier gate all build, test
-and run. `pons scan <path>` works today and reports real findings.
+*Implementation in progress toward v0.1.0.* Milestones M0–M4 are present: the
+Rust workspace, scanning engine, five tree-sitter languages, eight T0 rules,
+JSON/SARIF reporters, and a Python CFG with two T1 dataflow rules. Ten rules
+are registered. `pons scan <PATH>`, `pons catalogue`, `pons man`, `pons doctor`
+and `pons trace` exist; `pons.toml` suppression, inline allowances, rule/language
+selection, `--explain`, `--no-speculative` and `--fail-on-skips` are implemented.
 
-Milestones M3-M8 remain: machine-readable output (JSON + SARIF), the Python
-CFG and dataflow engine (T1), typestate and protocols (T2), speculative rules
-(T3), suppression, and the v0.1.0 acceptance sweep.
+Still open for the v0.1.0 acceptance sweep: source-derived T2 typestate, T3
+speculative rules, external-corpus precision/recall gates with confidence
+intervals, optional local adapters, and a portability/release matrix. The
+historical 27-check rookie-scanner audit describes a deferred fork, not the
+current binary; see `docs/AUDIT.adoc` and `PROOF-PROGRESS.adoc`.
 
-The ratified plan is still the authority for everything not yet built, and is
-written so that implementation agents can execute it without re-opening any
-design question.
+The ratified plan remains authoritative for design decisions not yet built;
+where this status section and the plan disagree about what has landed, the
+code and `PROOF-PROGRESS.adoc` are the measured source of truth.
 
 Read in this order:
 

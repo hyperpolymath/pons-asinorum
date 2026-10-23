@@ -75,22 +75,30 @@ Components marked *planned* carry the milestone that delivers them; see
 * tree-sitter grammars for Python, JavaScript, TypeScript, TSX and Rust
 * Grammar crate versions pinned exactly (PLAN Appendix F)
 * `.jsx` maps to the JavaScript grammar; `.tsx` to the TSX grammar
-. *CFG + Dataflow Engine* — *planned (M4, ADR-0002)*
-* Per-language CFG extraction, Python first
+. *CFG + Dataflow Engine* — *built (M4, ADR-0002)*
+* Python CFG extraction with loops, exceptions, `finally` copies and opaque units
 * Forward may-be-unbound analysis for `+read-before-init+`
 * Backward live-variables analysis for `+dead-store+`
-* The OPAQUE hatch: no T1 finding is reported for a function that can
-  rewrite its own scope (`exec`, `eval`, `locals`, wildcard import)
-. *Typestate Engine* — *planned (M5, ADR-0003)*
-* Forward per-path may-analysis over the CFG, one instance key at a time
-. *Rule Engine* — *built (T0 catalogue; higher tiers planned)*
+* Bounded repairs for unreachable predecessors, guaranteed non-empty literal
+  loops, correlated pure guards and `with`-suppression liveness
+. *Protocol Engine* — *partly built (explicit trace only)*
+* TOML protocol validation and ordered JSON trace checking in `pons-protocols`
+* Source-derived T2 typestate over the CFG remains *planned (M5, ADR-0003)*
+. *Rule Engine* — *built (T0 + T1; higher tiers planned)*
 * Evidence class is fixed by tier and cannot be overridden per finding
 * Negative corpus for every rule (falsification testing)
 * A rule that fires anywhere in its own negative corpus is falsified, and is
   demoted or removed
-. *Reporter*
-* Human-readable output with SPECULATIVE visually demoted — *built*
-* JSON and SARIF output — *planned (M3)*
+. *Configuration + Suppression* — *built (scope limited)*
+* `pons.toml` with `[identity]` and `[suppress]` only; unknown keys fail
+* Rule/path/allowance globs compiled before scanning
+* Inline comment allowances; strings cannot suppress findings
+* Suppressed findings are counted rather than silently erased
+. *Reporter* — *built*
+* Human-readable output with SPECULATIVE visually demoted
+* JSON 0.3.0 envelope with skip, transcode and suppression accounting
+* SARIF 2.1.0 with invocation notifications and honest artifact offsets
+* Generated catalogue and man page from the live registry/CLI model
 
 === Evidence Classes
 

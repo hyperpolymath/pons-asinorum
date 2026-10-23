@@ -47,6 +47,8 @@ pub(crate) mod fixture {
     //! demotion to `"note"` overrides severity rather than merely agreeing
     //! with it.
 
+    use std::collections::BTreeSet;
+
     use crate::engine::{RuleInfo, ScanReport, SkippedFile};
     use crate::finding::{Finding, Location, Severity, Tier};
     use crate::lang::Lang;
@@ -113,6 +115,8 @@ pub(crate) mod fixture {
                 path: "app/broken.py".to_string(),
                 reason: "could not read: No such file or directory (os error 2)".to_string(),
             }],
+            transcoded: BTreeSet::new(),
+            suppressed_findings: 0,
             rules: vec![
                 RuleInfo {
                     id: "dead-store",
