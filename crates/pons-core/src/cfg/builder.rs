@@ -650,6 +650,7 @@ impl<'t> Builder<'t> {
     /// `for`: the iterable is evaluated once, before the loop. The target is
     /// defined on the iterate edge, in a synthetic block of its own, so that a
     /// read of the loop variable after a loop that never ran is may-unbound.
+    /// Recognised non-empty literals omit the zero-trip exit edge.
     fn for_(&mut self, node: Node<'t>) {
         let right = node.child_by_field_name("right");
         if let Some(right) = right {
@@ -689,9 +690,10 @@ impl<'t> Builder<'t> {
         self.cur = after;
     }
 
-    /// Only directly-written non-empty literals are treated as guaranteed to
-    /// iterate. A parenthesized, concatenated, f-string or named iterable is
-    /// left conservative: proving its emptiness is beyond this CFG.
+    /// Whether the iterable is recognised as a directly written non-empty
+    /// literal: a collection with a non-comment, non-splat child, or a string
+    /// with non-empty content and no interpolation. Missing nodes and other
+    /// expressions are left conservative; `text` must contain the node's source.
     fn literal_non_empty(node: Option<Node<'t>>, text: &str) -> bool {
         let Some(node) = node else {
             return false;

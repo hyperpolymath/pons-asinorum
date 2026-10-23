@@ -65,12 +65,24 @@ pub struct Violation {
 }
 
 impl Protocol {
+    /// Parse a TOML protocol and validate it before returning.
+    ///
+    /// Returns TOML deserialisation errors, including unknown fields, or errors
+    /// from [`Self::validate`].
     pub fn parse(text: &str) -> Result<Self> {
         let protocol: Self = toml::from_str(text)?;
         protocol.validate()?;
         Ok(protocol)
     }
 
+    /// Check the supported schema and internal consistency of this protocol.
+    ///
+    /// Returns an error unless the schema is `0.1.0`, identity fields are
+    /// non-blank, states are unique and non-blank, and all state references
+    /// exist. Transition calls must be non-blank and unique per source state.
+    /// Operations must use kind `emit`, a non-blank call and message, and at
+    /// least one known forbidden state. At least one transition or operation
+    /// is required.
     pub fn validate(&self) -> Result<()> {
         if self.schema_version != "0.1.0" {
             bail!("unsupported protocol schema {}", self.schema_version);
@@ -121,6 +133,16 @@ impl Protocol {
 
     /// Check a supplied, ordered concrete trace. Unknown calls are errors so a
     /// misspelt event cannot silently make an incomplete trace look correct.
+    ///
+    /// Instances have independent states, initially `initial`. Forbidden
+    /// operations produce violations before any matching transition; a known
+    /// call with no transition from the current state leaves it unchanged.
+    /// Exit-state violations apply only to instances that have transitioned
+    /// to a non-initial state at least once. An empty trace has no violations.
+    ///
+    /// Returns validation errors or an error for blank instance keys, zero or
+    /// globally decreasing source line numbers, or unknown calls. Equal line
+    /// numbers are allowed. Protocol violations are returned as values.
     pub fn check_trace(&self, events: &[Event]) -> Result<Vec<Violation>> {
         self.validate()?;
         let mut instances: BTreeMap<&str, (&str, usize, bool)> = BTreeMap::new();

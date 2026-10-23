@@ -131,6 +131,8 @@ pub struct Engine {
 }
 
 impl Engine {
+    /// Create an engine with no project configuration suppressions.
+    /// Inline allowances are still honoured.
     pub fn new(rules: Vec<Box<dyn Rule>>) -> Self {
         Self {
             rules,
@@ -166,10 +168,16 @@ impl Engine {
         Ok(report)
     }
 
-    /// Scan an explicit file list. Infallible: every per-file failure becomes
+    /// Scan an explicit file list. Every file read or parse error becomes
     /// a skip. Public so the tolerance contract is testable without having to
     /// manufacture an unreadable file on disk — a fixture that behaves
     /// differently for root and non-root, and so proves nothing in CI.
+    ///
+    /// `root` labels the report and anchors configuration path matching; it
+    /// does not restrict the supplied file list. Suppressed findings are
+    /// counted and omitted. Successfully parsed files count as scanned even
+    /// when all their findings are suppressed; transcoded files are recorded.
+    /// Panics from rule checks propagate to the caller.
     pub fn scan_files(&self, root: &Path, files: &[DiscoveredFile]) -> ScanReport {
         let mut findings = Vec::new();
         let mut skipped = Vec::new();

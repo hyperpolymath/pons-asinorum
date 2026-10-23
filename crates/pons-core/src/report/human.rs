@@ -37,6 +37,8 @@ pub fn render_detailed(findings: &[Finding], explain: bool) -> String {
     out
 }
 
+/// Append one finding, its evidence note and any counter-condition to `out`.
+/// `explain` also includes its evidence class and tier.
 fn render_one(f: &Finding, out: &mut String, explain: bool) {
     let severity = match f.severity() {
         Severity::Info => "INFO",

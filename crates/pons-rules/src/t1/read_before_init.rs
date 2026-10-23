@@ -48,6 +48,7 @@ impl Rule for ReadBeforeInit {
 
     /// Reports possible unbound local reads in analysable functions as `WARN`,
     /// without counter-conditions. Opaque functions produce no findings.
+    /// Offsets selected by the bounded correlated-guard pass are omitted.
     fn check(&self, ctx: &RuleCtx) -> Vec<RawFinding> {
         let mut findings = Vec::new();
         // A bounded, explicitly documented pruning pass (#47 class A). It
@@ -83,8 +84,10 @@ impl Rule for ReadBeforeInit {
     }
 }
 
-/// A pure, attribute/identifier `is [not] None` guard. Call-bearing or
-/// otherwise impure conditions deliberately do not qualify.
+/// Extract a textual base and polarity from an `is None` or `is not None`
+/// suffix with exactly that spacing. The trimmed base may contain only ASCII
+/// letters, digits, underscores and dots; calls are rejected. This is a
+/// syntactic filter and does not establish that attribute access is pure.
 fn guard_key(cond: Node<'_>, text: &str) -> Option<(String, String)> {
     let raw = &text[cond.byte_range()];
     let (base, polarity) = if let Some(base) = raw.strip_suffix(" is not None") {
@@ -105,6 +108,7 @@ fn guard_key(cond: Node<'_>, text: &str) -> Option<(String, String)> {
     Some((base.to_string(), polarity.to_string()))
 }
 
+/// Return the node's named children in source order.
 fn children(node: Node<'_>) -> Vec<Node<'_>> {
     let mut cursor = node.walk();
     node.named_children(&mut cursor).collect()
@@ -130,6 +134,9 @@ fn assigned_names(block: Node<'_>, text: &str, out: &mut BTreeSet<String>) {
     }
 }
 
+/// Add starting byte offsets of matching identifiers to `out`, recursively.
+/// Includes assignment targets and identifiers in nested scopes, not just reads;
+/// `text` must be the source for `node`.
 fn identifier_offsets(
     node: Node<'_>,
     text: &str,
@@ -144,8 +151,10 @@ fn identifier_offsets(
     }
 }
 
-/// Conservative invalidation: any assignment/delete whose target is the guard
-/// base itself, or an attribute of it, disables the correlation.
+/// Search the byte interval `[start, end)` for an assignment, augmented
+/// assignment or deletion node with a `left` field spelling `base` or one of
+/// its attributes. Targets without that field are ignored. This textual
+/// check does not detect mutation through calls or aliases.
 fn base_mutated_between(node: Node<'_>, start: usize, end: usize, base: &str, text: &str) -> bool {
     if node.start_byte() >= end {
         return false;
@@ -185,6 +194,8 @@ fn correlated_guard_reads(ctx: &RuleCtx<'_>) -> BTreeSet<usize> {
     out
 }
 
+/// Accumulate pruning offsets for every function below `node`, including
+/// nested functions as separate units. `text` must be the node's source.
 fn visit_functions(node: Node<'_>, text: &str, out: &mut BTreeSet<usize>) {
     if node.kind() == "function_definition" {
         prune_function(node, text, out);
@@ -199,6 +210,13 @@ fn visit_functions(node: Node<'_>, text: &str, out: &mut BTreeSet<usize>) {
     }
 }
 
+/// Add identifier offsets from branches with repeated textual guard keys.
+///
+/// The first guard encountered in the tree traversal supplies directly
+/// assigned names; subsequent matching guards supply identifier occurrences,
+/// subject to [`base_mutated_between`]. Guards are visited in stack traversal
+/// order, not sorted by source position. Nested function guards are excluded.
+/// This bounded syntactic pass does not prove that branches execute together.
 fn prune_function(func: Node<'_>, text: &str, out: &mut BTreeSet<usize>) {
     let mut guards = Vec::new();
     let mut stack = vec![func];

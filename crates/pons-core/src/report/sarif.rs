@@ -339,6 +339,10 @@ struct ResultProperties {
 }
 
 /// Render a [`ScanReport`] as SARIF 2.1.0, with a trailing newline.
+///
+/// Skips become warning notifications in an invocation marked successful.
+/// Findings in transcoded files retain line and column locations but omit
+/// artifact byte offsets and lengths. JSON serialisation errors propagate.
 pub fn render(report: &ScanReport) -> anyhow::Result<String> {
     let descriptions: BTreeMap<&str, &str> =
         report.rules.iter().map(|r| (r.id, r.description)).collect();

@@ -59,6 +59,10 @@ pub struct CompiledConfig {
 }
 
 impl Config {
+    /// Read a UTF-8 TOML configuration, rejecting unknown fields.
+    ///
+    /// Returns file read, decoding or TOML deserialisation errors. Rule IDs and
+    /// globs are validated separately by [`Self::compile`].
     pub fn load(path: &Path) -> Result<Self> {
         let text = std::fs::read_to_string(path)
             .with_context(|| format!("cannot read configuration {}", path.display()))?;
@@ -67,6 +71,10 @@ impl Config {
 
     /// Validates rule IDs and globs once, before any file is scanned. A bad
     /// suppression must be an operational error (exit 2), not an empty result.
+    ///
+    /// `known_rules` lists the accepted rule IDs. Returns an error for an
+    /// unknown suppressed rule, an invalid glob or an allowance whose reason
+    /// is empty after trimming whitespace.
     pub fn compile(self, known_rules: &[&str]) -> Result<CompiledConfig> {
         let known: BTreeSet<&str> = known_rules.iter().copied().collect();
         for id in &self.suppress.rules {
@@ -104,10 +112,16 @@ impl Config {
 }
 
 impl CompiledConfig {
+    /// Return a configuration that suppresses no findings.
     pub fn empty() -> Self {
         Self::default()
     }
 
+    /// Whether a rule, path glob or rule-and-path allowance suppresses `finding`.
+    ///
+    /// Globs match both the reported path and its form relative to `root` when
+    /// the root is a path prefix. Backslashes are normalised to forward slashes;
+    /// paths are not canonicalised.
     pub fn suppressed(&self, finding: &Finding, root: &Path) -> bool {
         if self.rules.contains(finding.rule_id()) {
             return true;

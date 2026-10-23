@@ -213,8 +213,9 @@ pub fn discover(root: &Path) -> anyhow::Result<Discovery> {
 
 /// Read one [`DiscoveredFile`] into a [`SourceFile`].
 ///
-/// Fallible on purpose, and called per file: this is the boundary at which a
-/// single unreadable file stops being able to end the whole scan.
+/// Non-UTF-8 input is decoded as Latin-1 and marked `transcoded`; offsets
+/// into the resulting text then differ from offsets into the original file.
+/// File read errors propagate; the engine records them as per-file skips.
 pub fn read(file: &DiscoveredFile) -> anyhow::Result<SourceFile> {
     let bytes = std::fs::read(&file.path)?;
     let (text, transcoded) = match String::from_utf8(bytes) {

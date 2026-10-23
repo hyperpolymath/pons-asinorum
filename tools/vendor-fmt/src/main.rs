@@ -7,6 +7,8 @@
 use std::path::Path;
 use std::process::{Command, ExitCode};
 
+/// Run a child command and return its exit status.
+/// Spawn failures and termination without an exit code return status 1.
 fn run(mut command: Command) -> ExitCode {
     match command.status() {
         Ok(status) if status.success() => ExitCode::SUCCESS,
@@ -18,6 +20,12 @@ fn run(mut command: Command) -> ExitCode {
     }
 }
 
+/// Vendor dependencies only when `CI=true` and no vendor directory exists.
+///
+/// After successful vendoring, add source replacement to a readable Cargo
+/// configuration if absent, then stage the vendor tree and configuration.
+/// Returns child command failures or status 1 if writing the configuration
+/// fails; an unreadable configuration is left untouched.
 fn vendor_on_ci() -> ExitCode {
     if std::env::var("CI").as_deref() != Ok("true") || Path::new("vendor").is_dir() {
         return ExitCode::SUCCESS;
@@ -53,6 +61,8 @@ fn vendor_on_ci() -> ExitCode {
     run(add)
 }
 
+/// Prepare vendored sources on CI, then run `cargo-fmt` with the supplied
+/// arguments, returning the first failing status or the formatter's status.
 fn main() -> ExitCode {
     let code = vendor_on_ci();
     if code != ExitCode::SUCCESS {

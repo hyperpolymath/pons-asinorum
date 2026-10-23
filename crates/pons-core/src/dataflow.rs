@@ -124,7 +124,8 @@ fn events_of<P: Problem>(cfg: &FunctionCfg, block: BlockId) -> Vec<&Event> {
 
 /// Solves a gen/kill problem using union at joins, returning facts indexed by
 /// block ID in program order. All blocks participate, including unreachable
-/// ones; callers must filter reachability when reporting findings.
+/// ones; callers must filter reachability when reporting findings. Forward
+/// joins ignore unreachable predecessors; backward joins retain all successors.
 ///
 /// The problem must use sets sized for `cfg.locals()` and monotone transfers
 /// for convergence. Panics from the problem's callbacks propagate to the caller.

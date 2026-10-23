@@ -105,6 +105,7 @@ enum Language {
 }
 
 impl Language {
+    /// Return the grammar corresponding to the CLI language selection.
     fn lang(self) -> Lang {
         match self {
             Language::Python => Lang::Python,
@@ -124,6 +125,8 @@ fn severity_rank(s: Severity) -> u8 {
     }
 }
 
+/// Run the CLI, treating a propagated broken pipe as success and other
+/// operational errors as exit status 2.
 fn main() -> ExitCode {
     match run(Cli::parse()) {
         Ok(code) => ExitCode::from(code),
@@ -139,6 +142,9 @@ fn main() -> ExitCode {
     }
 }
 
+/// Write and flush `text` to stdout without adding a newline.
+///
+/// Returns any write or flush error, including a broken pipe.
 fn emit(text: &str) -> Result<()> {
     let mut stdout = io::stdout().lock();
     stdout.write_all(text.as_bytes())?;
@@ -146,6 +152,11 @@ fn emit(text: &str) -> Result<()> {
     Ok(())
 }
 
+/// Execute a parsed command and emit its output to stdout.
+///
+/// Returns 0 for informational commands; scans return their gating status,
+/// and traces return 1 when violations are found. File access, input
+/// validation, rendering and output errors propagate to the caller.
 fn run(cli: Cli) -> Result<u8> {
     match cli.command {
         Command::Scan {
@@ -214,6 +225,9 @@ fn run(cli: Cli) -> Result<u8> {
     }
 }
 
+/// Describe optional adapter file locations found on `PATH`.
+///
+/// File presence does not verify executable permissions or adapter behaviour.
 fn doctor() -> String {
     let mut out = String::from(
         "Optional adapters (presence only; availability is not an integration test):\n",
@@ -240,6 +254,20 @@ fn doctor() -> String {
     out
 }
 
+/// Scan a path and write the selected report to stdout and accounting to stderr.
+///
+/// An empty `selected` list enables all registered rules. Without `config_path`,
+/// load `pons.toml` from the directory scanned or the input file's parent if
+/// present. `forced_lang` bypasses extension detection for a single file.
+/// `no_speculative` removes speculative findings and counts them as suppressed;
+/// `explain` adds evidence and tier annotations only in human output.
+///
+/// Returns 2 if `fail_on_skips` is set and any input was skipped, otherwise 1
+/// if a remaining non-speculative finding meets `fail_on`, or 0.
+///
+/// Missing paths, a forced grammar for a directory, unknown selected rules,
+/// configuration and discovery errors, and rendering or stdout errors propagate.
+/// Per-file read and parse errors are reported as skips.
 #[allow(clippy::too_many_arguments)]
 fn run_scan(
     path: &Path,
