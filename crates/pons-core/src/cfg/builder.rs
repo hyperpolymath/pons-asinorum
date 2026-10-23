@@ -697,12 +697,26 @@ impl<'t> Builder<'t> {
             return false;
         };
         match node.kind() {
-            "list" | "tuple" | "set" | "dictionary" => node.named_child_count() > 0,
+            "list" | "tuple" | "set" | "dictionary" => {
+                let mut cursor = node.walk();
+                node.named_children(&mut cursor).any(|c| {
+                    !matches!(
+                        c.kind(),
+                        "comment" | "list_splat" | "parenthesized_list_splat" | "dictionary_splat"
+                    )
+                })
+            }
             "string" => {
+                let mut cursor = node.walk();
+                let has_interpolation = node
+                    .named_children(&mut cursor)
+                    .any(|c| c.kind() == "interpolation");
+                if has_interpolation {
+                    return false;
+                }
                 let raw = &text[node.byte_range()];
                 let content = raw.trim_start_matches(['f', 'F', 'r', 'R', 'b', 'B', 'u', 'U']);
-                content.trim_matches('"').trim_matches('\'').len() > 0
-                    || node.named_child_count() > 0
+                !content.trim_matches('"').trim_matches('\'').is_empty()
             }
             _ => false,
         }
