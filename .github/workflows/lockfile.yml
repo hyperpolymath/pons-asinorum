@@ -3,6 +3,9 @@ name: lockfile
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - arena/4457fb85-pons-asinorum
 
 permissions:
   contents: write

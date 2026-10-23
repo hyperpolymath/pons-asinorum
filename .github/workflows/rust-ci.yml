@@ -24,17 +24,6 @@ jobs:
           rustc --version
           cargo fmt --version
           cargo clippy --version
-      # Temporary until Cargo.lock is regenerated in the sandbox. The lock is
-      # uploaded as an artifact so the agent can commit the exact resolution
-      # produced by the runner; this step is removed once --locked CI is green.
-      - name: generate lockfile
-        run: cargo generate-lockfile
-      - name: upload generated lockfile
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cargo-lock
-          path: Cargo.lock
       - name: fmt
         run: cargo fmt --check
       - name: clippy
