@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pons-vendor-fmt"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace]

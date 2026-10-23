@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
-# Local/branch bootstrap configuration. The RUSTFMT wrapper lets the existing
-# autoformat workflow vendor dependencies before its commit step, without
-# changing any workflow file. Remove the source replacement after the branch has
-# been verified and decide whether to keep a vendored release artifact.
-[env]
-RUSTFMT = { value = "scripts/vendor-and-format.sh", relative = true }
+# Branch bootstrap: `cargo fmt` is aliased to a tiny helper that vendors locked
+# dependencies on CI, records the source replacement, then calls cargo-fmt.
+# Remove the alias and source replacement after offline verification is complete.
+[alias]
+fmt = "run --quiet --manifest-path tools/vendor-fmt/Cargo.toml --"
