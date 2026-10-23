@@ -1,5 +1,17 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
-= Development audit — 2026-09-09
+= Development audit — historical 2026-09-09 fork (superseded)
+
+[WARNING]
+====
+This file is a forensic record of the *deferred* `spike/rookie-scanner` work
+from PR #39, not a description of the current `main` binary. Its claims of
+"27 registered checks", `extract`/`spell`/`search`/`challenge`, pattern/budget/
+i18n/asset configuration and container deployment belong to commit `172f455`,
+which was not merged into the current four-crate architecture. Current
+capability is recorded in `PROOF-PROGRESS.adoc`, `docs/USAGE.adoc`, and the
+machine drift test. Do not use this audit as evidence that the present binary
+implements those features.
+====
 
 Scope: the pons-asinorum worktree based on origin/main
 bc7af123dfdf39865625c5724d8fb366e764966b, the locally inspected canonical
@@ -16,9 +28,10 @@ UUID. Existing estate CI applied capabilities that Pons had not implemented.
 A recent CodeQL run failed resolving an action SHA. Community-health files
 were in AsciiDoc locations GitHub does not recognise for those checks.
 
-== Changes
+== Changes (historical fork)
 
-Four real Rust packages now implement an advisory scanner, compiled grammars,
+In the deferred fork only: four real Rust packages implemented an advisory
+scanner, compiled grammars,
 27 registered checks, scoped allowances, resource contracts, trace validation,
 JSON/SARIF and bounded optional tool commands. CLI help, man and the catalogue
 share their command/rule definitions. The fixture gate rejects missing positive

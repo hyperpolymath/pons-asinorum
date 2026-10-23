@@ -1,0 +1,461 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Pons Asinorum — forensic recon, proof obligations and exnovation roadmap
+:toc: left
+:toclevels: 3
+:sectnums:
+:stem: latexmath
+
+Date: 2026-10-23. Scope: branch `arena/4457fb85-pons-asinorum`, the issue
+record, the deferred PR #39 fork at commit `172f455`, and the research base in
+the bibliography. This document distinguishes *observed capability*,
+*implemented repair*, *planned design* and *unproved ambition*.
+
+== Executive verdict
+
+Pons is a promising falsifier-first analysis core, not yet a production
+exnovation platform. Its strongest idea is epistemic: every finding carries an
+evidence class derived from its tier, and speculative signals are demoted rather
+than presented as verdicts. Its largest defect before this pass was also
+epistemic: documentation described a 27-check product that the current binary
+did not implement, while status files understated the M3/M4 code that did
+exist. A tool for serious refactors cannot be trusted if its own help, audit and
+status cannot be trusted.
+
+This branch therefore does four things:
+
+. aligns docs/help/catalogue with the executable and adds a non-vacuous drift
+  test;
+. repairs measured correctness/observability defects in dataflow, SARIF,
+  non-UTF-8 offsets and discovery blind spots;
+. restores a narrow, tested slice of configuration/suppression, explicit trace
+  protocols, catalogue/man/doctor commands and rule/language selectors;
+. states the mathematical and statistical proof obligations that remain before
+  any claim of dependable forward engineering, reverse engineering or
+  world-scale legacy scanning.
+
+The long-term vision — supervised scanning of COBOL, FORTRAN, BASIC and C/C++
+estates — is credible only if Pons becomes a measurement instrument first and a
+rule catalogue second. "Best exnovation tool ever" is a target, not a current
+property.
+
+== Forensic record: two products in one repository
+
+=== Current main architecture
+
+The current workspace has four crates, five tree-sitter grammars (Python,
+JavaScript, TypeScript, TSX, Rust), 10 registered rules, JSON/SARIF reporters,
+a Python CFG/dataflow engine, positive/negative falsifier corpora, an exit-code
+contract, and deterministic partial-scan accounting. Evidence class is derived
+from tier in the type system, not supplied by a rule.
+
+=== The deferred 27-check fork
+
+PR #39's merge kept documentation/fixtures/config from a September 2026 spike
+but explicitly deferred the executable fork at `172f455`. That fork contained
+8 syntax rules, 11 repository checks, 4 document checks, 3 asset checks and 1
+budget check, plus config patterns, inline allowances, explicit trace checking,
+bounded adapters and extra CLI commands. It used an older API and lacked the
+current CFG/dataflow engine. It is a *quarry*, not a rollback target.
+
+The correct strategy is reconciliation and selective harvesting. This branch
+harvests explicit trace checking, scoped suppression, inline comments, rule
+selection, catalogue/man generation and honest encoding accounting. It leaves
+repository/prose/asset/budget/pattern rules and external adapters as labelled
+future work until each has fixtures, a falsifier gate and its own evidence
+contract.
+
+=== Integrity drift as a correctness defect
+
+`docs/AUDIT.adoc`, `docs/USAGE.adoc`, `docs/catalogue.adoc`, `docs/man/pons.1`
+and `docs/adr/0005-rookie-scanner-development.adoc` described commands and
+flags the binary did not have. Conversely `README.adoc`, `EXPLAINME.adoc`,
+`ARCHITECTURE.adoc` and `PROOF-PROGRESS.adoc` said M3/M4 were pending. Both are
+now corrected. Issue #43's requirement — every documented command either exists
+or is marked planned — is enforced by `tests/doc_drift.sh` and a mutant that
+adds a fake flag.
+
+== Implemented repairs and their limits
+
+=== Analysis repairs
+
+* *Unreachable predecessors (#50).* `dataflow::solve` excludes predecessors not
+  reachable from `ENTRY` from the forward meet. A `Kill` in dead code can no
+  longer invent an unbound fact at a live join. The paired control — a handler
+  ending in `pass` rather than `raise` — still reports the implicit `del e`.
+* *Exception suppression in `with` (#48).* A strong redefinition inside a
+  `with` body of a local already strongly defined becomes `WeakDef`: it clears
+  may-unbound but does not end the earlier value's live range. This models a
+  truthy `__exit__` conservatively for liveness without adding a normal
+  zero-body edge that would break `with open(...) as fh` bindings.
+* *Guaranteed non-empty literal loops (#47 class B).* A directly written
+  non-empty list/tuple/set/string/dictionary literal gets a post-iteration
+  header, so its loop-exit state has executed at least one iteration. Named or
+  computed iterables keep the zero-trip edge.
+* *Correlated pure guards (#47 class A).* A narrow pruning pass suppresses a
+  read in a later branch guarded by the same pure `X is [not] None` condition
+  that guarded an earlier binding branch, unless an assignment/delete of `X` or
+  its attribute is observed between them. This is explicitly a documented
+  heuristic layered over a path-insensitive solver, not a soundness proof.
+
+The measured real-world starting point was 3 true positives out of 78 findings,
+with 71 correlated-guard and 4 literal-loop false positives. A 95% Wilson
+interval for observed precision 3/78 is approximately **[1.3%, 10.7%]**. No
+single re-scan number without a denominator and confidence interval is
+acceptable evidence in future releases.
+
+=== Observability and artifact truth
+
+* Error-recovered tree-sitter trees are rejected as skipped files, not treated
+  as clean parses.
+* Latin-1-transcoded sources are named in JSON; SARIF omits their optional
+  `byteOffset`/`byteLength` instead of emitting decoded-string offsets as if
+  they were artifact offsets. Line and UTF-16 columns remain usable.
+* SARIF always emits `runs[0].invocations[0]` with
+  `executionSuccessful: true` under ADR-0005 and one
+  `toolExecutionNotifications[]` entry per skipped path. Consumers can no
+  longer see a clean complete run over a tree that was never opened (#32).
+* `--fail-on-skips` lets an operator promote a partial scan to exit 2.
+* Directories named `corpus`, `third_party` and `external_corpora` are no
+  longer silently hidden. Exclusions must be explicit in `.ponsignore` or
+  configuration, because a legacy-estate scanner's silent blind spots are
+  worse than its noisy findings.
+
+=== Product surface restored
+
+The CLI now provides `scan`, `catalogue`, `man`, `doctor` and `trace`. `scan`
+accepts `--config`, repeated `--rule`, `--lang` for a single file,
+`--no-speculative`, `--explain`, `--fail-on-skips`, `--format` and `--fail-on`.
+`pons.toml` accepts only `[identity]` and `[suppress]` with `rules`, `paths` and
+reasoned `[[suppress.allow]]`; unknown keys fail. Inline comment allowances
+work; strings do not. Suppressed findings are counted. `trace` checks
+operator-supplied events only.
+
+Optional `challenge`, `extract`, `spell` and `search` adapters remain planned.
+`doctor` reports executable presence without claiming integration.
+
+== Mathematical and logical proof obligations
+
+=== Abstract interpretation, not magic
+
+For each analysis `A`, define a concrete semantics `C`, an abstraction function
+`α`, a concretisation `γ`, and an abstract transfer `A#`. A sound over-
+approximation claim requires:
+
+[latexmath]
+++++
+\forall c \in C.\quad \alpha(f(c)) \sqsubseteq A^{\#}(\alpha(c))
+++++
+
+or equivalently that concrete post-states are contained in the concretisation
+of abstract post-states. The T1 lattices are finite powersets of locals with
+union as meet, so the worklist reaches a least fixpoint without widening. This
+termination property is not a semantic soundness proof; the CFG construction
+itself must be validated against Python's control effects.
+
+=== Undecidability and the decidability wall
+
+Rice-style undecidability prevents a general scanner from deciding non-trivial
+semantic properties of arbitrary programs. Pons must therefore classify
+claims:
+
+* *Decidable, local syntactic facts* (T0): a literal-zero divisor, a syntactic
+  self-assignment. Cheap, but still heuristic about intent.
+* *Approximate may-facts* (T1): local liveness/unboundness over a modelled CFG.
+  A finding means a path exists in the model, not that the program will take it.
+* *Contract-conditional facts* (T2): a violation of an explicitly supplied
+  protocol.
+* *Speculative facts* (T3): complexity, general division by zero,
+  non-termination. Always demoted.
+
+No output may convert a may-result into "this always happens" or a no-result
+into "this cannot happen".
+
+=== Bug-catching versus absence-of-bugs
+
+Classical Hoare-style verification aims to prove absence of bad states;
+incorrectness logic aims to prove that a reachable bad state exists. Pons is
+primarily a bug-finder. When it reports a potential `UnboundLocalError`, the
+honest claim is existential over the abstract model. Future "clean" claims must
+be under-approximations with explicit coverage, not silent complements of
+findings.
+
+=== CEGAR and path sensitivity
+
+Counterexample-guided abstraction refinement can add branch predicates only
+when a spurious abstract counterexample is identified. The correlated-guard
+pass is a deliberately bounded special case, not full CEGAR. A future
+path-sensitive engine should:
+
+. record the abstract path/witness for each finding;
+. attempt to validate it against a stronger solver or concrete test;
+. refine only the predicates that remove the spurious path;
+. retain a cap and report when the cap stops refinement.
+
+Every refinement must be paired with a negative control that still fires.
+
+=== Typestate, aliasing and interprocedural reasoning
+
+Source-derived T2 must distinguish syntactic instance keys from object identity.
+Without alias analysis it should prefer silence to accusation. The proof
+obligation is to state the alias abstraction, the call model, and the join
+semantics. Typestate is a contract over operations; it does not become legal or
+business truth because a TOML file exists.
+
+For C/C++ and legacy languages, pointer/alias analysis and effect systems are
+prerequisites for stronger claims. A "resource acquired but not released"
+finding in a language with exceptions, `longjmp`, early returns, macros or
+copybook `GO TO` needs an explicit exceptional-edge model.
+
+=== Translation validation for refactors
+
+If Pons ever proposes a rewrite, the transformation is not proved by the
+finding that motivated it. Use translation-validation ideas: compare observable
+behaviour on characterization tests, record pre/post artifacts, preserve
+encoding and line endings, and require a differential oracle for representative
+inputs. A refactoring suggestion is a hypothesis until behaviour preservation
+evidence is attached.
+
+== Statistical proof plan
+
+A production scanner needs a labelled measurement protocol, not anecdotes.
+
+=== Units and labels
+
+* Unit: one finding, with rule ID, rule version, corpus revision, file path,
+  location fingerprint and reviewer label.
+* Labels: true positive, false positive, intentional/suppressed, unknown, and
+  duplicate-of. Unknown is not silently counted as false.
+* Positive controls: known-answer corpora and mutation-derived faults.
+* Negative controls: idiomatic patterns that resemble a bug.
+* Every release-critical rule needs a corpus in at least two independent
+  repositories or dialects; one repository cannot establish generality.
+
+=== Precision and recall with uncertainty
+
+Observed precision `p̂ = TP / (TP + FP)`. Report a Wilson score interval, not a
+point estimate alone:
+
+[latexmath]
+++++
+\frac{\hat p + z^2/(2n) \pm z\sqrt{\hat p(1-\hat p)/n + z^2/(4n^2)}}{1+z^2/n}
+++++
+
+At 95% confidence (`z ≈ 1.96`), a worst-case sample of 385 reviewed findings
+gives roughly ±5 percentage points; near `p = 0.9`, 139 findings suffice for
+the same margin. The old 3/78 measurement has a [1.3%, 10.7%] precision
+interval, so it demonstrates a serious defect but cannot certify any repaired
+precision without a fresh sample.
+
+Recall requires an independently constructed denominator. Mutation testing can
+create known faults, but mutants are not a representative sample of real legacy
+defects; report seeded-fault recall separately from field recall.
+
+=== Acceptance gates before production claims
+
+[cols="2,3",options="header"]
+|===
+| Gate | Minimum evidence
+
+| Rule registration
+| Positive corpus fires, negative corpus silent, non-vacuous mutant fails, parse-error trees rejected.
+
+| Precision
+| Pre-registered labelled corpus, Wilson interval, corpus revision and denominator. No release-blocking rule ships on n < 30 without an explicit warning.
+
+| Recall
+| Seeded-fault corpus plus field sample; report both, with confidence intervals.
+
+| Observability
+| Zero unexplained skips in a complete-scan CI profile; SARIF invocations present; encoding/offset truth asserted.
+
+| Refactoring safety
+| Characterization tests, differential execution where feasible, translation-validation artifact, human review.
+
+| Reproducibility
+| Pinned toolchain, locked dependencies, corpus hashes, command line, environment and report schema version.
+|===
+
+== Legacy-estate exnovation architecture
+
+The mission is supervised archaeology at scale: find old mistakes and residue,
+preserve provenance, and never let a heuristic become an accusation.
+
+=== Front-end evidence layers
+
+[cols="2,3,3",options="header"]
+|===
+| Language family | Parsing evidence required | First semantic rules
+
+| COBOL
+| Fixed/free format, sequence numbers, `COPY`/copybooks, dialect keywords,
+  EBCDIC/ASCII manifests, paragraph/section CFG. | Unreachable paragraph after
+  `GO TO`, suspicious `STOP RUN`, copybook drift, record/field mismatch, literal
+  divide-by-zero, dead MOVE.
+
+| FORTRAN
+| Fixed/free form, `INCLUDE`, `COMMON`, `EQUIVALENCE`, `IMPLICIT`, labelled
+  `DO`, computed `GOTO`. | Uninitialised local use, loop bounds, obsolete
+  constructs, mismatched argument shapes where type information exists.
+
+| BASIC
+| Line numbers, dialect keywords, `GOSUB`/`RETURN`, `ON ... GOTO`, data blocks,
+  encoded source. | Jump into data, duplicate line numbers, unreachable blocks,
+  suspicious `ON ERROR RESUME NEXT`, resource leaks in long-running programs.
+
+| C / C++
+| Preprocessor modes, macros, headers, templates, exception paths,
+  `setjmp`/`longjmp`, ownership idioms, compiler dialect. | Literal divide by
+  zero, self-assignment, unreachable after jump, `free`/`delete` use-after-free
+  only with alias evidence, RAII/typestate contracts.
+|===
+
+Tree-sitter error recovery is useful for resilient parsing, but the scanner
+must count and report recovery. A parser that silently accepts a dialect it does
+not understand converts ignorance into a clean report.
+
+=== Encoding and record provenance
+
+Legacy sources are not simply UTF-8. Support requires an encoding manifest,
+byte-preserving decode maps, fixed-record handling, and per-file hashes. For
+each artifact store: original bytes hash, declared encoding, transcoded text
+hash, decode map version, dialect, parser version and skip/recovery count. SARIF
+artifact offsets must use the decode map or be omitted.
+
+=== Supervised world-scan workflow
+
+. *Inventory*: immutable input snapshot, repository digest, licence and
+  provenance metadata, language/dialect classifier confidence.
+. *Parse gate*: report coverage/error recovery; do not run semantic rules on
+  files outside the dialect evidence boundary.
+. *Rule packs*: versioned, signed or reviewed rule bundles with explicit
+  evidence tiers and counter-conditions.
+. *Triage*: baseline fingerprints, suppression with reason and reviewer,
+  duplicate clustering, human approval state.
+. *Measurement*: sample findings for review, compute precision intervals, track
+  drift by language/dialect/rule version.
+. *Refactor hand-off*: never auto-apply; attach characterization tests and a
+  translation-validation artifact.
+. *Publication*: only reviewed claims, never raw speculative counts.
+
+This is a logistics problem as much as an analysis problem: custody, queueing,
+sampling, reviewer workload, false-positive budgets and feedback loops. Meta's
+experience scaling static analysis, Coverity's industrial deployment and
+Christakis & Bird's developer studies all show that fix rate and trust depend
+on workflow integration, not just detector cleverness.
+
+== Staged roadmap
+
+=== Phase 0 — Truth and regression (this branch)
+
+* Align docs with executable; add drift test and mutant.
+* Repair measured #47/#48/#50/#32/#33 defects with paired controls.
+* Land explicit configuration/suppression and trace protocols with boundaries.
+* Gate: CI fmt/clippy/test/build/e2e and non-vacuity checks; no phantom commands.
+
+=== Phase 1 — Measured M4 hardening
+
+* Re-scan the recorded `google-flatbuffers-bounty` revision; keep the three
+  flexbuffers true positives; report class A/B counts and Wilson intervals.
+* Add a second independent Python corpus, including generated code and
+  exception-heavy idioms.
+* Add benchmark harness with wall-time distributions, not a single 26 ms claim.
+* Gate: pre-registered precision target with confidence interval; zero
+  unexplained parse-error trees in the corpus.
+
+=== Phase 2 — Source-derived T2 typestate
+
+* Implement ADR-0003 over the current CFG with path witnesses.
+* Ship `suppress-then-emit` plus one optional resource rule only with positive,
+  negative and alias-uncertainty controls.
+* Gate: every T2 finding cites concrete lines; unknown aliases are disclosed;
+  no automatic fix.
+
+=== Phase 3 — T3 and speculative UX
+
+* Implement `possible-superlinear`, `no-interrupt-on-long-op` and
+  `general-div-by-zero` as demoted prompts.
+* Make `--no-speculative` and evidence filters observable in a benchmark.
+* Gate: T3 never affects exit status; user study or reviewer feedback shows the
+  prompts are understood as prompts.
+
+=== Phase 4 — Legacy front ends
+
+* Add one language at a time, starting with the encoding/record layer and
+  dialect corpus before semantics.
+* COBOL and FORTRAN adapters first for archaeology value; BASIC dialect matrix
+  next; C/C++ front end with compiler/preprocessor evidence.
+* Gate: parse coverage report per dialect, skip notifications, known-answer
+  positive/negative corpora, no claims beyond implemented front ends.
+
+=== Phase 5 — Exnovation platform
+
+* Distributed scanning with immutable snapshots and bounded resources.
+* Signed/reviewed rule packs, reviewer workflow, baseline fingerprints and
+  statistical dashboards.
+* Refactor suggestions with characterization-test bundles; no auto-merge.
+* Gate: reproducibility across two environments, reviewer audit, published
+  precision/recall by rule and language.
+
+== Research base
+
+The design above draws on the following foundations and practitioner evidence.
+Links are provided for further reading; inclusion is not a claim that Pons
+implements the cited system.
+
+* Abstract interpretation: Cousot & Cousot, POPL 1977 —
+  https://www.di.ens.fr/~cousot/COUSOTpapers/POPL77.shtml
+* Kildall-style dataflow and monotone frameworks; see the classical literature
+  and the lattice equations in ADR-0002.
+* Infeasible paths and branch correlation: Bodík et al., 1997 —
+  https://www.cs.virginia.edu/~soffa/Soffa_Pubs_all/Conferences/Refining.Bodick.1997.pdf
+* CEGAR overview — https://web.stanford.edu/class/cs357/cegar.pdf
+* Incorrectness logic: O'Hearn —
+  http://www0.cs.ucl.ac.uk/staff/p.ohearn/papers/IncorrectnessLogic.pdf
+* SSA: Cytron et al. — https://c9x.me/compile/bib/ssa.pdf
+* Pointer analysis survey: Hind — https://dl.acm.org/doi/10.1145/379605.379665
+* Symbolic execution survey: Cadar & Sen —
+  https://people.eecs.berkeley.edu/~ksen/papers/cacm13.pdf
+* Typestate: Strom & Yemini —
+  https://research.ibm.com/publications/typestate-a-programming-language-concept-for-enhancing-software-reliability
+* Modular typestate/aliasing: Bierhoff & Aldrich —
+  https://www.cs.cmu.edu/~kbierhof/papers/typestate-verification.pdf
+* Program slicing: Weiser — https://dl.acm.org/doi/10.5555/800078.802557
+* Translation validation: Pnueli et al. —
+  https://link.springer.com/chapter/10.1007/BFb0054170
+* Refactoring survey: Mens & Tourwé —
+  https://plg.uwaterloo.ca/~migod/846/papers/mensRefactoring-tse.pdf
+* Equality saturation / e-graphs: Tate et al. —
+  https://homes.cs.washington.edu/~ztatlock/pubs/eqsat-tate-popl09.pdf ;
+  egg — https://dl.acm.org/doi/10.1145/3434304
+* Datalog/CodeQL-style analysis: see Soufflé and GitHub CodeQL literature.
+* Mutation testing survey: Papadakis et al. —
+  https://mutationtesting.uni.lu/survey.pdf
+* Wilson interval and statistical guidance: NIST TN 2119 —
+  https://nvlpubs.nist.gov/nistpubs/TechnicalNotes/NIST.TN.2119.pdf
+* Scaling static analysis at Facebook/Meta —
+  https://cacm.acm.org/magazines/2019/8/238344-scaling-static-analyses-at-facebook/fulltext
+* Developer false-positive tolerance: Christakis & Bird, ASE 2016 —
+  https://mariachris.github.io/Pubs/ASE-2016.pdf
+* Industrial experience: Coverity, "A Few Billion Lines of Code Later" —
+  https://cacm.acm.org/research/a-few-billion-lines-of-code-later/
+* Reverse-engineering taxonomy: Chikofsky & Cross —
+  https://dl.acm.org/doi/10.1109/52.43044
+* Fortran analysis infrastructure: `fortran-src` —
+  https://github.com/camfort/fortran-src ; JOSS paper —
+  https://www.theoj.org/joss-papers/joss.07571/10.21105.joss.07571.pdf
+* Tree-sitter error recovery documentation —
+  https://tree-sitter.github.io/tree-sitter/
+* SARIF 2.1.0 —
+  https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html ;
+  GitHub SARIF support —
+  https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning
+* Mining software repositories / architecture recovery survey —
+  https://www.sciencedirect.com/science/article/pii/S0950584925000163
+
+== Final epistemic rule
+
+If Pons did not look at a file, it must say so. If it guessed, it must label
+the guess. If it proved something, it must state the abstraction, assumptions
+and corpus. If it proposes a refactor, it must attach preservation evidence.
+Everything else is marketing — and marketing is the one evidence class this
+project must never invent.

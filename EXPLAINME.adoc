@@ -49,15 +49,17 @@ pons delivers certainty.
 
 == Current Status
 
-*Implementation in progress toward v0.1.0.* Milestones M0-M2 are merged: the
-Rust workspace, the scanning engine, five tree-sitter grammars, the eight-rule
-T0 catalogue and the falsifier gate all build, test and run. `pons scan <path>`
-works today.
+*Implementation in progress toward v0.1.0.* M0–M4 are present: five grammars,
+eight T0 rules, JSON/SARIF reporters, and a Python CFG with `dead-store` and
+`read-before-init` T1 rules. Ten rules are registered and each carries the
+evidence class derived from its tier. Scoped suppression, an explicit trace
+protocol checker, catalogue/man generation and a documentation drift gate are
+also present.
 
-Milestones M3-M8 remain: JSON and SARIF output, the Python CFG and dataflow
-engine (T1), typestate and protocols (T2), speculative rules (T3), suppression,
-and the v0.1.0 acceptance sweep. Until a tier ships, no finding carries its
-evidence class: every rule on `main` today is T0/`HEURISTIC`.
+Source-derived T2 typestate, T3 speculative rules, optional adapter commands,
+and the external-corpus acceptance sweep are still open. `SPECULATIVE`
+demotion is implemented and tested in reporters even though no T3 rule is yet
+registered, so the honesty plumbing cannot be bypassed when those rules land.
 
 == Repository Structure
 

@@ -5,14 +5,11 @@
 :toc:
 :icons: font
 
-A snapshot of which guarantees pons actually delivers, measured against
-`main` at `7ec7e08` on 2026-09-30. `docs/PLAN.adoc` (milestones M0–M8) and
-`docs/adr/` are authoritative. Where this file disagrees with them, this file
-is wrong.
-
-An earlier version of this file (dated 2026-08-14) said "implementation not
-started" and used an M0–M4 milestone scheme that PLAN.adoc never had. Both were
-false by 2026-09-15. It has been rewritten against the code, not revised.
+A snapshot of which guarantees Pons actually delivers on branch
+`arena/4457fb85-pons-asinorum` at 2026-10-23. This file is written against the
+code, the issue measurements and the executable contract. It deliberately
+replaces two older false narratives: "only M0–M2 landed" (understates M3/M4)
+and "27 registered checks exist" (describes the deferred PR #39 fork).
 
 == Headline
 
@@ -20,21 +17,20 @@ false by 2026-09-15. It has been rewritten against the code, not revised.
 |===
 | Milestone (PLAN.adoc) | Status | Evidence
 
-| M0 — workspace + substrate smoke test | ✅ landed | #19. Four crates; four pinned grammar crates (five languages: Python, JavaScript, TypeScript, TSX, Rust) parse and query.
-| M1 — finding model, engine, human reporter | ✅ landed | #19. Exit codes fixed by ADR-0005 (CLI exit-code contract).
-| M2 — T0 rules 1–8 + falsifier gate | ✅ landed | #19. All positive fixtures fire, no negative fixture fires. Enforced in CI by `cargo test --workspace`.
-| M3 — JSON + SARIF reporters | ✅ landed | #27, then #34. Golden files; SARIF URIs repo-relative and escaped (#28); columns in UTF-16 code units (#30).
-| M4 — Python CFG + dataflow, T1 rules 9–10 | 🚧 in progress | Grammar-vocabulary probe written (branch `feat/pons-m4-python-dataflow`), not yet merged. No CFG, solver or T1 rule on `main`.
-| M5 — T2 typestate, rule 11, toy protocol | ⏳ not started | `pons-protocols` is a one-line stub.
-| M6 — T3 rules 13–15, SPECULATIVE plumbing | ⏳ not started |
-| M7 — suppression, full CLI, catalogue generator | ⏳ not started | `suppress.rs` is a three-line comment.
-| M8 — acceptance sweep, tag `v0.1.0` | ⏳ not started | Tag creation is unblocked (#36): the `Immutable-Tags` ruleset now allows creating a tag but still forbids moving or deleting one.
+| M0 — workspace + substrate smoke test | ✅ landed | Five tree-sitter languages parse; 4-crate workspace.
+| M1 — finding model, engine, human reporter | ✅ landed | Evidence class derived from tier; deterministic ordering; exit contract.
+| M2 — T0 rules 1–8 + falsifier gate | ✅ landed | Eight rules, positive/negative corpora and non-vacuity CI.
+| M3 — JSON + SARIF reporters | ✅ landed, extended | JSON schema 0.3.0; SARIF 2.1.0 with `invocations`.
+| M4 — Python CFG + dataflow, T1 rules 9–10 | ✅ landed, measured FP repairs | CFG, liveness, may-unbound; ADR-0002 amended 2026-10-23.
+| M5 — T2 typestate, rule 11 | 🚧 partial | Explicit trace protocol checker lands; source-derived typestate remains unimplemented.
+| M6 — T3 rules 13–15, SPECULATIVE plumbing | 🚧 plumbing only | Demotion tested in all reporters; no T3 rule registered.
+| M7 — suppression, CLI polish, catalogue generator | ✅ mostly landed | Config + inline suppression, selectors, catalogue, man, doctor, doc drift gate.
+| M8 — acceptance sweep, tag `v0.1.0` | ⏳ not complete | External corpus, statistical precision, portability and release gates remain.
 |===
 
-On `main`: 113 tests pass, 0 fail. `cargo clippy -D warnings` and
-`cargo fmt --check` are clean. All five workflows (rust-ci, CodeQL for actions
-and rust, Secret Scanner, Scorecard, estate audit) are green at `7ec7e08`, and
-each ran its jobs rather than skipping them.
+Current registered rule count: **10** (8 T0, 2 T1 Python). The 27-check
+"rookie scanner" lives in the deferred `172f455` fork; its documentation is
+historical evidence, not a capability claim.
 
 == The core contract
 
@@ -43,44 +39,93 @@ ____
 Never dress a heuristic up as a proof.
 ____
 
-Every finding carries an evidence class, and the class is fixed by the rule's
-tier (PLAN Appendix B). This is enforced by the type system in
-`crates/pons-core/src/finding.rs`, not by review:
+`Finding`'s private fields enforce two invariants:
 
-* a rule cannot set its own `rule_id`; `RawFinding` has no such field, and only
-  `Engine::scan` stamps it from `Rule::id()`;
+* a rule cannot set its own `rule_id`; `RawFinding` has no such field and
+  `Engine::scan_files` stamps it from `Rule::id()`;
 * `evidence` is re-derived from `tier` on deserialise. The wire type has no
   `evidence` field, so a forged class cannot round-trip.
 
-*`SPECULATIVE` demotion* is implemented in all three reporters (human, JSON,
-SARIF: `level: "note"`, rank 20, the "(heuristic — not a verdict)" suffix) and
-asserted by tests. It is *not yet reachable* from a real scan: every shipped
-rule is T0 / `HEURISTIC` / `WARN`, and no rule emits `SPECULATIVE` until M6.
-For the same reason `--fail-on error` cannot exit 1 today.
+`SPECULATIVE` is demoted in human, JSON and SARIF output and cannot trigger
+`--fail-on`. No registered rule currently emits it. The demotion path is
+tested with a deliberately ERROR-severity T3 fixture finding so the override is
+not a coincidence.
 
 == Evidence tiers
 
 [cols="1,3,1,1",options="header"]
 |===
-| Tier | Rests on | Evidence class | Rules on `main`
+| Tier | Rests on | Evidence class | Registered rules
 
-| T0 | Concrete syntax: tree-sitter queries plus small local predicates | `HEURISTIC` | 8 (rules 1–8)
-| T1 | Per-function CFG plus live-variables / may-be-unbound dataflow (ADR-0002) | `DATAFLOW` | 0 (rules 9–10 are M4)
-| T2 | A supplied protocol walked as typestate over the CFG (ADR-0003) | `PROTOCOL` | 0 (rule 11 is M5; rule 12 optional)
-| T3 | A pattern catalogue for properties that are undecidable | `SPECULATIVE` | 0 (rules 13–15 are M6)
+| T0 | Concrete syntax: tree-sitter nodes plus local predicates | `HEURISTIC` | 8
+| T1 | Intraprocedural Python CFG + liveness/may-unbound worklists | `DATAFLOW` | 2
+| T2 | A supplied protocol walked over explicit ordered events | `PROTOCOL` | 0 source rules; trace mode exists
+| T3 | Pattern catalogue for undecidable/weak signals | `SPECULATIVE` | 0
 |===
 
-T0 covers Python, JavaScript, TypeScript, TSX and Rust. T1 and T2 are
-Python-only in v0.1.0 (ADR-0002 explains why Python rather than Rust).
+T0 covers Python, JavaScript, TypeScript, TSX and Rust. T1 is Python-only.
+`pons trace` emits protocol violations from supplied events; it does not infer
+source events, so it is not counted as the M5 flagship rule.
 
-== The decidability wall
+== Measured defects and repair status
 
-pons never claims to prove an undecidable property. Real asymptotic
-complexity, general divide-by-zero and non-termination are T3 at most and
-always `SPECULATIVE`. A literal-zero divisor and unreachable code after a jump
-are decidable and cheap, which makes them T0. A dead store on every path is
-decidable with dataflow, which makes it T1. The full table is in
-`docs/pons-kickoff.adoc` §4.
+[cols="2,4",options="header"]
+|===
+| Issue | Status on this branch
+
+| #47 — 75/78 `read-before-init` real-world findings were infeasible-path FPs
+| ADR-0002 now names the false-positive classes. Non-empty literal `for` loops
+  get a post-iteration exit state; a narrow pure-guard correlation pass prunes
+  identical `X is [not] None` checks unless `X` is rebound between them.
+  Mismatched-guard and intervening-mutation controls remain reportable.
+
+| #48 — `with` suppression made an earlier store look dead
+| A strong in-`with` redefinition of an already-bound local is now `WeakDef`:
+  it clears may-unbound but does not end the earlier live range. The paired
+  `with open(...) as fh` control prevents a may-unbound regression.
+
+| #50 — unreachable predecessor `Kill` polluted a live join
+| The forward dataflow meet ignores predecessors unreachable from `ENTRY`.
+  Unreachable blocks remain visible to `FunctionCfg::render` and the separate
+  unreachable-code rule.
+
+| #32 — SARIF hid skipped paths
+| `runs[0].invocations[0]` is always emitted. Skips become
+  `toolExecutionNotifications` with root-relative artifact URIs and reasons.
+  Direct content tests, not just schema validation, pin this.
+
+| #33 — Latin-1 fallback made `byteOffset` point into the decoded string
+| Transcoded files are named in JSON and SARIF omits their optional artifact
+  byte offsets. Lines and UTF-16 columns remain usable for annotation.
+
+| #43 — docs described a phantom 27-check CLI
+| USAGE, catalogue and man now describe the actual surface; planned adapters
+  are labelled. A drift script compares documented commands/flags/rule IDs
+  with executable help and includes a non-vacuous mutant check.
+
+| #29 / #30 — discovery skips and UTF-16 columns
+| Code and regression tests are present on this branch; both GitHub issues
+  remain open until their closure evidence is re-run and recorded.
+|===
+
+These repairs are *engineering controls*, not a proof of absence. The
+path-insensitive solver still has known incompleteness; every claim must state
+the abstraction, corpus revision and denominator.
+
+== Verification discipline
+
+* `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
+  `cargo test --workspace`, a release build and `tests/e2e.sh` are CI gates.
+* The e2e suite executes the actual binary, asserts the ADR-0005 exit matrix,
+  scans a known-answer positive corpus, checks every rule's own negative corpus,
+  and must fail against a stub binary.
+* The falsifier gate loads each positive and negative fixture, rejects a
+  tree-sitter error-recovered tree, and refuses empty corpora.
+* JSON/SARIF golden tests pin key order and shapes. The SARIF schema validator
+  is paired with a mutant that corrupts an enum field, so a validator that
+  accepts everything cannot pass vacuously.
+* Documentation drift has its own mutant: a fake `--flag` appended to USAGE
+  must make `tests/doc_drift.sh` fail.
 
 == Known gaps and honest notes
 
@@ -88,30 +133,31 @@ decidable with dataflow, which makes it T1. The full table is in
 |===
 | Gap | Detail
 
-| Documentation ahead of the code
-| `docs/USAGE.adoc`, `docs/catalogue.adoc` and `docs/man/pons.1` (all from
-  #39) document subcommands (`extract`, `trace`, `spell`, `search`, `doctor`,
-  `challenge`, `catalogue`) and flags (`--rule`, `--lang`, `--protocol`,
-  `--no-speculative`, …) that the binary does not have. The real surface is
-  `pons scan <PATH> [--format human\|json\|sarif] [--fail-on info\|warn\|error]`.
-  `catalogue.adoc` says it is generated by `pons catalogue`, but no such
-  generator exists (it is M7). Tracked as #43.
+| Source-derived T2 typestate
+| ADR-0003 is ratified but no rule walks the CFG with extracted protocol
+  events. `pons trace` checks explicit traces only.
+
+| T3 speculative rules
+| Plumbing exists; rules 13–15 do not. The `--no-speculative` flag is therefore
+  a no-op until those rules land, though its filtering path is implemented.
+
+| Optional adapters
+| `challenge`, `extract`, `spell` and `search` are explicitly planned. `doctor`
+  reports presence only.
+
+| Encoded legacy corpora
+| Latin-1 fallback preserves line structure but makes byte offsets
+  artifact-relative only after a decode map. Current SARIF omits those offsets
+  rather than lie; EBCDIC/CP037 and fixed-record encodings are future work.
+
+| Statistical proof
+| No labelled external corpus precision/recall study or confidence interval has
+  been run on this branch. `docs/EXNOVATION-ROADMAP.adoc` defines the required
+  protocol before any production-precision claim.
 
 | Two ADRs numbered 0005
-| `0005-cli-exit-code-contract.adoc` and `0005-rookie-scanner-development.adoc`.
-  PLAN.adoc's "per ADR-0005" means the exit-code contract. Renumbering is the
-  owner's call.
-
-| OPAQUE hatch not yet built
-| ADR-0002 now lists five triggers: `exec`/`eval`/`locals`/`globals`/`vars`,
-  wildcard import, frame introspection, `except*` (PEP 654), and a parse
-  error in the unit. The runaway-names cap is a further guard. The M4 probe
-  measured that `except*` does *not* produce an error node in the pinned
-  grammar, so it needs a structural detector of its own.
-
-| Instance-key aliasing (T2)
-| Syntactic receiver keys give false negatives under aliasing, never false
-  positives. This is a disclosed limitation (ADR-0003).
+| `0005-cli-exit-code-contract.adoc` is normative; `0005-rookie-scanner-development.adoc`
+  is now marked historical/superseded. Renumbering remains an owner decision.
 |===
 
 == File map
@@ -120,17 +166,14 @@ decidable with dataflow, which makes it T1. The full table is in
 |===
 | Path | Role
 
-| `docs/PLAN.adoc` | Milestones M0–M8 and Appendices A–G (rule map; evidence/severity; falsifier gate; T0 query guidance; SARIF mapping; pins; JSON envelope). *Authoritative.*
-| `docs/pons-kickoff.adoc` | Mission, decidability wall, evidence tiers, rule catalogue.
-| `docs/adr/0001-substrate.adoc` | tree-sitter native + Rust workspace.
-| `docs/adr/0002-t1-language-and-cfg.adoc` | T1 = Python; CFG construction, both dataflow analyses, OPAQUE triggers.
-| `docs/adr/0003-protocol-spec-and-typestate.adoc` | T2 protocol TOML and typestate semantics.
-| `docs/adr/0004-companion-to-panic-attack.adoc` | Separate repo; SARIF-only interop.
+| `docs/PLAN.adoc` | Ratified milestones and Appendices A–G.
+| `docs/adr/0002-t1-language-and-cfg.adoc` | T1 CFG/dataflow design plus the 2026-10-23 FP amendment.
+| `docs/adr/0003-protocol-spec-and-typestate.adoc` | Ratified source-typestate design, not yet implemented.
 | `docs/adr/0005-cli-exit-code-contract.adoc` | Exit codes 0 / 1 / 2.
-| `docs/OWNER-DECISIONS.adoc` | D1–D5 and their ratification.
-| `crates/pons-core/` | Finding model, engine, discovery, parsing, reporters.
-| `crates/pons-rules/` | Rule registry, T0 rules, falsifier test.
-| `crates/pons-cli/` | The `pons` binary.
-| `crates/pons-protocols/` | Stub until M5.
-| `fixtures/<rule-id>/{positive,negative}/` | Falsifier corpora, one directory per rule.
+| `docs/EXNOVATION-ROADMAP.adoc` | Forensic findings, mathematical/statistical proof plan and legacy-estate roadmap.
+| `crates/pons-core/` | Finding model, engine, discovery, parsing, CFG, dataflow, reporters, config.
+| `crates/pons-rules/` | Rule registry, T0/T1 rules, catalogue generator, falsifier test.
+| `crates/pons-cli/` | The `pons` binary and command model.
+| `crates/pons-protocols/` | Explicit trace protocol parser/checker.
+| `fixtures/<rule-id>/{positive,negative}/` | Falsifier corpora, one directory per registered rule.
 |===

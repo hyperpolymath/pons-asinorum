@@ -2,6 +2,15 @@
 = Scope and development priorities
 :toc:
 
+[NOTE]
+====
+Status updated 2026-10-23. The current binary implements the ten registered
+rules in `docs/catalogue.adoc`, explicit trace checking, scoped suppression,
+JSON/SARIF accounting, catalogue/man/doctor commands, and the CLI flags in
+`docs/USAGE.adoc`. Repository/prose/asset/pattern/budget/localisation checks
+from the 2026-09-09 fork are design material, not shipped rules.
+====
+
 Pons reviews everyday oversights after a compiler or IDE is satisfied.
 Explain the practical mistake first, show the evidence on request, and let
 the author declare intent. One engine serves human-written, generated and
@@ -10,21 +19,23 @@ a diagnosis. No philosophy qualification is expected.
 
 == Implemented development slice
 
-* AST checks: literal zero division, bare-name self-assignment, literal
-  conditions, obvious loops without an escape, empty-effect literal loops,
-  unreachable same-block statements, empty broad catches, repeated string
-  concatenation. These are deliberately bounded heuristics.
-* Repository checks: conventional filename typos, known template markers,
-  explicit README language contradictions, simple manifest/SPDX contradictions,
-  missing Just tool declaration, and suspicious single-quoted shell expansion.
-* Prose: implausibly large speedup prompts and sub-unit "faster" ambiguity;
-  local Markdown/AsciiDoc missing references, placeholder targets and explicit
-  AsciiDoc anchor references; configured project-title mismatch.
-* Localisation key/placeholder drift; explicit resource budget arithmetic;
-  TOML finite-state contracts over supplied traces; custom text patterns.
-* Literal HTML alt/decorative checks and author-declared asset requirements.
-* Ignore/allow configuration, human/JSON/SARIF, generated help/man/catalogue,
-  optional local tool adapters, rootless container and CI definitions.
+* Eight T0 syntax checks across Python, JavaScript, TypeScript, TSX and Rust:
+  literal-zero division, bare-name self-assignment, literal conditions, obvious
+  loops without an escape, empty-effect literal loops, unreachable same-block
+  statements, empty broad catches, and repeated string concatenation. These are
+  deliberately bounded heuristics.
+* Two T1 Python dataflow checks: backward live variables for `dead-store` and
+  forward may-unbound for `read-before-init`, over a CFG with explicit opaque
+  functions, exceptional edges, `finally` copies and bounded path-correlation
+  pruning. See ADR-0002's 2026-10-23 amendment for measured limits.
+* Explicit TOML finite-state protocol checking over an operator-supplied ordered
+  JSON trace. This is groundwork for T2, not source-derived typestate.
+* Scoped configuration and suppression: `pons.toml`, `--config`, rule/path
+  allowances, inline comment allowances, and suppression accounting.
+* Human, JSON 0.3.0 and SARIF 2.1.0 output. SARIF carries invocation
+  notifications for skipped paths; JSON carries skip, transcode and suppression
+  accounting; a transcoded file omits misleading artifact byte offsets.
+* Generated help/man/catalogue, `doctor`, and a CLI/rule/doc drift test.
 
 Consult the generated catalogue for exact evidence classes and exceptions.
 The presence of a grammar does not mean every rule applies to every construct
@@ -32,10 +43,10 @@ or language. No precision/recall or industrial readiness claim is established.
 
 == Next: finish the ratified core before a v0.1 release
 
-. Implement Python CFG extraction including exceptions, finally, loops,
-  break/continue and scopes; then liveness/reaching definitions with real
-  dead-store/read-before-init evidence. Add closure, alias and dynamic-language
-  counterexamples. Keep opaque behaviour explicitly unknown.
+. Harden the implemented Python CFG with measured external-corpus precision
+  work, closure/alias/dynamic-language counterexamples, and explicit opacity
+  accounting. The first CFG and both T1 analyses exist; their epistemic limits
+  are now recorded in ADR-0002.
 . Derive source protocol events and typestate on that CFG, checking joins,
   exceptional exits, receiver identity and alias uncertainty. The explicit
   trace checker is useful groundwork, not completion of this milestone.
