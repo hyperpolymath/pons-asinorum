@@ -110,16 +110,23 @@ fn children(node: Node<'_>) -> Vec<Node<'_>> {
     node.named_children(&mut cursor).collect()
 }
 
-fn assigned_names(node: Node<'_>, text: &str, out: &mut BTreeSet<String>) {
-    if node.kind() == "assignment" {
-        if let Some(left) = node.child_by_field_name("left") {
-            if left.kind() == "identifier" {
-                out.insert(text[left.byte_range()].to_string());
+/// Names bound by plain assignments that sit directly in `block`. Nested
+/// compound statements and nested scopes are skipped: they may not run.
+fn assigned_names(block: Node<'_>, text: &str, out: &mut BTreeSet<String>) {
+    for stmt in children(block) {
+        if stmt.kind() != "expression_statement" {
+            continue;
+        }
+        for expr in children(stmt) {
+            if expr.kind() != "assignment" || expr.child_by_field_name("right").is_none() {
+                continue;
+            }
+            if let Some(left) = expr.child_by_field_name("left") {
+                if left.kind() == "identifier" {
+                    out.insert(text[left.byte_range()].to_string());
+                }
             }
         }
-    }
-    for child in children(node) {
-        assigned_names(child, text, out);
     }
 }
 
