@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  actions: write
 
 jobs:
   check:
@@ -28,17 +27,7 @@ jobs:
       - name: fmt
         run: cargo fmt --check
       - name: clippy
-        shell: bash
-        run: |
-          set -o pipefail
-          cargo clippy --workspace --all-targets -- -D warnings 2>&1 | tee clippy.log
-      - name: upload clippy log
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: clippy-log
-          path: clippy.log
-          if-no-files-found: warn
+        run: cargo clippy --workspace --all-targets -- -D warnings
         env:
           RUSTFLAGS: "-D warnings"
       - name: test

@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MPL-2.0
+# Local/branch bootstrap configuration. The RUSTFMT wrapper lets the existing
+# autoformat workflow vendor dependencies before its commit step, without
+# changing any workflow file. Remove the source replacement after the branch has
+# been verified and decide whether to keep a vendored release artifact.
+[env]
+RUSTFMT = { value = "scripts/vendor-and-format.sh", relative = true }

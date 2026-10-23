@@ -24,7 +24,7 @@ zig-cache/
 .zig-cache/
 # Dependencies
 /node_modules/
-/vendor/
+# /vendor/  # temporarily vendored on this verification branch
 /deps/
 /.elixir_ls/
 # Rust
