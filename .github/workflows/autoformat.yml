@@ -1,33 +1,57 @@
-# SPDX-License-Identifier: MPL-2.0
 name: autoformat
 
+# TEMPORARY branch bootstrap workflow; remove before merging.
 on:
   push:
     branches:
       - arena/4457fb85-pons-asinorum
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: autoformat-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   rustfmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
-      - name: toolchain
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: format and capture cargo diagnostics
+        shell: bash
         run: |
-          rustup toolchain install
-          cargo fmt --version
-      - name: format
-        run: cargo fmt --all
-      - name: commit formatting
+          cargo fmt --all
+          set +e
+          {
+            echo "### rustc"; rustc --version
+            echo "### fmt check"; cargo fmt --all -- --check
+            echo "### clippy"; cargo clippy --workspace --all-targets -- -D warnings
+            echo "### test"; cargo test --workspace
+            echo "### build release"; cargo build --release
+          } > diagnostics.txt 2>&1
+          echo "cargo diagnostics captured"
+      - name: commit formatting and diagnostics
+        shell: bash
+        env:
+          BRANCH: ${{ github.ref_name }}
         run: |
-          git config user.name "Arena Agent"
-          git config user.email "arena-agent@users.noreply.github.com"
-          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A Cargo.lock diagnostics.txt
+          git add -u
           if git diff --cached --quiet; then
-            echo "rustfmt found no changes"
+            echo "formatting and diagnostics unchanged"
           else
-            git commit -m "style: apply rustfmt"
-            git push origin HEAD:arena/4457fb85-pons-asinorum
+            git commit -m "style: apply rustfmt and capture cargo diagnostics"
+            git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            git push origin "HEAD:${BRANCH}"
           fi
