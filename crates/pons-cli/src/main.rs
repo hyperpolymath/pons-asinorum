@@ -109,8 +109,8 @@ impl Language {
     fn lang(self) -> Lang {
         match self {
             Language::Python => Lang::Python,
-            Language::Javascript => Lang::Javascript,
-            Language::Typescript => Lang::Typescript,
+            Language::Javascript => Lang::JavaScript,
+            Language::Typescript => Lang::TypeScript,
             Language::Tsx => Lang::Tsx,
             Language::Rust => Lang::Rust,
         }

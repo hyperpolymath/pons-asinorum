@@ -701,12 +701,13 @@ impl<'t> Builder<'t> {
         match node.kind() {
             "list" | "tuple" | "set" | "dictionary" => {
                 let mut cursor = node.walk();
-                node.named_children(&mut cursor).any(|c| {
+                let has_content = node.named_children(&mut cursor).any(|c| {
                     !matches!(
                         c.kind(),
                         "comment" | "list_splat" | "parenthesized_list_splat" | "dictionary_splat"
                     )
-                })
+                });
+                has_content
             }
             "string" => {
                 let mut cursor = node.walk();

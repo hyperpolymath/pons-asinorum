@@ -73,7 +73,12 @@ mod tests {
 
     #[test]
     fn a_preceding_comment_can_allow_a_rule_but_a_string_cannot() {
-        let text = "# pons:allow self-assignment -- deliberate fixture\nx = x\n";
+        let text = concat!(
+            "# pons:allow self-assignment -- deliberate fixture\n",
+            "x = x\n",
+            "s = \"# pons:allow self-assignment\"\n",
+            "y = y\n",
+        );
         let source = SourceFile {
             path: PathBuf::from("x.py"),
             lang: Lang::Python,
@@ -82,7 +87,11 @@ mod tests {
         };
         let tree = parse::parse(&source).unwrap();
         let ctx = RuleCtx::new(&source.path, source.lang, &source.text, &tree);
+        // The comment allows its own line and the line that follows it.
+        assert!(inline_allowed(&ctx, &finding(1)));
         assert!(inline_allowed(&ctx, &finding(2)));
-        assert!(!inline_allowed(&ctx, &finding(1)));
+        // A string literal is data, not a comment: it allows nothing.
+        assert!(!inline_allowed(&ctx, &finding(3)));
+        assert!(!inline_allowed(&ctx, &finding(4)));
     }
 }

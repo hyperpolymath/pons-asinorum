@@ -85,17 +85,30 @@ have() {
     if [ -z "$missing" ]; then ok "$name"; else bad "$name (missing:$missing)"; fi
 }
 
-# run_pons <args...> — echoes output, sets RC. Never trips `set -e`, because a
-# non-zero exit is the thing under test, not a script failure.
-RC=0
+# run_pons <args...> — echoes output, records rc via pons_rc. Never trips
+# `set -e`, because a non-zero exit is the thing under test, not a script
+# failure.
+#
+# The rc travels through a file, not a shell variable: `VAR=$(run_pons ...)`
+# runs run_pons in a subshell, so an RC variable set inside it is lost and the
+# caller silently reads a stale rc. This bit the ADR-0005 exit-code matrix —
+# both default scans exited 0 but were recorded as rc=1 left over from an
+# earlier check, while the earlier checks passed vacuously on stale zeros.
+PONS_RC_FILE="$(mktemp "${TMPDIR:-/tmp}/pons-e2e-rc.XXXXXX")"
+trap 'rm -f "$PONS_RC_FILE"' EXIT
+
 run_pons() {
     local out
     set +e
     out="$("$PONS_BIN" "$@" 2>&1)"
-    RC=$?
+    printf '%s' "$?" > "$PONS_RC_FILE"
     set -e
     printf '%s' "$out"
 }
+
+# pons_rc — the exit status of the most recent run_pons call, direct or in a
+# command substitution. Compare numerically only.
+pons_rc() { cat "$PONS_RC_FILE"; }
 
 echo "═══════════════════════════════════════════════════════════════"
 echo "  pons-asinorum — End-to-End Tests"
@@ -196,29 +209,29 @@ else
     echo "  using: $PONS_BIN"
 
     # --- 1. The tool identifies itself ---------------------------------
-    VERSION_OUT=$(run_pons --version); VERSION_RC=$RC
+    VERSION_OUT=$(run_pons --version); VERSION_RC=$(pons_rc)
     expect_rc "--version exits 0" 0 "$VERSION_RC"
     check "--version prints name and semver" '^pons [0-9]\+\.[0-9]\+\.[0-9]\+' "$VERSION_OUT"
 
-    HELP_OUT=$(run_pons --help); HELP_RC=$RC
+    HELP_OUT=$(run_pons --help); HELP_RC=$(pons_rc)
     expect_rc "--help exits 0" 0 "$HELP_RC"
     check "--help documents the scan subcommand" "scan" "$HELP_OUT"
     check "--help documents the trace subcommand" "trace" "$HELP_OUT"
     check "--help documents the catalogue subcommand" "catalogue" "$HELP_OUT"
 
-    CATALOGUE_OUT=$(run_pons catalogue); CATALOGUE_RC=$RC
+    CATALOGUE_OUT=$(run_pons catalogue); CATALOGUE_RC=$(pons_rc)
     expect_rc "catalogue exits 0" 0 "$CATALOGUE_RC"
     check "catalogue lists a registered rule" "dead-store" "$CATALOGUE_OUT"
 
-    MAN_OUT=$(run_pons man); MAN_RC=$RC
+    MAN_OUT=$(run_pons man); MAN_RC=$(pons_rc)
     expect_rc "man exits 0" 0 "$MAN_RC"
     check "man documents scan" "scan" "$MAN_OUT"
 
-    TRACE_OUT=$(run_pons trace "$PROJECT_DIR/fixtures/protocols/good_trace.json" --protocol "$PROJECT_DIR/protocols/linear-egg.toml"); TRACE_RC=$RC
+    TRACE_OUT=$(run_pons trace "$PROJECT_DIR/fixtures/protocols/good_trace.json" --protocol "$PROJECT_DIR/protocols/linear-egg.toml"); TRACE_RC=$(pons_rc)
     expect_rc "a valid protocol trace exits 0" 0 "$TRACE_RC"
     check "trace names its protocol" "linear-egg" "$TRACE_OUT"
 
-    run_pons trace "$PROJECT_DIR/fixtures/protocols/bad_trace.json" --protocol "$PROJECT_DIR/protocols/linear-egg.toml" >/dev/null; TRACE_BAD_RC=$RC
+    run_pons trace "$PROJECT_DIR/fixtures/protocols/bad_trace.json" --protocol "$PROJECT_DIR/protocols/linear-egg.toml" >/dev/null; TRACE_BAD_RC=$(pons_rc)
     expect_rc "a violating protocol trace exits 1" 1 "$TRACE_BAD_RC"
 
     if PONS_BIN="$PONS_BIN" bash "$SCRIPT_DIR/doc_drift.sh" >/dev/null 2>&1; then
@@ -241,7 +254,7 @@ else
     # fixtures/<rule>/positive is the committed known-answer control: the rule
     # MUST fire there. A tmpdir would prove less and rot faster.
     POS="fixtures/self-assignment/positive"
-    POS_OUT=$(run_pons scan "$PROJECT_DIR/$POS"); POS_RC=$RC
+    POS_OUT=$(run_pons scan "$PROJECT_DIR/$POS"); POS_RC=$(pons_rc)
     expect_rc "scan of a dirty tree still exits 0 (ADR-0005)" 0 "$POS_RC"
     check "positive corpus fires its rule" "self-assignment" "$POS_OUT"
     check "finding carries a location"     ":[0-9]\+:[0-9]\+" "$POS_OUT"
@@ -275,21 +288,21 @@ else
     fi
 
     # --- 4. Clean tree ---------------------------------------------------
-    CLEAN_OUT=$(run_pons scan "$PROJECT_DIR/crates/pons-cli/src"); CLEAN_RC=$RC
+    CLEAN_OUT=$(run_pons scan "$PROJECT_DIR/crates/pons-cli/src"); CLEAN_RC=$(pons_rc)
     expect_rc "scan of a clean tree exits 0" 0 "$CLEAN_RC"
     check_absent "clean tree reports no findings" "\[WARN\]" "$CLEAN_OUT"
 
     # --- 5. The ADR-0005 exit-code matrix --------------------------------
-    run_pons scan "$PROJECT_DIR/$POS" --fail-on warn  >/dev/null; W_RC=$RC
+    run_pons scan "$PROJECT_DIR/$POS" --fail-on warn  >/dev/null; W_RC=$(pons_rc)
     expect_rc "--fail-on warn with warnings exits 1" 1 "$W_RC"
 
-    run_pons scan "$PROJECT_DIR/$POS" --fail-on error >/dev/null; E_RC=$RC
+    run_pons scan "$PROJECT_DIR/$POS" --fail-on error >/dev/null; E_RC=$(pons_rc)
     expect_rc "--fail-on error with only warnings exits 0" 0 "$E_RC"
 
-    run_pons scan "$PROJECT_DIR/crates/pons-cli/src" --fail-on warn >/dev/null; CW_RC=$RC
+    run_pons scan "$PROJECT_DIR/crates/pons-cli/src" --fail-on warn >/dev/null; CW_RC=$(pons_rc)
     expect_rc "--fail-on warn on a clean tree exits 0" 0 "$CW_RC"
 
-    run_pons scan "$PROJECT_DIR/does-not-exist-zzz" >/dev/null; MISS_RC=$RC
+    run_pons scan "$PROJECT_DIR/does-not-exist-zzz" >/dev/null; MISS_RC=$(pons_rc)
     expect_rc "scan of a nonexistent path exits 2 (operational error)" 2 "$MISS_RC"
 fi
 

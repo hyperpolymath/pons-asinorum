@@ -92,10 +92,9 @@ fn guard_key(cond: Node<'_>, text: &str) -> Option<(String, String)> {
     let raw = &text[cond.byte_range()];
     let (base, polarity) = if let Some(base) = raw.strip_suffix(" is not None") {
         (base, "not-none")
-    } else if let Some(base) = raw.strip_suffix(" is None") {
-        (base, "none")
     } else {
-        return None;
+        let base = raw.strip_suffix(" is None")?;
+        (base, "none")
     };
     let base = base.trim();
     if base.is_empty()
@@ -168,7 +167,10 @@ fn base_mutated_between(node: Node<'_>, start: usize, end: usize, base: &str, te
         let left = node.child_by_field_name("left");
         if let Some(left) = left {
             let target = &text[left.byte_range()];
-            if target == base || target.starts_with(&format!("{base}.")) {
+            if target == base
+                || target.starts_with(&format!("{base}."))
+                || base.starts_with(&format!("{target}."))
+            {
                 return true;
             }
         }
@@ -212,10 +214,10 @@ fn visit_functions(node: Node<'_>, text: &str, out: &mut BTreeSet<usize>) {
 
 /// Add identifier offsets from branches with repeated textual guard keys.
 ///
-/// The first guard encountered in the tree traversal supplies directly
-/// assigned names; subsequent matching guards supply identifier occurrences,
-/// subject to [`base_mutated_between`]. Guards are visited in stack traversal
-/// order, not sorted by source position. Nested function guards are excluded.
+/// The first guard in source order supplies directly assigned names;
+/// subsequent matching guards supply identifier occurrences, subject to
+/// [`base_mutated_between`]. Guards are sorted by source position before
+/// pairing. Nested function guards are excluded.
 /// This bounded syntactic pass does not prove that branches execute together.
 fn prune_function(func: Node<'_>, text: &str, out: &mut BTreeSet<usize>) {
     let mut guards = Vec::new();
@@ -243,6 +245,11 @@ fn prune_function(func: Node<'_>, text: &str, out: &mut BTreeSet<usize>) {
         }
         stack.extend(children(node));
     }
+
+    // The DFS above uses a LIFO stack, so collection order is not source
+    // order. Correlation is only meaningful from the earlier guard to a later
+    // one, so restore source order before pairing.
+    guards.sort_by_key(|guard| guard.start);
 
     let mut first: BTreeMap<String, GuardIf<'_>> = BTreeMap::new();
     for guard in guards {
