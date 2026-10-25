@@ -89,8 +89,8 @@ pub fn language(path: &Path) -> String {
         "php" | "phtml" | "php5" | "inc" => "php",
         "hs" | "lhs" => "haskell",
         "ex" | "exs" => "elixir",
-        "lock" | "json" | "toml" | "yaml" | "yml" | "xml" | "ini" | "conf" | "ncl" | "k9"
-        | "a2ml" => "configuration",
+        "lock" | "json" | "jsonl" | "toml" | "yaml" | "yml" | "kyaml" | "xml" | "ini" | "conf"
+        | "ncl" | "k9" | "deed" | "a2ml" => "configuration",
         "sh" | "bash" | "zsh" => "shell",
         "c" | "h" => "c",
         "cc" | "cpp" | "hpp" => "cpp",

@@ -170,8 +170,26 @@ pub fn validate(text: &str) -> Result<String> {
         "contract coverage differs from scan coverage"
     );
     for (r, f) in records.iter().zip(findings) {
+        let file = f["location"]["file"]
+            .as_str()
+            .context("missing finding file")?;
+        let root = s["root"].as_str().context("missing scan root")?;
+        let notes = &inventory
+            .iter()
+            .find(|e| e.path == file)
+            .context("finding outside inventory")?
+            .analysis_notes;
+        let counterconditions: Vec<_> = f["counter_condition"].as_str().into_iter().collect();
         ensure!(
-            r.rule == f["rule_id"] && serde_json::to_value(r.tier)? == f["tier"],
+            r.rule == f["rule_id"]
+                && serde_json::to_value(r.tier)? == f["tier"]
+                && serde_json::to_value(r.evidence)? == f["evidence"]
+                && r.path == crate::evidence::relative_path(file, root)
+                && Some(r.line as u64) == f["location"]["line_start"].as_u64()
+                && r.trace == f["evidence_note"]
+                && r.counterconditions == counterconditions
+                && &r.unknown_edges == notes
+                && r.assumptions == [crate::evidence::ASSUMPTION],
             "record/finding mismatch"
         );
     }

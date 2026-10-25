@@ -85,4 +85,11 @@ diff -u <(printf '%s\n' "$generated_ids") <(printf '%s\n' "$documented_ids") \
 
 grep -q 'planned' "$MAN" || fail "man page does not mark deferred commands as planned"
 
+# Every referenced subcommand page is shipped and generated from the live CLI.
+for cmd in scan catalogue wharf-trace validate-report man doctor trace help; do
+    page="$(dirname "$MAN")/pons-$cmd.1"
+    [[ -s "$page" ]] || fail "missing subcommand man page: $page"
+    diff -u "$page" <("$PONS_BIN" man "$cmd") || fail "stale man page: $page"
+done
+
 echo "doc-drift: help, USAGE, man and catalogue agree with the binary"

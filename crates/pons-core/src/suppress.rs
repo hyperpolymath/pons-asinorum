@@ -34,12 +34,21 @@ pub fn inline_allowed(ctx: &RuleCtx<'_>, finding: &Finding) -> bool {
                         .split('|')
                         .map(str::trim)
                         .collect();
-                    let reason = parts.first().is_some_and(|s| !s.is_empty());
-                    let owner = parts
+                    let reason = parts.first().is_some_and(|s| {
+                        !s.is_empty() && !s.starts_with("owner=") && !s.starts_with("expires=")
+                    });
+                    let fields = &parts[1..];
+                    if fields.len() != 2
+                        || fields.iter().filter(|s| s.starts_with("owner=")).count() != 1
+                        || fields.iter().filter(|s| s.starts_with("expires=")).count() != 1
+                    {
+                        continue;
+                    }
+                    let owner = fields
                         .iter()
                         .find_map(|s| s.strip_prefix("owner="))
                         .is_some_and(|s| !s.trim().is_empty());
-                    let expiry = parts
+                    let expiry = fields
                         .iter()
                         .find_map(|s| s.strip_prefix("expires="))
                         .and_then(|s| s.trim().parse::<u64>().ok());

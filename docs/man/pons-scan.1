@@ -1,0 +1,84 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH pons-scan 1  "scan "
+.SH NAME
+pons\-scan \- Scan a file or directory and report findings
+.SH SYNOPSIS
+\fBpons scan\fR [\fB\-\-fail\-on\fR] [\fB\-\-format\fR] [\fB\-\-config\fR] [\fB\-\-rule\fR] [\fB\-\-lang\fR] [\fB\-\-no\-speculative\fR] [\fB\-\-explain\fR] [\fB\-\-fail\-on\-skips\fR] [\fB\-\-require\-language\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIPATH\fR>
+.SH DESCRIPTION
+Scan a file or directory and report findings
+.SH OPTIONS
+.TP
+\fB\-\-fail\-on\fR \fI<FAIL_ON>\fR
+Exit 1 if any non\-speculative finding meets or exceeds this severity
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+info
+.IP \(bu 2
+warn
+.IP \(bu 2
+error
+.RE
+.TP
+\fB\-\-format\fR \fI<FORMAT>\fR [default: human]
+Output format. `human` is the default; `json` and `sarif` emit the machine\-readable envelopes from PLAN Appendices G and E
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+human
+.IP \(bu 2
+json
+.IP \(bu 2
+sarif
+.RE
+.TP
+\fB\-\-config\fR \fI<CONFIG>\fR
+TOML configuration. Defaults to `pons.toml` at the scan root
+.TP
+\fB\-\-rule\fR \fI<RULE>\fR
+Select rule IDs; repeat to select more than one. Unknown IDs fail
+.TP
+\fB\-\-lang\fR \fI<LANG>\fR
+Force one grammar for a single extensionless file
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+python
+.IP \(bu 2
+javascript
+.IP \(bu 2
+typescript
+.IP \(bu 2
+tsx
+.IP \(bu 2
+rust
+.IP \(bu 2
+php
+.RE
+.TP
+\fB\-\-no\-speculative\fR
+Omit findings carrying speculative evidence
+.TP
+\fB\-\-explain\fR
+Include evidence class and tier in human output
+.TP
+\fB\-\-fail\-on\-skips\fR
+Treat any skipped file or subtree as an incomplete scan and exit 2
+.TP
+\fB\-\-require\-language\fR \fI<REQUIRE_LANGUAGE>\fR
+Require complete coverage of a language (repeatable, e.g. php or haskell)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fIPATH\fR>

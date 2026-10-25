@@ -6,6 +6,23 @@ use crate::{
     finding::{EvidenceClass, Tier},
 };
 use serde::{Deserialize, Serialize};
+pub(crate) const ASSUMPTION: &str = "Only registered rule semantics and declared parser/model coverage; no runtime safety certification";
+
+pub(crate) fn relative_path(file: &str, root: &str) -> String {
+    let path = std::path::Path::new(file);
+    let root = std::path::Path::new(root);
+    // A file scan has root == file. Do not consult the validator's filesystem:
+    // the original checkout may no longer exist where evidence is consumed.
+    let base = if path == root {
+        root.parent().unwrap_or(root)
+    } else {
+        root
+    };
+    path.strip_prefix(base)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .replace('\\', "/")
+}
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Target {
@@ -40,20 +57,68 @@ pub struct Contract<'a> {
 /// Root-relative fingerprint keys remain stable when a checkout moves. Source
 /// anchors are supplied by the engine from the bytes actually analysed.
 pub fn contract(report: &ScanReport) -> Contract<'_> {
-    let records=report.findings.iter().map(|f| {
-        let path=std::path::Path::new(&f.location().file);
-        let root=std::path::Path::new(&report.root);
-        let relative=path.strip_prefix(if root.is_file(){root.parent().unwrap_or(root)}else{root}).unwrap_or(path).to_string_lossy().replace('\\',"/");
-        let key=format!("{}:{}:{}:{}",f.rule_id(),f.location().file,f.location().byte_start,f.location().byte_end);
-        let anchor=report.anchors.get(&key).cloned().unwrap_or_else(||format!("line:{}:column:{}",f.location().line_start,f.location().col_start));
-        let fingerprint=blake3::hash(format!("pons-fingerprint-v1\0{}\0{}\0{}",f.rule_id(),relative,anchor).as_bytes()).to_hex().to_string();
-        let unknown=report.inventory.iter().find(|i|i.path==f.location().file).map(|i|i.analysis_notes.clone()).unwrap_or_default();
-        Record{fingerprint,producer:"pons".into(),correlation_group:format!("pons:{:?}",f.tier()),
-            rule:f.rule_id().into(),tier:f.tier(),evidence:f.evidence(),confidence:match f.tier(){Tier::T0=>"heuristic",Tier::T1=>"model-dependent",Tier::T2=>"premise-dependent",Tier::T3=>"speculative"}.into(),
-            path:relative,line:f.location().line_start,trace:f.evidence_note().into(),
-            assumptions:vec!["Only registered rule semantics and declared parser/model coverage; no runtime safety certification".into()],
-            unknown_edges:unknown,counterconditions:f.counter_condition().map(|s|vec![s.into()]).unwrap_or_default()}
-    }).collect();
+    let records = report
+        .findings
+        .iter()
+        .map(|f| {
+            let relative = relative_path(&f.location().file, &report.root);
+            let key = format!(
+                "{}:{}:{}:{}",
+                f.rule_id(),
+                f.location().file,
+                f.location().byte_start,
+                f.location().byte_end
+            );
+            let anchor = report.anchors.get(&key).cloned().unwrap_or_else(|| {
+                format!(
+                    "line:{}:column:{}",
+                    f.location().line_start,
+                    f.location().col_start
+                )
+            });
+            let fingerprint = blake3::hash(
+                format!(
+                    "pons-fingerprint-v1\0{}\0{}\0{}",
+                    f.rule_id(),
+                    relative,
+                    anchor
+                )
+                .as_bytes(),
+            )
+            .to_hex()
+            .to_string();
+            let unknown = report
+                .inventory
+                .iter()
+                .find(|i| i.path == f.location().file)
+                .map(|i| i.analysis_notes.clone())
+                .unwrap_or_default();
+            Record {
+                fingerprint,
+                producer: "pons".into(),
+                correlation_group: format!("pons:{:?}", f.tier()),
+                rule: f.rule_id().into(),
+                tier: f.tier(),
+                evidence: f.evidence(),
+                confidence: match f.tier() {
+                    Tier::T0 => "heuristic",
+                    Tier::T1 => "model-dependent",
+                    Tier::T2 => "premise-dependent",
+                    Tier::T3 => "speculative",
+                }
+                .into(),
+                path: relative,
+                line: f.location().line_start,
+                trace: f.evidence_note().into(),
+                assumptions: vec![ASSUMPTION.into()],
+                unknown_edges: unknown,
+                counterconditions: f
+                    .counter_condition()
+                    .map(|s| vec![s.into()])
+                    .unwrap_or_default(),
+            }
+        })
+        .collect();
     Contract {
         schema_version: "1.0.0",
         target: &report.target,

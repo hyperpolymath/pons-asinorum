@@ -30,12 +30,15 @@ pub fn render_report(report: &ScanReport, explain: bool) -> String {
         let _ = writeln!(out, "coverage failure: {failure}");
     }
     for entry in &report.inventory {
-        if entry.outcome != crate::coverage::Outcome::Analysed {
+        if entry.outcome != crate::coverage::Outcome::Analysed || !entry.analysis_complete {
             let _ = writeln!(
                 out,
                 "  {:?}: {} — {}",
                 entry.outcome, entry.path, entry.reason
             );
+            for note in &entry.analysis_notes {
+                let _ = writeln!(out, "    analysis incomplete: {note}");
+            }
         }
     }
     out

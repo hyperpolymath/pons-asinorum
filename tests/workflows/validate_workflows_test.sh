@@ -8,6 +8,11 @@
 set -euo pipefail
 
 WORKFLOWS_DIR="${1:-.github/workflows}"
+YQ_BIN="${YQ_BIN:-yq}"
+if ! command -v "$YQ_BIN" >/dev/null 2>&1; then
+    echo "MISSING_TOOL: Mike Farah yq is required for YAML/KYAML field checks" >&2
+    exit 2
+fi
 ERRORS=0
 WARNINGS=0
 
@@ -57,6 +62,9 @@ while IFS= read -r workflow_file; do
 done < <(find "$WORKFLOWS_DIR" \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null | sort)
 
 echo "Found $WORKFLOW_COUNT workflow file(s)"
+if [ "$WORKFLOW_COUNT" -eq 0 ]; then
+    log_error "No workflow files found"
+fi
 echo ""
 
 while IFS= read -r workflow_file; do
@@ -72,10 +80,10 @@ while IFS= read -r workflow_file; do
     fi
 
     # TEST 1b: Has 'name' field
-    if grep -q "^name:" "$workflow_file" 2>/dev/null; then
+    if "$YQ_BIN" -e 'tag == "!!map" and (.name | tag == "!!str") and (.name | length > 0)' "$workflow_file" >/dev/null 2>&1; then
         log_pass "  $WORKFLOW_NAME: Has 'name' field"
     else
-        log_error "  $WORKFLOW_NAME: Missing 'name' field"
+        log_error "  $WORKFLOW_NAME: Invalid YAML or missing/non-string/empty 'name' field"
     fi
 
 done < <(find "$WORKFLOWS_DIR" \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null | sort)

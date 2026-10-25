@@ -66,8 +66,8 @@ enum Command {
     WharfTrace { path: PathBuf },
     /// Validate a scan report; schema validity alone is not an assurance pass.
     ValidateReport { path: PathBuf },
-    /// Generate a man page from the same command model as `--help`.
-    Man,
+    /// Generate the main or a subcommand man page from the live command model.
+    Man { command: Option<String> },
     /// Show optional adapter executables without claiming they are tested.
     Doctor,
     /// Check an explicit ordered JSON event trace against a TOML protocol.
@@ -222,9 +222,19 @@ fn run(cli: Cli) -> Result<u8> {
             emit(&pons_rules::catalogue())?;
             Ok(0)
         }
-        Command::Man => {
+        Command::Man { command } => {
             let mut rendered = Vec::new();
-            clap_mangen::Man::new(Cli::command()).render(&mut rendered)?;
+            let mut cli = Cli::command();
+            cli.build();
+            let man = if let Some(name) = command {
+                let sub = cli
+                    .find_subcommand(&name)
+                    .with_context(|| format!("unknown man-page command: {name}"))?;
+                clap_mangen::Man::new(sub.clone()).title(format!("pons-{name}"))
+            } else {
+                clap_mangen::Man::new(cli)
+            };
+            man.render(&mut rendered)?;
             let text = String::from_utf8(rendered)?;
             emit(
                 &(text
@@ -232,6 +242,8 @@ fn run(cli: Cli) -> Result<u8> {
                     .map(str::trim_end)
                     .collect::<Vec<_>>()
                     .join("\n")
+                    .trim_end()
+                    .to_string()
                     + "\n"),
             )?;
             Ok(0)
@@ -355,7 +367,10 @@ fn run_scan(
     let engine = Engine::with_config(rules, compiled);
 
     let mut report = if let Some(lang) = forced_lang {
-        let root = path.parent().unwrap_or_else(|| Path::new("."));
+        let root = path
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or_else(|| Path::new("."));
         let file = DiscoveredFile {
             path: path.to_path_buf(),
             lang: lang.lang(),
@@ -376,7 +391,9 @@ fn run_scan(
     let dir = if path.is_dir() {
         path
     } else {
-        path.parent().unwrap_or(Path::new("."))
+        path.parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or(Path::new("."))
     };
     if let Ok(output) = std::process::Command::new("git")
         .arg("-C")

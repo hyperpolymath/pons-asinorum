@@ -43,6 +43,16 @@ and only then apply finding severity policy. Do not translate an empty findings
 array into a pass. Haskell and Elixir remain unsupported. Configuration files
 are inventory only; JSON/TOML syntax recognition is not security analysis.
 
+Estate migration formats `.deed`, `.k9`, `.kyaml`, `.json` and `.jsonl` are
+recognised configuration inputs and reported unsupported until an actual
+adapter exists. K9 components and `coordination.k9` have distinct contracts;
+filename recognition does not validate either. Legacy `.a2ml` remains visible.
+This expands strict skip accounting and can increase exit-2 runs. The repository
+format/toolchain handoffs are in `docs/handoffs/format-toolchain/README.md`.
+The existing JSON report format is not yet a JCS byte contract; historical raw
+reports remain unchanged. Strict raw-byte I-JSON/JCS adoption and a consumer-
+tested DEED metadata migration remain explicit follow-ups in those handoffs.
+
 == Reproduction and correction
 
 At c4394f8, a fresh build returned exit 0, files=0, skipped=[] for php-aegis at

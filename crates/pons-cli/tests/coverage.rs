@@ -108,6 +108,27 @@ fn generated_report_validates_and_malformed_claims_fail_closed() {
         ("/tool/name", serde_json::json!("another-tool")),
         ("/tool/source_dirty", serde_json::json!("maybe")),
         (
+            "/evidence_contract/records/0/path",
+            serde_json::json!("other.php"),
+        ),
+        ("/evidence_contract/records/0/line", serde_json::json!(99)),
+        (
+            "/evidence_contract/records/0/trace",
+            serde_json::json!("different trace"),
+        ),
+        (
+            "/evidence_contract/records/0/counterconditions",
+            serde_json::json!(["different premise"]),
+        ),
+        (
+            "/evidence_contract/records/0/assumptions",
+            serde_json::json!(["unconditional proof"]),
+        ),
+        (
+            "/evidence_contract/records/0/unknown_edges",
+            serde_json::json!(["different unknown"]),
+        ),
+        (
             "/evidence_contract/records/0/fingerprint",
             serde_json::json!("fake"),
         ),
@@ -190,6 +211,99 @@ fn imported_sanitizer_alias_is_partial_and_fails_required_php_coverage() {
     assert!(v["scanned"]["inventory"][0]["analysis_notes"]
         .to_string()
         .contains("import"));
+    let human = t.scan(&["--format", "human"]);
+    let human = String::from_utf8(human.stdout).unwrap();
+    assert!(human.contains("alias.php"));
+    assert!(human.contains("analysis incomplete:") && human.contains("import"));
+}
+
+#[test]
+fn estate_formats_are_visible_unsupported_configuration() {
+    let t = Temp::new();
+    for name in [
+        "repo.deed",
+        "component.k9",
+        "coordination.k9",
+        "config.kyaml",
+        "records.jsonl",
+    ] {
+        fs::write(t.0.join(name), "placeholder").unwrap();
+    }
+    let out = t.scan(&["--format", "json", "--fail-on-skips"]);
+    assert_eq!(out.status.code(), Some(2));
+    let value: Value = serde_json::from_slice(&out.stdout).unwrap();
+    let inventory = value["scanned"]["inventory"].as_array().unwrap();
+    assert_eq!(inventory.len(), 5);
+    assert!(inventory.iter().all(|e| e["outcome"] == "unsupported"
+        && e["language"] == "configuration"
+        && e["parser"].is_null()));
+    assert_eq!(value["scanned"]["skipped"].as_array().unwrap().len(), 5);
+}
+
+#[test]
+fn bare_forced_file_has_nonempty_root_and_valid_evidence_offline() {
+    let t = Temp::new();
+    fs::write(
+        t.0.join("extensionless"),
+        "<?php function f() { echo $_GET['x']; }",
+    )
+    .unwrap();
+    for args in [vec!["--lang", "php"], vec![]] {
+        let file = if args.is_empty() {
+            "sample.php"
+        } else {
+            "extensionless"
+        };
+        fs::copy(t.0.join("extensionless"), t.0.join("sample.php")).unwrap();
+        let output = Command::new(env!("CARGO_BIN_EXE_pons"))
+            .current_dir(&t.0)
+            .args(["scan", file, "--format", "json"])
+            .args(args)
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(0));
+        let text = String::from_utf8(output.stdout).unwrap();
+        let value: Value = serde_json::from_str(&text).unwrap();
+        assert!(!value["scanned"]["root"].as_str().unwrap().is_empty());
+        assert!(!value["findings"].as_array().unwrap().is_empty());
+        fs::remove_file(t.0.join(file)).unwrap();
+        assert!(pons_core::report::validate::validate(&text).is_ok());
+        fs::write(
+            t.0.join("extensionless"),
+            "<?php function f() { echo $_GET['x']; }",
+        )
+        .unwrap();
+    }
+}
+
+#[test]
+fn inline_suppression_requires_distinct_reason_owner_and_expiry() {
+    let t = Temp::new();
+    for (metadata, expected) in [
+        ("owner=me | expires=4102444800", 0),
+        ("expires=4102444800 | owner=me", 0),
+        ("fixture | owner=me | owner=other | expires=4102444800", 0),
+        (
+            "fixture | owner=me | expires=4102444800 | expires=4102444801",
+            0,
+        ),
+        ("fixture | owner=me | expires=4102444800", 1),
+        ("fixture | expires=4102444800 | owner=me", 1),
+    ] {
+        fs::write(
+            t.0.join("a.py"),
+            format!("# pons:allow self-assignment -- {metadata}\nx = x\n"),
+        )
+        .unwrap();
+        let out = t.scan(&["--format", "json", "--rule", "self-assignment"]);
+        assert_eq!(out.status.code(), Some(0));
+        let value: Value = serde_json::from_slice(&out.stdout).unwrap();
+        assert_eq!(
+            value["scanned"]["suppressed_findings"], expected,
+            "{metadata}"
+        );
+        assert_eq!(value["counts"]["total"], 1 - expected, "{metadata}");
+    }
 }
 #[test]
 fn fingerprints_survive_checkout_move_and_blank_line_insertion() {
