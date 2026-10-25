@@ -1,0 +1,164 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+//
+// GENERATED FILE - DO NOT EDIT BY HAND.
+//
+// Rendered from tests/proven/ledger.kyaml by tests/proven/render_dashboard.sh.
+// `tests/proven/check_test_provenance.sh` re-renders it and fails when the
+// committed copy differs, so this file cannot drift from the inventory it
+// describes.
+= Tests and benchmarks dashboard
+:toc: preamble
+:toclevels: 3
+
+Pons's test and benchmark evidence, described the way
+https://github.com/hyperpolymath/proven-tests-and-benches[proven-tests-and-benches]
+describes it: every test carries a *provenance tier*, and coverage over the
+estate's category x aspect lattice is derived from the tests that actually
+ran and passed, never from a claim.
+
+== The three provenance tiers
+
+[cols="1,4"]
+|===
+| Tier | Meaning
+
+| Actually-Proven
+| A machine-checked proof artefact discharges the obligation. Claiming this tier requires `proof`, a path listed in `proof_artifacts`. This repository has none, so no entry may claim it: the gate fails the claim rather than accepting it.
+| Provisionally-Proven
+| A real, executed, passing test discharges the obligation for the finite domain it covers, and `reason` records the assumption or limitation that keeps the claim provisional. This is the honest tier for an ordinary test suite.
+| Unproven
+| The obligation is acknowledged and not discharged. The entry contributes NO coverage, and `reason` says why. An Unproven entry is a declared gap, not a failure.
+|===
+
+== The declared lattice
+
+Columns are the first two letters of each aspect; `#` means some entry in the
+ledger occupies that (category, aspect) cell.
+
+[source,text]
+----
+                                      De Se Us In Sa Pe Fu Ve Ac Ma Pr Ob Re Po 
+Unit Tests                            #  .  .  .  .  .  #  .  .  #  .  .  .  .  
+Point-to-Point (P2P) Tests            .  .  .  .  .  .  .  .  .  .  .  .  .  .  
+End-to-End (E2E) Tests                #  .  .  #  .  .  #  .  .  .  .  .  .  .  
+Build Tests                           .  .  .  .  .  .  .  .  .  .  .  .  #  .  
+Execution & Runtime Tests             .  .  .  .  .  #  .  .  .  .  .  .  .  .  
+Reflexive Tests                       .  .  .  .  .  .  .  .  .  .  .  .  .  .  
+Lifecycle Tests                       .  .  .  .  .  .  .  .  .  .  .  .  .  .  
+Smoke Tests                           .  .  .  .  .  .  .  .  .  .  .  .  .  .  
+Property-Based / Generative Tests     .  .  .  .  .  .  .  .  .  .  .  .  .  .  
+Mutation Tests                        .  .  .  .  .  .  #  .  .  #  .  .  .  .  
+Fuzz Tests                            .  .  .  .  .  .  .  .  .  .  .  .  .  .  
+Contract / Invariant Tests            .  .  .  #  .  .  .  .  .  #  .  .  .  .  
+Regression Tests                      .  .  .  #  .  #  #  .  .  #  .  .  .  .  
+Chaos / Resilience Tests              .  .  .  .  .  .  .  .  .  .  .  .  .  .  
+Compatibility Tests                   .  .  .  .  .  .  .  .  .  .  .  .  .  .  
+Proof Regression Tests                .  .  .  .  .  .  .  .  .  .  .  .  .  .  
+Type-Safe Tests                       .  .  .  .  .  .  .  .  .  .  .  .  .  .  
+Coupling / Drift-freedom Tests        .  .  .  .  .  .  .  .  .  .  .  .  .  .  
+----
+
+Declared cells: *16* of *252*
+(18 categories x 14 aspects).
+
+!!! NOTE
+This is the DECLARED map. The DERIVED map — the cells occupied by tests
+that actually ran and passed — is computed at run time by
+`tests/proven/check_test_provenance.sh`, written to
+`build/proven-report.json` and published in the CI job summary. A suite
+that is declared but did not run contributes nothing to the derived map,
+and the gate fails the build when a suite that was supposed to run failed.
+
+== The inventory
+
+[cols="2,3,2,2,1"]
+|===
+| Test | Command | Category | Aspects | Tier
+
+| unit-tests
+| `cargo test --workspace`
+| Unit Tests
+| Functionality, Dependability
+| Provisionally-Proven
+| e2e
+| `bash tests/e2e.sh`
+| End-to-End (E2E) Tests
+| Functionality, Interoperability, Dependability
+| Provisionally-Proven
+| aspect-tests
+| `bash tests/aspect_tests.sh`
+| Unit Tests
+| Maintainability
+| Provisionally-Proven
+| doc-drift
+| `bash tests/doc_drift.sh`
+| Regression Tests
+| Maintainability, Functionality
+| Provisionally-Proven
+| build-provenance
+| `bash tests/build_provenance.sh`
+| Build Tests
+| Reproducibility
+| Provisionally-Proven
+| workflow-validation
+| `bash tests/workflows/validate_workflows_test.sh`
+| Contract / Invariant Tests
+| Interoperability
+| Provisionally-Proven
+| workflow-regression
+| `bash tests/workflows/validate_workflows_regression.sh`
+| Regression Tests
+| Interoperability
+| Provisionally-Proven
+| format-ratchet
+| `bash tests/format_ratchet.sh`
+| Contract / Invariant Tests
+| Interoperability, Maintainability
+| Provisionally-Proven
+| format-ratchet-mutant
+| `bash tests/format_ratchet_test.sh`
+| Mutation Tests
+| Functionality, Maintainability
+| Provisionally-Proven
+| sonar-fixture-gate
+| `bash tests/sonar_fixture_gate_test.sh`
+| Contract / Invariant Tests
+| Interoperability, Maintainability
+| Provisionally-Proven
+| mutation-smoke
+| `bash tests/mutation_smoke.sh`
+| Mutation Tests
+| Functionality
+| Unproven
+| bench-measurement
+| `bash benches/pons_bench.sh --json build/bench-current.json`
+| Execution & Runtime Tests
+| Performance
+| Provisionally-Proven
+| bench-regression
+| `bash scripts/proven-bench/check-bench-regression.sh build/bench-current.json benches/baseline.json`
+| Regression Tests
+| Performance
+| Unproven
+|===
+
+== Machine-checked proofs
+
+None. This repository has no machine-checked proof artefact, so no entry
+may claim the Actually-Proven tier: the gate fails such a claim rather
+than accepting it. Every obligation here is discharged, if at all, by an
+executed test — which is what Provisionally-Proven means.
+
+== Harness
+
+These are the gate's own machinery, not tests, and are excluded from the
+inventory for that reason.
+
+* `tests/proven/check_test_provenance.sh`
+* `tests/proven/provenance_gate_test.sh`
+* `tests/proven/render_dashboard.sh`
+* `scripts/proven-bench/check-bench-regression.sh`
+* `scripts/proven-bench/compute-bench-baseline.sh`
+* `scripts/proven-bench/bench-stats.jq`
+* `scripts/proven-bench/verify-upstream.sh`
+

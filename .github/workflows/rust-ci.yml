@@ -9,9 +9,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
       # The toolchain comes from rust-toolchain.toml (channel + components) via the
@@ -43,3 +48,65 @@ jobs:
             exit 1
           fi
           echo "e2e suite correctly rejects a stub binary"
+
+  # The provenance gate: the port of hyperpolymath/proven-tests-and-benches to
+  # this repository. It runs every suite the ledger declares, derives the
+  # category x aspect coverage lattice from the suites that RAN and PASSED,
+  # and fails when a declared cell has no passing suite behind it.
+  #
+  # It is a separate job from `check` on purpose. The coverage the gate
+  # publishes must be derived from a run the gate itself performed and
+  # witnessed; inheriting another job's "it passed" would make the coverage
+  # a claim rather than a measurement.
+  proven-tests:
+    name: Provenance and coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - name: toolchain
+        run: |
+          rustup toolchain install
+          rustc --version
+          cargo --version
+      - name: Install yq and jq
+        run: |
+          # yq is preinstalled on the runner (standards' YAML-POLICY Y-1
+          # relies on that); jq is too. Both are checked rather than assumed.
+          command -v yq
+          command -v jq
+          yq --version
+          jq --version
+      # The format ratchet is one of the declared suites, and it needs the
+      # estate's JSON tool. Pinned to a commit: ijson-jcs has no releases
+      # yet. This is the same revision standards' own self-test installs.
+      - name: Install ijson-jcs
+        run: cargo install --git https://github.com/hyperpolymath/ijson-jcs --rev 0fdeea716fd558e9807362acf6f8202d56d8d88f --locked ijson-jcs
+      # The end-to-end suite runs the binary, so it has to exist before the
+      # gate runs the suites.
+      - name: Build the CLI
+        run: cargo build --release --locked -p pons-cli
+      - name: The vendored benchmark harness still matches upstream
+        run: bash scripts/proven-bench/verify-upstream.sh
+      - name: Provenance gate
+        run: bash tests/proven/check_test_provenance.sh
+      - name: Provenance gate self-test
+        run: bash tests/proven/provenance_gate_test.sh
+      - name: Publish the derived coverage
+        if: always()
+        run: |
+          if [ -f build/proven-report.json ]; then
+            jq -r '.coverage.lattice' build/proven-report.json >> "$GITHUB_STEP_SUMMARY"
+            echo >> "$GITHUB_STEP_SUMMARY"
+            echo "Derived cells: $(jq -r '.coverage.derived_cells' build/proven-report.json) of $(jq -r '.coverage.total_cells' build/proven-report.json)." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No provenance report was produced." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Retain the provenance report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: proven-report
+          path: build/proven-report.json
+          retention-days: 30
+          if-no-files-found: warn

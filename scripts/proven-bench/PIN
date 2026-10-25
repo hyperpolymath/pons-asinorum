@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# The upstream provenance of the vendored benchmark harness.
+#
+# These three files are copied byte-for-byte from
+# hyperpolymath/proven-tests-and-benches, at the revision below. They are
+# vendored rather than fetched at run time so the gate runs offline and on a
+# contributor's machine; `scripts/proven-bench/verify-upstream.sh` fetches
+# the same revision from upstream and compares the digests, so a vendored
+# copy that drifts is caught rather than trusted.
+#
+# The estate's testing taxonomy says to draw from proven-tests-and-benches
+# FIRST, ahead of writing a new test or benchmark: copying a test is how a
+# shared expectation stays shared, and writing a fresh one per repository is
+# how sixteen subtly different definitions of "the same" test appear.
+#
+# Format: shell assignments, sourced by verify-upstream.sh.
+UPSTREAM_REPO="hyperpolymath/proven-tests-and-benches"
+UPSTREAM_REV="eca682bcd419554f6779e72969902e6faef4fd9d"
