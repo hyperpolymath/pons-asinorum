@@ -77,6 +77,16 @@ jobs:
           command -v jq
           yq --version
           jq --version
+      # tests/aspect_tests.sh walks the Rust sources with ripgrep, and
+      # ripgrep is NOT preinstalled on the runner — standards' own self-test
+      # installs it for exactly this reason. Without it the suite finds no
+      # sources and fails its own "no Rust source inspected" guard, which
+      # reads like a broken repository rather than a missing tool.
+      - name: Install ripgrep
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ripgrep
+          rg --version
       # The format ratchet is one of the declared suites, and it needs the
       # estate's JSON tool. Pinned to a commit: ijson-jcs has no releases
       # yet. This is the same revision standards' own self-test installs.
