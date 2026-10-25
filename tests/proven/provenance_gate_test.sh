@@ -98,6 +98,7 @@ write_ledger() {
     "tests/format_ratchet.sh",
     "tests/format_ratchet_test.sh",
     "tests/sonar_fixture_gate_test.sh",
+    "tests/sonar_fixture_gate_mutation_test.sh",
     "tests/mutation_smoke.sh",
     "tests/workflows/validate_workflows_regression.sh",
     "tests/workflows/validate_workflows_test.sh",
@@ -106,7 +107,7 @@ write_ledger() {
   entries: [
     {
       id: "scratch-pass",
-      command: "printf 'PROVEN-CASES: 1\\n'",
+      command: ["bash", "tests/scratch-pass.sh"],
       paths: [
         "tests/scratch-pass.sh",
       ],
@@ -119,7 +120,7 @@ write_ledger() {
     },
     {
       id: "scratch-gap",
-      command: "true",
+      command: ["true"],
       paths: [
       ],
       category: "Mutation Tests",
@@ -146,7 +147,10 @@ LEDGER
 }
 
 reset() {
-  (cd "$REPO" && git checkout -q -- . && git clean -qfd) || exit 2
+  # The index AND the working tree go back to HEAD. `git checkout -- .`
+  # alone leaves a staged file staged, and a staged file from one mutation
+  # would still be there for the next one, masking it.
+  (cd "$REPO" && git reset --quiet --hard HEAD && git clean -qfd) || exit 2
   write_ledger
 }
 
@@ -154,8 +158,12 @@ run_gate() {
   (cd "$REPO" && PROVEN_REPORT=build/proven-report.json bash tests/proven/check_test_provenance.sh 2>&1)
 }
 
+# expect_red LABEL DIAGNOSTIC: the gate must exit 1 AND name the defect.
+# The exit status alone proves nothing. A gate that goes red for the wrong
+# reason is as useless as one that never goes red, so the diagnostic the
+# defect should produce has to appear in the output.
 expect_red() {
-  local label="$1"
+  local label="$1" diagnostic="$2"
   local output rc
   output="$(run_gate)"
   rc=$?
@@ -167,6 +175,13 @@ expect_red() {
   fi
   if [ "$rc" -ne 1 ]; then
     echo "provenance-gate-test: FAIL - the gate exited $rc (expected 1) for: $label" >&2
+    printf '%s\n' "$output" | sed 's/^/    /' >&2
+    fail=1
+    return
+  fi
+  if ! printf '%s\n' "$output" | grep -qF -- "$diagnostic"; then
+    echo "provenance-gate-test: FAIL - the gate went red for: $label, but never named the defect" >&2
+    echo "provenance-gate-test:   expected to find: $diagnostic" >&2
     printf '%s\n' "$output" | sed 's/^/    /' >&2
     fail=1
     return
@@ -194,36 +209,37 @@ expect_green "the scratch ledger"
 
 echo "== mutation 1: a suite that fails =="
 reset
-sed -i 's|command: "printf .*"|command: "false"|' "$REPO/tests/proven/ledger.kyaml"
-expect_red "a suite that fails"
+sed -i '/id: "scratch-pass"/,/^    },/ s|command: \["bash", "tests/scratch-pass.sh"\]|command: ["false"]|' "$REPO/tests/proven/ledger.kyaml"
+expect_red "a suite that fails" "the suite 'scratch-pass' FAILED"
 
 echo "== mutation 2: a claimed cell with no passing suite =="
 reset
 # The Unproven entry declares (Mutation Tests, Functionality). Unproven
 # entries contribute no coverage, and the gate must not treat the claim as
-# evidence.
-sed -i 's|provenance: "Unproven"|provenance: "Provisionally-Proven"|' "$REPO/tests/proven/ledger.kyaml"
-expect_red "a claimed cell with no passing suite"
+# evidence: promoting it to a claim, with no suite behind it, must be
+# caught by the coverage check and not merely reported.
+sed -i '/id: "scratch-gap"/,/^    },/ s|provenance: "Unproven"|provenance: "Provisionally-Proven"|' "$REPO/tests/proven/ledger.kyaml"
+expect_red "a claimed cell with no passing suite" "the ledger claims (Mutation Tests, Functionality), but no suite that RAN and PASSED occupies it"
 
 echo "== mutation 3: an Actually-Proven claim with no registered proof =="
 reset
-sed -i '0,/provenance: "Provisionally-Proven"/s|provenance: "Provisionally-Proven"|provenance: "Actually-Proven"|' "$REPO/tests/proven/ledger.kyaml"
-expect_red "an Actually-Proven claim with no proof"
+sed -i '/id: "scratch-pass"/,/^    },/ s|provenance: "Provisionally-Proven"|provenance: "Actually-Proven"|' "$REPO/tests/proven/ledger.kyaml"
+expect_red "an Actually-Proven claim with no proof" "claims Actually-Proven but names no proof artefact"
 
 echo "== mutation 4: a Provisionally-Proven claim with no reason =="
 reset
-sed -i '/reason: "scratch",/d' "$REPO/tests/proven/ledger.kyaml"
-expect_red "a claim with no recorded reason"
+sed -i '0,/reason: "scratch",/ { /reason: "scratch",/d }' "$REPO/tests/proven/ledger.kyaml"
+expect_red "a claim with no recorded reason" "claims Provisionally-Proven but records no reason"
 
 echo "== mutation 5: an unknown provenance tier =="
 reset
-sed -i '0,/provenance: "Provisionally-Proven"/s|provenance: "Provisionally-Proven"|provenance: "Mostly-Proven"|' "$REPO/tests/proven/ledger.kyaml"
-expect_red "an unknown provenance tier"
+sed -i '/id: "scratch-pass"/,/^    },/ s|provenance: "Provisionally-Proven"|provenance: "Mostly-Proven"|' "$REPO/tests/proven/ledger.kyaml"
+expect_red "an unknown provenance tier" "has an unknown provenance tier 'Mostly-Proven'"
 
 echo "== mutation 6: a category outside the taxonomy =="
 reset
-sed -i 's|category: "Unit Tests"|category: "Vibes Tests"|' "$REPO/tests/proven/ledger.kyaml"
-expect_red "a category outside the taxonomy"
+sed -i '/id: "scratch-pass"/,/^    },/ s|category: "Unit Tests"|category: "Vibes Tests"|' "$REPO/tests/proven/ledger.kyaml"
+expect_red "a category outside the taxonomy" "declares category 'Vibes Tests', which is not in the ledger's taxonomy"
 
 echo "== mutation 7: a test script the ledger does not account for =="
 reset
@@ -231,13 +247,13 @@ printf '#!/usr/bin/env bash\n# SPDX-License-Identifier: MPL-2.0\nprintf "x\\n"\n
   > "$REPO/tests/stray-test.sh"
 chmod +x "$REPO/tests/stray-test.sh"
 (cd "$REPO" && git add -A >/dev/null 2>&1)
-expect_red "a test script the ledger does not account for"
+expect_red "a test script the ledger does not account for" "is a test or bench script that the ledger does not account for"
 
 echo "== mutation 8: a stale ledger entry =="
 reset
 rm -f "$REPO/tests/scratch-pass.sh"
 (cd "$REPO" && git add -A >/dev/null 2>&1)
-expect_red "a stale ledger entry"
+expect_red "a stale ledger entry" "the ledger accounts for tests/scratch-pass.sh, but no such tracked file exists"
 
 reset
 if [ "$fail" -ne 0 ]; then

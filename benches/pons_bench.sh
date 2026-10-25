@@ -25,6 +25,17 @@
 #   * The JSON is written with numbers in it. Numbers ship with artefacts,
 #     never merely asserted.
 #
+# WHY THE PREDICATES CHECK THE FINDING, NOT THE ENVELOPE
+# -------------------------------------------------------
+# A predicate that only asks "does the output contain a schema_version?" is
+# satisfied by an empty report. The scan workloads therefore require the
+# finding the positive fixture MUST produce: `throw.php` is the positive
+# control for the `unreachable-after-jump` rule, and
+# crates/pons-rules/tests/falsifier.rs asserts that every positive fixture
+# produces a finding from its own rule. A scan that reports nothing is
+# therefore a BROKEN SCAN, and the harness must say so rather than record a
+# green timing for it.
+#
 # USAGE
 #   benches/pons_bench.sh [--json PATH]
 #
@@ -49,7 +60,8 @@ while [ "$#" -gt 0 ]; do
       shift 2
       ;;
     -h|--help)
-      sed -n '2,30p' "$0"
+      # The header comment is the usage text; print it, up to the code.
+      awk 'NR > 1 && /^set -uo/ { exit } NR > 1 { print }' "$0"
       exit 0
       ;;
     *)
@@ -79,36 +91,111 @@ now_ns() {
   date +%s%N
 }
 
+# ---------------------------------------------------------------------------
 # The workload set. FROZEN. Each entry is:
-#   name|iterations|shell snippet|expected exit code|output predicate
 #
-# The predicate is written as a shell snippet that must succeed; a workload
-# whose output changes shape fails its predicate, and its timings are then
-# measurements of a broken workload rather than of Pons.
+#   name|iterations|expected exit code|runner|checker
 #
-# The exit codes are ADR-0005's contract: `pons scan` exits 0 even when it
-# reports findings, and 2 only for an operational error at the root.
+# The runner and the checker are NAMES, dispatched through the explicit
+# allowlists below. They are not shell snippets, and nothing here is
+# `eval`ed: a workload string can only ever name a command and a predicate
+# that exist in this file, so a string in the table can never become shell
+# code. (The exit codes are ADR-0005's contract: `pons scan` exits 0 even
+# when it reports findings, and 2 only for an operational error at the
+# root.)
+# ---------------------------------------------------------------------------
 workloads=(
-  "scan-fixtures|$REPS|\"\$BIN\" scan fixtures --format json|0|grep -q '\"schema_version\"'"
-  "scan-single-file|$REPS|\"\$BIN\" scan fixtures/unreachable-after-jump/positive/throw.php --format json|0|grep -q '\"schema_version\"'"
-  "catalogue|$REPS|\"\$BIN\" catalogue|0|grep -q 'unreachable-after-jump'"
-  "startup|$REPS|\"\$BIN\" --version|0|grep -q '^pons '"
+  "scan-fixtures|$REPS|0|run_scan_fixtures|check_scan_fixtures"
+  "scan-single-file|$REPS|0|run_scan_single_file|check_scan_single_file"
+  "catalogue|$REPS|0|run_catalogue|check_catalogue"
+  "startup|$REPS|0|run_startup|check_startup"
 )
+
+# The runners. Each writes the workload's output to STDOUT; diagnostics go
+# to stderr and are not merged into the output, because the checkers parse
+# the output as JSON.
+run_scan_fixtures() {
+  "$BIN" scan fixtures --format json
+}
+
+run_scan_single_file() {
+  "$BIN" scan fixtures/unreachable-after-jump/positive/throw.php --format json
+}
+
+run_catalogue() {
+  "$BIN" catalogue
+}
+
+run_startup() {
+  "$BIN" --version
+}
+
+# expect_finding JSON RULE PATH_SUFFIX — the envelope must carry a finding
+# for RULE whose location names the file whose path ends with PATH_SUFFIX.
+# The path is matched by SUFFIX because the scan root differs between the
+# two scan workloads: one scans a directory, the other a single file.
+expect_finding() {
+  local json="$1" rule="$2" suffix="$3"
+  jq -e --arg rule "$rule" --arg suffix "$suffix" '
+    [ .findings[]?
+      | select(.rule_id == $rule)
+      | select((.location.file // "") | endswith($suffix)) ]
+    | length > 0
+  ' <<<"$json" >/dev/null 2>&1
+}
+
+# The checkers. Each returns 0 when the output is what the workload claims
+# to measure, and non-zero otherwise.
+check_scan_fixtures() {
+  expect_finding "$1" "unreachable-after-jump" "positive/throw.php"
+}
+
+check_scan_single_file() {
+  expect_finding "$1" "unreachable-after-jump" "throw.php"
+}
+
+check_catalogue() {
+  grep -q 'unreachable-after-jump' <<<"$1"
+}
+
+check_startup() {
+  grep -q '^pons ' <<<"$1"
+}
+
+# The dispatch. An unknown name is an error, not a silent no-op: a workload
+# whose runner or checker does not exist would otherwise measure nothing.
+run_workload() {
+  case "$1" in
+    run_scan_fixtures) run_scan_fixtures ;;
+    run_scan_single_file) run_scan_single_file ;;
+    run_catalogue) run_catalogue ;;
+    run_startup) run_startup ;;
+    *) echo "bench: unknown workload runner '$1'" >&2; return 2 ;;
+  esac
+}
+
+run_check() {
+  case "$1" in
+    check_scan_fixtures) check_scan_fixtures "$2" ;;
+    check_scan_single_file) check_scan_single_file "$2" ;;
+    check_catalogue) check_catalogue "$2" ;;
+    check_startup) check_startup "$2" ;;
+    *) echo "bench: unknown workload checker '$1'" >&2; return 2 ;;
+  esac
+}
 
 results_json='[]'
 human_lines=''
 checksum_failed=''
 
 for workload in "${workloads[@]}"; do
-  IFS='|' read -r name iterations snippet expected predicate <<<"$workload"
+  IFS='|' read -r name iterations expected runner checker <<<"$workload"
   samples=''
   checksum=true
   for _ in $(seq 1 "$iterations"); do
     start="$(now_ns)"
-    set +e
-    output="$(eval "$snippet" 2>&1)"
+    output="$(run_workload "$runner")"
     rc=$?
-    set -e
     end="$(now_ns)"
     elapsed=$(( end - start ))
     [ "$elapsed" -gt 0 ] || elapsed=1
@@ -118,7 +205,7 @@ for workload in "${workloads[@]}"; do
       echo "bench: $name: iteration exited $rc, expected $expected" >&2
       break
     fi
-    if ! eval "$predicate" <<<"$output"; then
+    if ! run_check "$checker" "$output"; then
       checksum=false
       echo "bench: $name: the output did not satisfy its predicate" >&2
       break

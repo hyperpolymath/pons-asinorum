@@ -33,7 +33,8 @@ ran and passed, never from a claim.
 == The declared lattice
 
 Columns are the first two letters of each aspect; `#` means some entry in the
-ledger occupies that (category, aspect) cell.
+ledger occupies that (category, aspect) cell. An `Unproven` entry is a declared
+gap and occupies no cell.
 
 [source,text]
 ----
@@ -50,7 +51,7 @@ Property-Based / Generative Tests     .  .  .  .  .  .  .  .  .  .  .  .  .  .
 Mutation Tests                        .  .  .  .  .  .  #  .  .  #  .  .  .  .  
 Fuzz Tests                            .  .  .  .  .  .  .  .  .  .  .  .  .  .  
 Contract / Invariant Tests            .  .  .  #  .  .  .  .  .  #  .  .  .  .  
-Regression Tests                      .  .  .  #  .  #  #  .  .  #  .  .  .  .  
+Regression Tests                      .  .  .  #  .  .  #  .  .  #  .  .  .  .  
 Chaos / Resilience Tests              .  .  .  .  .  .  .  .  .  .  .  .  .  .  
 Compatibility Tests                   .  .  .  .  .  .  .  .  .  .  .  .  .  .  
 Proof Regression Tests                .  .  .  .  .  .  .  .  .  .  .  .  .  .  
@@ -58,16 +59,18 @@ Type-Safe Tests                       .  .  .  .  .  .  .  .  .  .  .  .  .  .
 Coupling / Drift-freedom Tests        .  .  .  .  .  .  .  .  .  .  .  .  .  .  
 ----
 
-Declared cells: *16* of *252*
+Declared cells: *15* of *252*
 (18 categories x 14 aspects).
 
-!!! NOTE
+[NOTE]
+====
 This is the DECLARED map. The DERIVED map — the cells occupied by tests
 that actually ran and passed — is computed at run time by
 `tests/proven/check_test_provenance.sh`, written to
 `build/proven-report.json` and published in the CI job summary. A suite
 that is declared but did not run contributes nothing to the derived map,
 and the gate fails the build when a suite that was supposed to run failed.
+====
 
 == The inventory
 
@@ -124,6 +127,11 @@ and the gate fails the build when a suite that was supposed to run failed.
 | `bash tests/sonar_fixture_gate_test.sh`
 | Contract / Invariant Tests
 | Interoperability, Maintainability
+| Provisionally-Proven
+| sonar-fixture-gate-mutant
+| `bash tests/sonar_fixture_gate_mutation_test.sh`
+| Mutation Tests
+| Functionality, Maintainability
 | Provisionally-Proven
 | mutation-smoke
 | `bash tests/mutation_smoke.sh`

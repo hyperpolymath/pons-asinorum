@@ -18,11 +18,17 @@
 #      exact rule key, an exact file path, a reason, an owner and an expiry.
 #   2. Every declaration has a matching Sonar criterion, and every Sonar
 #      criterion has a matching declaration. Neither side may grow alone.
-#   3. Every criterion names a WHOLE FILE. A pattern - `fixtures/**` or any
-#      other glob - is refused: a broad waiver is the thing this gate exists
-#      to prevent, and the fixture corpus must still be analysed.
-#   4. Every declaration names a file that exists, and every expiry is in
-#      the future. An expired waiver must be re-approved, not inherited.
+#   3. Every criterion names a WHOLE FILE and a WHOLE RULE. A pattern -
+#      `fixtures/**` or any other glob, `php:*` or any other wildcard - is
+#      refused: a broad waiver is the thing this gate exists to prevent,
+#      and the fixture corpus must still be analysed.
+#   4. Every declaration names a file that exists, and every expiry is a
+#      real calendar date strictly in the future. An expired waiver must be
+#      re-approved, not inherited.
+#   5. `sonar.issue.ignore.multicriteria` is assigned exactly once, with a
+#      comma-separated list. A properties file keeps only the LAST
+#      assignment of a key, so a file that assigns it once per criterion
+#      silently ignores every criterion but the last.
 #
 # A NEW diagnostic in a fixture is therefore not silently waived: it fails
 # the SonarCloud check, and the fix is to declare it (with a reason and an
@@ -59,7 +65,21 @@ TODAY="$(date -u +%Y-%m-%d)"
 # The Sonar criteria, read from the properties file. The criterion set is
 # declared by `sonar.issue.ignore.multicriteria=`; each member then has a
 # `.ruleKey` and a `.resourceKey`.
-mapfile -t CRITERION_IDS < <(sed -n 's/^sonar\.issue\.ignore\.multicriteria=//p' "$PROPERTIES" | sort -u)
+#
+# THE PROPERTY IS ASSIGNED EXACTLY ONCE. A properties file gives the LAST
+# assignment of a key precedence, so declaring the property once per
+# criterion would leave only the final criterion in force and drop the rest
+# without a word. The list is therefore one comma-separated value, and this
+# gate refuses a file that assigns the property more than once.
+mapfile -t MULTICRITERIA_LINES < <(sed -n 's/^sonar\.issue\.ignore\.multicriteria=//p' "$PROPERTIES")
+if [ "${#MULTICRITERIA_LINES[@]}" -ne 1 ]; then
+  echo "::error::$PROPERTIES::sonar-fixture-gate: the file assigns 'sonar.issue.ignore.multicriteria' ${#MULTICRITERIA_LINES[@]} times. Only the LAST assignment of a property survives, so the criteria must be one comma-separated value on a single line." >&2
+  fail=1
+fi
+CRITERION_IDS=()
+if [ "${#MULTICRITERIA_LINES[@]}" -gt 0 ]; then
+  IFS=',' read -r -a CRITERION_IDS <<<"${MULTICRITERIA_LINES[0]}"
+fi
 
 declare -A SONAR_RULE=()
 declare -A SONAR_PATH=()
@@ -69,6 +89,14 @@ for id in "${CRITERION_IDS[@]}"; do
   path="$(sed -n "s/^sonar\.issue\.ignore\.multicriteria\.$id\.resourceKey=//p" "$PROPERTIES")"
   if [ -z "$rule" ] || [ -z "$path" ]; then
     echo "::error::$PROPERTIES::sonar-fixture-gate: criterion '$id' has no ruleKey or no resourceKey." >&2
+    fail=1
+    continue
+  fi
+  # A wildcard rule key waives a whole rule wherever it fires. This gate
+  # exists to refuse broad waivers, and a wildcard is the same move as a
+  # glob, so it is refused here rather than in the declaration only.
+  if [[ "$rule" == *'*'* || "$rule" == *'?'* ]]; then
+    echo "::error::$PROPERTIES::sonar-fixture-gate: criterion '$id' names the rule key '$rule', which is a WILDCARD. Name one whole rule; a wildcard waives that rule everywhere." >&2
     fail=1
     continue
   fi
@@ -108,7 +136,13 @@ for entry in "${DECLARED[@]}"; do
   if [ -z "$expires" ]; then
     echo "::error file=$path::sonar-fixture-gate: the waiver for $rule has no expiry." >&2
     fail=1
-  elif [[ "$expires" < "$TODAY" ]]; then
+  elif ! [[ "$expires" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+    echo "::error file=$path::sonar-fixture-gate: the waiver for $rule expires on '$expires', which is not a date in YYYY-MM-DD form. An expiry that cannot be read is not an expiry." >&2
+    fail=1
+  elif ! date -u -d "$expires" +%Y-%m-%d >/dev/null 2>&1; then
+    echo "::error file=$path::sonar-fixture-gate: the waiver for $rule expires on '$expires', which is not a real calendar date." >&2
+    fail=1
+  elif [[ "$expires" < "$TODAY" || "$expires" == "$TODAY" ]]; then
     echo "::error file=$path::sonar-fixture-gate: the waiver for $rule expired on $expires (today is $TODAY). Re-approve it with a fresh reason, or correct the fixture." >&2
     fail=1
   fi
@@ -118,6 +152,10 @@ for entry in "${DECLARED[@]}"; do
   fi
   if [[ "$path" == *'*'* || "$path" == *'?'* ]]; then
     echo "::error file=$path::sonar-fixture-gate: the waiver path is a PATTERN. This gate exists to refuse broad waivers: name the whole file." >&2
+    fail=1
+  fi
+  if [[ "$rule" == *'*'* || "$rule" == *'?'* ]]; then
+    echo "::error file=$path::sonar-fixture-gate: the waiver names the rule key '$rule', which is a WILDCARD. Name one whole rule; a wildcard waives that rule everywhere." >&2
     fail=1
   fi
   case "$path" in

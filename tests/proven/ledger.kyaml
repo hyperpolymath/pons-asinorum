@@ -57,7 +57,11 @@
   entries: [
     {
       id: "unit-tests",
-      command: "cargo test --workspace",
+      command: [
+        "cargo",
+        "test",
+        "--workspace",
+      ],
       paths: [],
       category: "Unit Tests",
       aspects: [
@@ -69,7 +73,10 @@
     },
     {
       id: "e2e",
-      command: "bash tests/e2e.sh",
+      command: [
+        "bash",
+        "tests/e2e.sh",
+      ],
       paths: [
         "tests/e2e.sh",
       ],
@@ -84,7 +91,10 @@
     },
     {
       id: "aspect-tests",
-      command: "bash tests/aspect_tests.sh",
+      command: [
+        "bash",
+        "tests/aspect_tests.sh",
+      ],
       paths: [
         "tests/aspect_tests.sh",
       ],
@@ -97,7 +107,10 @@
     },
     {
       id: "doc-drift",
-      command: "bash tests/doc_drift.sh",
+      command: [
+        "bash",
+        "tests/doc_drift.sh",
+      ],
       paths: [
         "tests/doc_drift.sh",
       ],
@@ -111,7 +124,10 @@
     },
     {
       id: "build-provenance",
-      command: "bash tests/build_provenance.sh",
+      command: [
+        "bash",
+        "tests/build_provenance.sh",
+      ],
       paths: [
         "tests/build_provenance.sh",
       ],
@@ -124,7 +140,10 @@
     },
     {
       id: "workflow-validation",
-      command: "bash tests/workflows/validate_workflows_test.sh",
+      command: [
+        "bash",
+        "tests/workflows/validate_workflows_test.sh",
+      ],
       paths: [
         "tests/workflows/validate_workflows_test.sh",
       ],
@@ -137,7 +156,10 @@
     },
     {
       id: "workflow-regression",
-      command: "bash tests/workflows/validate_workflows_regression.sh",
+      command: [
+        "bash",
+        "tests/workflows/validate_workflows_regression.sh",
+      ],
       paths: [
         "tests/workflows/validate_workflows_regression.sh",
       ],
@@ -150,7 +172,10 @@
     },
     {
       id: "format-ratchet",
-      command: "bash tests/format_ratchet.sh",
+      command: [
+        "bash",
+        "tests/format_ratchet.sh",
+      ],
       paths: [
         "tests/format_ratchet.sh",
       ],
@@ -164,7 +189,10 @@
     },
     {
       id: "format-ratchet-mutant",
-      command: "bash tests/format_ratchet_test.sh",
+      command: [
+        "bash",
+        "tests/format_ratchet_test.sh",
+      ],
       paths: [
         "tests/format_ratchet_test.sh",
       ],
@@ -178,7 +206,10 @@
     },
     {
       id: "sonar-fixture-gate",
-      command: "bash tests/sonar_fixture_gate_test.sh",
+      command: [
+        "bash",
+        "tests/sonar_fixture_gate_test.sh",
+      ],
       paths: [
         "tests/sonar_fixture_gate_test.sh",
       ],
@@ -191,8 +222,28 @@
       reason: "every diagnostic SonarCloud is told to ignore on the fixture corpus is declared with an exact rule, path, reason, owner and expiry, and the two sides are compared in both directions. A broad waiver, an undeclared waiver and an expired waiver are all failures.",
     },
     {
+      id: "sonar-fixture-gate-mutant",
+      command: [
+        "bash",
+        "tests/sonar_fixture_gate_mutation_test.sh",
+      ],
+      paths: [
+        "tests/sonar_fixture_gate_mutation_test.sh",
+      ],
+      category: "Mutation Tests",
+      aspects: [
+        "Functionality",
+        "Maintainability",
+      ],
+      provenance: "Provisionally-Proven",
+      reason: "one defect at a time is planted in a scratch copy and the gate is required to go red AND name the defect, so the gate is proved capable of failing.",
+    },
+    {
       id: "mutation-smoke",
-      command: "bash tests/mutation_smoke.sh",
+      command: [
+        "bash",
+        "tests/mutation_smoke.sh",
+      ],
       paths: [
         "tests/mutation_smoke.sh",
       ],
@@ -205,7 +256,12 @@
     },
     {
       id: "bench-measurement",
-      command: "bash benches/pons_bench.sh --json build/bench-current.json",
+      command: [
+        "bash",
+        "benches/pons_bench.sh",
+        "--json",
+        "build/bench-current.json",
+      ],
       paths: [
         "benches/pons_bench.sh",
       ],
@@ -218,7 +274,12 @@
     },
     {
       id: "bench-regression",
-      command: "bash scripts/proven-bench/check-bench-regression.sh build/bench-current.json benches/baseline.json",
+      command: [
+        "bash",
+        "scripts/proven-bench/check-bench-regression.sh",
+        "build/bench-current.json",
+        "benches/baseline.json",
+      ],
       paths: [],
       category: "Regression Tests",
       aspects: [

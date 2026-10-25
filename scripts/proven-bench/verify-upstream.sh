@@ -49,7 +49,14 @@ fail=0
 for path in "${FILES[@]}"; do
   local_name="$(basename "$path")"
   url="https://raw.githubusercontent.com/${UPSTREAM_REPO}/${UPSTREAM_REV}/${path}"
+  # The fetch has a DEADLINE. A transfer that stalls after the connection
+  # is made would otherwise hold the runner until the job's own timeout,
+  # and the check would report nothing: a gate that cannot look must not
+  # report a pass, but it must also say it could not look rather than
+  # hanging. --connect-timeout bounds the connect phase, --max-time bounds
+  # the whole transfer.
   if ! curl --proto '=https' --proto-redir '=https' --fail --silent --show-error --location \
+        --connect-timeout 15 --max-time 60 \
         "$url" --output "$tmp/$local_name"; then
     echo "verify-upstream: could not fetch $url" >&2
     echo "verify-upstream: NO CHECK WAS PERFORMED - a skip is not a pass." >&2

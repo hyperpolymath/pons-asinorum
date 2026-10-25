@@ -11,7 +11,8 @@
 #
 # WHAT THE DASHBOARD DOES AND DOES NOT CLAIM
 # The lattice it prints is the DECLARED lattice: the cells the ledger's
-# entries occupy. The DERIVED lattice — the cells occupied by tests that
+# entries occupy. An Unproven entry is a declared gap, not a claim, and
+# occupies no cell. The DERIVED lattice — the cells occupied by tests that
 # actually ran and passed — is computed by `check_test_provenance.sh` at run
 # time, because it depends on what the suite did on this machine, and it is
 # published in the CI job summary and written to `build/proven-report.json`.
@@ -55,11 +56,15 @@ mapfile -t ASPECTS < <(jq -r '.taxonomy.aspects[]' <<<"$LEDGER_JSON")
 
 # The declared cells: for each (category, aspect), is there an entry that
 # declares that category and lists that aspect?
+#
+# An UNPROVEN entry is a declared GAP. It discharges nothing, so it occupies
+# no cell: counting it would put a `#` on the map for an obligation nobody
+# has met, which is the exact confusion this dashboard exists to prevent.
 declare -A DECLARED=()
 while IFS=$'\t' read -r cat asp; do
   [ -n "$cat" ] || continue
   DECLARED["$cat|$asp"]=1
-done < <(jq -r '.entries[] | .category as $c | .aspects[] | [$c, .] | @tsv' <<<"$LEDGER_JSON")
+done < <(jq -r '.entries[] | select(.provenance != "Unproven") | .category as $c | .aspects[] | [$c, .] | @tsv' <<<"$LEDGER_JSON")
 
 {
   echo "// SPDX-License-Identifier: CC-BY-SA-4.0"
@@ -92,7 +97,8 @@ done < <(jq -r '.entries[] | .category as $c | .aspects[] | [$c, .] | @tsv' <<<"
   echo "== The declared lattice"
   echo ""
   echo "Columns are the first two letters of each aspect; \`#\` means some entry in the"
-  echo "ledger occupies that (category, aspect) cell."
+  echo "ledger occupies that (category, aspect) cell. An \`Unproven\` entry is a declared"
+  echo "gap and occupies no cell."
   echo ""
   echo "[source,text]"
   echo "----"
@@ -119,13 +125,15 @@ done < <(jq -r '.entries[] | .category as $c | .aspects[] | [$c, .] | @tsv' <<<"
   echo "Declared cells: *${declared_cells}* of *${total_cells}*"
   echo "(${#CATEGORIES[@]} categories x ${#ASPECTS[@]} aspects)."
   echo ""
-  echo "!!! NOTE"
+  echo "[NOTE]"
+  echo "===="
   echo "This is the DECLARED map. The DERIVED map — the cells occupied by tests"
   echo "that actually ran and passed — is computed at run time by"
   echo "\`tests/proven/check_test_provenance.sh\`, written to"
   echo "\`build/proven-report.json\` and published in the CI job summary. A suite"
   echo "that is declared but did not run contributes nothing to the derived map,"
   echo "and the gate fails the build when a suite that was supposed to run failed."
+  echo "===="
   echo ""
   echo "== The inventory"
   echo ""
@@ -133,7 +141,7 @@ done < <(jq -r '.entries[] | .category as $c | .aspects[] | [$c, .] | @tsv' <<<"
   echo "|==="
   echo "| Test | Command | Category | Aspects | Tier"
   echo ""
-  jq -r '.entries[] | "| \(.id)\n| `\(.command)`\n| \(.category)\n| \(.aspects | join(", "))\n| \(.provenance)"' <<<"$LEDGER_JSON"
+  jq -r '.entries[] | "| \(.id)\n| `\(.command | join(" "))`\n| \(.category)\n| \(.aspects | join(", "))\n| \(.provenance)"' <<<"$LEDGER_JSON"
   echo "|==="
   echo ""
   echo "== Machine-checked proofs"

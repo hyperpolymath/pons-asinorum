@@ -59,10 +59,84 @@ need() {
 
 need yq
 need git
-need ijson-jcs
+
+IJSON_JCS="${IJSON_JCS:-ijson-jcs}"
+command -v "$IJSON_JCS" >/dev/null 2>&1 || die "$IJSON_JCS is not on PATH"
 
 [ -f "$YAML_RATCHET" ] || die "$YAML_RATCHET is missing"
 [ -f "$JSON_RATCHET" ] || die "$JSON_RATCHET is missing"
+
+# The verdict and the tool's own report for the file last classified. They
+# are globals rather than return values so that the classifier can report
+# WHY a file was rejected.
+IJSON_JCS_VERDICT=""
+IJSON_JCS_REPORT=""
+
+# classify_json FILE — set IJSON_JCS_VERDICT to OK, NOT CANONICAL or
+# INVALID.
+#
+# `ijson-jcs check` prints `OK <path>`, `NOT CANONICAL <path>` or
+# `INVALID <path>: reason`, and exits 0, 1 or 2. The printed verdict and
+# the exit status must AGREE, and only those three verdicts are accepted:
+# a usage error, a tool that died, or a verdict this gate does not know is
+# INVALID. The distinction that matters is INVALID (not I-JSON) versus NOT
+# CANONICAL (valid, but not RFC 8785 bytes) — and a file nobody could
+# classify belongs to neither side of that distinction.
+#
+# `--` ends the tool's option parsing, so a path that begins with a hyphen
+# is still read as a path.
+classify_json() {
+  local file="$1" report status
+  report="$("$IJSON_JCS" check -- "$file" 2>&1)"
+  status=$?
+  IJSON_JCS_REPORT="$report"
+  case "$report" in
+    "OK "*)
+      IJSON_JCS_VERDICT=OK
+      [ "$status" -eq 0 ] || IJSON_JCS_VERDICT=INVALID
+      ;;
+    "NOT CANONICAL "*)
+      IJSON_JCS_VERDICT=NOT_CANONICAL
+      [ "$status" -eq 1 ] || IJSON_JCS_VERDICT=INVALID
+      ;;
+    "INVALID "*)
+      IJSON_JCS_VERDICT=INVALID
+      ;;
+    *)
+      IJSON_JCS_VERDICT=INVALID
+      ;;
+  esac
+}
+
+# classify_jsonl FILE — a JSON Lines file is a SEQUENCE OF RECORDS, not one
+# document, and `ijson-jcs` reads whole documents only. Each line is
+# therefore canonicalised on its own with `ijson-jcs canon`, exactly as the
+# estate's own scripts/check-ijson-jcs.sh does. A blank or unparseable
+# line is INVALID; a line whose canonical form differs, or a missing final
+# newline, is NOT CANONICAL.
+classify_jsonl() {
+  local file="$1" line canon verdict=OK
+  if [ -s "$file" ] && [ "$(tail -c 1 "$file" | od -An -c | tr -d ' \n')" != '\n' ]; then
+    verdict=NOT_CANONICAL
+  fi
+  while IFS= read -r line || [ -n "$line" ]; do
+    if [ -z "$line" ]; then
+      IJSON_JCS_VERDICT=INVALID
+      IJSON_JCS_REPORT="INVALID $file: a JSON Lines file may not contain a blank line"
+      return
+    fi
+    if ! canon="$(printf '%s' "$line" | "$IJSON_JCS" canon 2>&1)"; then
+      IJSON_JCS_VERDICT=INVALID
+      IJSON_JCS_REPORT="INVALID $file: a record is not valid I-JSON: $canon"
+      return
+    fi
+    if [ "$canon" != "$line" ]; then
+      verdict=NOT_CANONICAL
+    fi
+  done <"$file"
+  IJSON_JCS_VERDICT="$verdict"
+  IJSON_JCS_REPORT="$verdict $file"
+}
 
 # yq must be able to WRITE kyaml, or the "is it KYAML?" question has no
 # answer and the check would pass by saying nothing. The estate's
@@ -127,12 +201,12 @@ done
 
 json_matches_pattern() {
   local file="$1" pattern="$2"
-  # Bash `case` patterns treat `*` as matching `/` too, so one `*` covers a
+  # Bash pattern matching treats `*` as matching `/` too, so one `*` covers a
   # whole subtree. That is what the estate's own ignore lists assume.
-  case "$file" in
-    $pattern) return 0 ;;
-  esac
-  return 1
+  # `[[ == ]]` is used rather than `case`, because an unquoted expansion in
+  # a `case` pattern is a glob that can also match a literal: the pattern
+  # here is meant to be a glob.
+  [[ "$file" == $pattern ]]
 }
 
 json_is_declared_non_canonical() {
@@ -179,34 +253,43 @@ for f in "${JSON_TREE[@]}"; do
     continue
   fi
 
-  # `ijson-jcs check` prints `OK <path>`, `NOT CANONICAL <path>` or
-  # `INVALID <path>: reason`, and exits 0 / 1 / >=2 respectively. The
-  # distinction that matters here is INVALID (not I-JSON) versus NOT
-  # CANONICAL (valid, but not RFC 8785 bytes).
-  report="$(ijson-jcs check "$f" 2>&1)"
-  status=$?
-  if printf '%s' "$report" | grep -q '^INVALID'; then
-    echo "::error file=$f::format-ratchet: $f is not valid I-JSON (RFC 7493): ${report#INVALID }" >&2
-    invalid=$((invalid + 1))
-    fail=1
-    continue
-  fi
-  if [ "$status" -ne 0 ]; then
-    # Valid, but the bytes are not RFC 8785 canonical.
-    if [ -n "${JSON_IS_CANONICAL["$f"]+x}" ]; then
-      echo "::error file=$f::format-ratchet: $f is listed as canonical but its bytes are not RFC 8785 canonical. Run: ijson-jcs fix $f" >&2
-      canonical_bad=$((canonical_bad + 1))
+  # The verdict comes from the classifier, which accepts only the three
+  # documented verdicts and requires the tool's exit status to agree with
+  # the verdict it printed.
+  case "$f" in
+    *.jsonl) classify_jsonl "$f" ;;
+    *) classify_json "$f" ;;
+  esac
+  case "$IJSON_JCS_VERDICT" in
+    INVALID)
+      echo "::error file=$f::format-ratchet: $f is not valid I-JSON (RFC 7493): ${IJSON_JCS_REPORT#INVALID $f: }" >&2
+      invalid=$((invalid + 1))
       fail=1
-    else
-      declared_non_canonical=$((declared_non_canonical + 1))
-    fi
-  else
-    canonical_ok=$((canonical_ok + 1))
-    if [ -z "${JSON_IS_CANONICAL["$f"]+x}" ]; then
-      echo "::notice file=$f::format-ratchet: $f is already RFC 8785 canonical but is declared non-canonical. Move it to 'canonical' in $JSON_RATCHET." >&2
-      promotable=$((promotable + 1))
-    fi
-  fi
+      continue
+      ;;
+    NOT_CANONICAL)
+      # Valid, but the bytes are not RFC 8785 canonical.
+      if [ -n "${JSON_IS_CANONICAL["$f"]+x}" ]; then
+        echo "::error file=$f::format-ratchet: $f is listed as canonical but its bytes are not RFC 8785 canonical. Run: ijson-jcs fix $f" >&2
+        canonical_bad=$((canonical_bad + 1))
+        fail=1
+      else
+        declared_non_canonical=$((declared_non_canonical + 1))
+      fi
+      ;;
+    OK)
+      canonical_ok=$((canonical_ok + 1))
+      if [ -z "${JSON_IS_CANONICAL["$f"]+x}" ]; then
+        echo "::notice file=$f::format-ratchet: $f is already RFC 8785 canonical but is declared non-canonical. Move it to 'canonical' in $JSON_RATCHET." >&2
+        promotable=$((promotable + 1))
+      fi
+      ;;
+    *)
+      # Unreachable: the classifier only ever sets one of the three.
+      echo "::error file=$f::format-ratchet: $f was not classified (verdict '$IJSON_JCS_VERDICT')." >&2
+      fail=1
+      ;;
+  esac
 done
 
 for p in "${JSON_CANONICAL[@]}"; do

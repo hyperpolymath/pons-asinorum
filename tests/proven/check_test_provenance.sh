@@ -94,7 +94,7 @@ for a in "${ASPECTS[@]}"; do KNOWN_ASPECT["$a"]=1; done
 # The declared cell count must agree with the lattice the taxonomy declares.
 expected_cells=$(( ${#CATEGORIES[@]} * ${#ASPECTS[@]} ))
 if [ "$TOTAL_CELLS" != "$expected_cells" ]; then
-  echo "::error::the ledger says the lattice has $TOTAL_CELLS cells, but $expected_cells categories x ${#ASPECTS[@]} aspects = $expected_cells." >&2
+  echo "::error::the ledger says the lattice has $TOTAL_CELLS cells, but ${#CATEGORIES[@]} categories x ${#ASPECTS[@]} aspects = $expected_cells." >&2
   fail=1
 fi
 
@@ -160,7 +160,12 @@ while IFS= read -r entry; do
   [ -n "$entry" ] || continue
   printf '%s\n' "$entry" > "$ENTRY_FILE"
   id="$(yq -p json -r '.id' "$ENTRY_FILE")"
-  command="$(yq -p json -r '.command' "$ENTRY_FILE")"
+  # The command is an ARGV LIST, not a shell string. A string would have to
+  # be handed to a shell to be run, and a shell re-parses its argument: a
+  # ledger entry could then become code rather than a command. The list is
+  # executed directly, so an entry can only ever name a program and its
+  # arguments.
+  mapfile -t COMMAND < <(yq -p json -r '.command[]' "$ENTRY_FILE")
   category="$(yq -p json -r '.category' "$ENTRY_FILE")"
   provenance="$(yq -p json -r '.provenance' "$ENTRY_FILE")"
   reason="$(yq -p json -r '.reason // ""' "$ENTRY_FILE")"
@@ -217,13 +222,24 @@ while IFS= read -r entry; do
     continue
   fi
 
+  if [ "${#COMMAND[@]}" -eq 0 ]; then
+    echo "::error::$id names no command. A suite that runs nothing discharges nothing." >&2
+    fail=1
+    continue
+  fi
+
   log="$(mktemp)"
   rc=0
-  bash -c "$command" >"$log" 2>&1 || rc=$?
+  "${COMMAND[@]}" >"$log" 2>&1 || rc=$?
   if [ "$rc" -ne 0 ]; then
     echo "::error::the suite '$id' FAILED (exit $rc). A suite that ran and failed is a failure of the build, not a coverage claim." >&2
     tail -n 40 "$log" | sed 's/^/    /' >&2
     rm -f "$log"
+    # A suite that ran and failed FAILS THE GATE. Without this the failure
+    # would be reported and then forgotten: the cells it would have occupied
+    # could be occupied by another, passing suite, and the build would be
+    # green over a suite that is red.
+    fail=1
     entries_json="$(jq -c --arg id "$id" --arg prov "$provenance" --arg cat "$category" \
       --argjson aspects "$(json_str_array "${aspects[@]}")" \
       '. + [{id: $id, provenance: $prov, category: $cat, aspects: $aspects, result: "Failed", cases: null}]' <<<"$entries_json")"
@@ -237,19 +253,25 @@ while IFS= read -r entry; do
   fi
 
   # The case count, when the tool reports one. `cargo test` prints
-  # "test result: ok. N passed; ...". A shell suite may print
-  # "PROVEN-CASES: N". Where neither is available the count is recorded as
-  # null rather than invented.
+  # "test result: ok. N passed; ..." once per test binary, so the counts of
+  # EVERY such line are summed: keeping only the last one would report the
+  # size of the last binary as the size of the suite. A shell suite may
+  # print "PROVEN-CASES: N", and may print it more than once, for the same
+  # reason. Where neither is available the count is recorded as null rather
+  # than invented.
   cases="null"
   if grep -qE '^test result: ok\.' "$log"; then
-    n="$(grep -E '^test result: ok\.' "$log" | tail -1 | sed -E 's/.*ok\. ([0-9]+) passed.*/\1/')"
+    n="$(grep -E '^test result: ok\.' "$log" | sed -E 's/.*ok\. ([0-9]+) passed.*/\1/' | awk '{s += $1} END {print s + 0}')"
     [ -n "$n" ] && cases="$n"
   elif grep -qE '^PROVEN-CASES: [0-9]+' "$log"; then
-    n="$(grep -E '^PROVEN-CASES: [0-9]+' "$log" | tail -1 | sed -E 's/^PROVEN-CASES: ([0-9]+)$/\1/')"
+    n="$(grep -E '^PROVEN-CASES: [0-9]+' "$log" | sed -E 's/^PROVEN-CASES: ([0-9]+)$/\1/' | awk '{s += $1} END {print s + 0}')"
     [ -n "$n" ] && cases="$n"
   fi
   if [ "$cases" = "null" ]; then
     echo "::notice::the suite '$id' reports no machine-readable case count; the report records null rather than an invented number." >&2
+    case_note=""
+  else
+    case_note=" ($cases case(s))"
   fi
 
   passed_count=$((passed_count + 1))
@@ -259,7 +281,7 @@ while IFS= read -r entry; do
       derived_cells=$((derived_cells + 1))
     fi
   done
-  echo "  $id: passed${cases:+, $cases case(s)}"
+  echo "  $id: passed$case_note"
   rm -f "$log"
   entries_json="$(jq -c --arg id "$id" --arg prov "$provenance" --arg cat "$category" \
     --argjson aspects "$(json_str_array "${aspects[@]}")" \
