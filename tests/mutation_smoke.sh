@@ -26,6 +26,7 @@ mutant() {
 }
 mutant empty-success crates/pons-cli/src/main.rs 's/report.files_scanned == 0/false/' pons-cli no_input_is_not_success_even_without_strict_flag
 mutant comment-is-statement crates/pons-rules/src/t0/unreachable_after_jump.rs 's/while next.is_some_and(|n| n.kind().contains("comment"))/while false/' pons-rules every_rule_is_proven_by_its_own_fixture_corpus
+mutant php-label-is-unreachable crates/pons-rules/src/t0/unreachable_after_jump.rs 's/if ctx.lang == Lang::Php \&\& next.kind() == "named_label_statement"/if false/' pons-rules php_jump_candidates_stay_in_their_block
 mutant html-clears-all-contexts crates/pons-core/src/php.rs 's/^                    HTML,$/                    ALL,/' pons-rules every_rule_is_proven_by_its_own_fixture_corpus
 mutant lost-branch-facts crates/pons-core/src/php.rs 's/|= bits/\&= bits/' pons-core branch_join_early_exit_and_loop_fixed_point
 mutant non-durable-commit crates/pons-protocols/src/wharf.rs 's/|| !durable/|| false/' pons-protocols denied_transition_matrix

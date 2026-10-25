@@ -58,7 +58,7 @@ is corroboration, not independent proof. Consumer integrations remain unfinished
 |Component |Implemented evidence |Limit
 |T0 structural rules |Ten registered syntax/local-observation rules, with
 positive, corrected and similar safe controls.
-|No semantic soundness or intent proof; includes two PHP heuristics.
+|No semantic soundness or intent proof; includes two PHP-specific heuristics and PHP jump adjacency.
 |Python T1 solver |`pons-core/src/dataflow.rs`: finite-set forward may-unbound
 and backward liveness worklists over per-function CFGs; explicit exception/
 finally modelling and narrow correlated-guard repairs.

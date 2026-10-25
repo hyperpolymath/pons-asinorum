@@ -6,6 +6,10 @@ mixed templates, namespaces, traits, closures and callback syntax. This is
 syntax coverage. There is no PHP-to-JavaScript or PHP-to-Python transcoder.
 
 `php-empty-security-function` and `php-unresolved-include` are T0 HEURISTIC.
+`unreachable-after-jump` also accepts PHP: return/break/continue and standalone
+throw expressions are candidates only when followed by a statement in the same
+block. Comments are skipped; sibling branches, conditional throws and goto
+labels are negative controls. Exception/finally dataflow remains unsupported.
 Security-like names do not establish caller expectations. Literal includes are
 checked relative to the source directory, with `__DIR__` concatenation supported;
 PHP cwd/include_path and generated files can invalidate that assumption.

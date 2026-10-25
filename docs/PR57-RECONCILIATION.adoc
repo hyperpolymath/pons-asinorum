@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= PR #57 reconciliation checkpoint — 2026-10-25
+
+Compared main `334d7b421dae2d07cae947eb63755841f7b16b8e` with PR #57
+`15edbbc1ea0412e382881f7d651dae03948bb00f` (42 changed files, seven commits).
+PR #57 remains open and conflicted; this checkpoint does not merge or close it.
+Its branch and historical evidence are preserved.
+
+[cols="2,4",options="header"]
+|===
+|Area |Disposition
+|Coverage discovery, native PHP parser, strict exits, CLI and SARIF
+|Main already has a broader implementation from #58. Do not replace it with
+#57's incompatible report shape merely because both use schema version 0.4.0.
+|Unreachable adjacency and comment controls
+|Main retains direct-parent and immediate-sibling guards. Ported PHP query and
+return/throw positive and sibling-branch negative fixtures from #57. Standalone
+throw captures the expression statement, so the direct-parent guard holds.
+Added negative controls for conditional throws, goto labels and finally cleanup.
+|Generic empty-php-function
+|Still absent from main. Main's php-empty-security-function is deliberately
+name-scoped and does not cover every empty method or anonymous callback. Adding
+#57's generic rule requires a separate intent/overlap decision and labelled
+no-op hooks/overrides; it must not be reported as already subsumed.
+|Workflows
+|#58 fixed canonical shared-workflow pins and field-based flow-KYAML checks.
+#57's old Actions-policy failure description is historical, not main's state.
+|Portfolio and test evidence
+|Retain original per-commit measurements. This checkpoint's new tests do not
+retroactively change #57's 193-test or #58's portfolio results.
+|===
+
+== Sonar comment 6400616215
+
+The comment reports failed maintainability/reliability ratings. Check run
+121234512166 has nine annotations, all on intentionally reduced PHP fixture
+files: unreachable positive/case.php; unreachable negative/case.php;
+unreachable negative/throw.php (exception class and naming); unreachable
+positive/throw.php (exception class and unreachable statement);
+empty-php-function positive/callback.php (unused parameter); and
+empty-php-function positive/case.php (unused parameter and naming).
+These are genuine source diagnostics in test inputs, not nine established
+scanner implementation defects. The exact #57 quality gate is not cleared by
+#61 having no new issues.
+
+Preserve vulnerable, corrected and similar-safe fixture shapes. A Sonar policy
+must distinguish production implementation from labelled scanner inputs while
+continuing to analyse both. Expected fixture diagnostics need exact rule/path,
+reason, owner and expiry; they are not false-positive waivers. Incidental style
+noise may be corrected only when the tested shape is preserved. No broad fixture
+exclusion, deleted failing case or coverage suppression is introduced here.
+Configuring that external fixture-aware quality gate remains outstanding.
+
+== Standards boundary
+
+Legacy A2ML files remain legacy, with stale planning/language/count claims
+corrected. This is not a DEED/K9 migration or conformance claim. Migration still
+requires authoritative grammars, working readers, pointer-only front doors,
+attested repository facts, coordination protocol and validated canonical bytes.
+kyq's intended estate scope is KYAML, I-JSON/JCS, DEED and K9; parser capability
+must be demonstrated separately for each format and each K9 form. The upstream
+ijson-jcs reference/corpus pin must be updated with tested standards changes.

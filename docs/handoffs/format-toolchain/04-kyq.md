@@ -1,8 +1,8 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 
-# Prompt: finish the AffineScript port and ship a real KYAML/JSON CLI
+# Prompt: finish the AffineScript port and ship the four-format estate processor
 
-Work in metadatastician/kyq. Preserve the owner's strict AffineScript-only decision and no-fabricated-artifacts invariant. Implement a tested vertical slice before expanding the command catalogue.
+Work in metadatastician/kyq. Preserve the owner's strict AffineScript-only decision and no-fabricated-artifacts invariant. The estate scope is KYAML, I-JSON/JCS, DEED and K9. Implement a tested vertical slice before expanding the command catalogue.
 
 Before editing, read the current repository instructions, deed, coordination.k9, plans, issues and open PRs. Recheck the pinned observations below against current HEAD. Preserve concurrent work and use bounded, reviewable commits. Implement and test; do not stop at recommendations. Record exact commands, tool/source versions, exit codes, fixed seeds, resource limits and actual outcomes. Missing tooling, skipped inputs and unsupported features must remain visible. Do not replace failing gates with placeholders, broad exclusions or optimistic metadata. Keep tests, finite checks, conjectures and machine-checked proofs distinct. Follow metadatastician/standards for DEED/K9, KYAML and I-JSON/JCS. A migration is complete only when its consumers and validators work, not when extensions are renamed.
 
@@ -15,7 +15,7 @@ Baseline observation: 4370c7637486fa8d69453d6d4731aaff81a8868b. Read docs/AFFINE
 5. Ship a narrow real CLI slice: parse/check, canonical formatting, JSON canonicalization and one simple path query. Test real installed artifacts, stdin and files, byte-exact outputs, malformed input and exit codes. Only then extend mutation and Kubernetes-specific rules. Keep schemas/target versions explicit and CRD uncertainty visible.
 6. Port I-JSON/JCS in AffineScript using a pinned hyperpolymath/ijson-jcs corpus and independent RFC cases. Resolve draft inconsistencies about Rust delegation, control characters, floating-point exactness and canonical-value equivalence. Differential tests do not inherit nonexistent proofs.
 7. Replace fail-by-design build/test recipes only when real compiler and runtime steps succeed and CI executes assertions. A census job must remain distinguishable from a passing build. Remove or label unmeasured size/speed and “full support” claims.
-8. Inventory consumers of .deed and both K9 forms. KYAML/JSON support does not imply DEED/K9 parsing. Define separate adapters against standards' grammars if required; until implemented, report unsupported formats explicitly. Do not split coordination text with ad hoc YAML/JSON parsing.
+8. Inventory consumers of .deed and both K9 forms. KYAML/JSON support does not imply DEED/K9 parsing. Implement separate adapters against standards' grammars for the intended four-format scope; until implemented, report unsupported formats explicitly. Do not split coordination text with ad hoc YAML/JSON parsing.
 9. Correct theorem statements before pursuing proofs: separator tokens inside quoted text are not document boundaries; selector matching is not generally equality of whole label maps; JCS equivalence must account for its number domain and negative zero. Track conjectured, tested and mechanically proven states separately.
 
 Done means a clean-install CLI demonstration, all tracked source checks plus real execution tests, positive/negative conformance corpora, fixed-seed adversarial tests, honest capability output and updated deed/coordination evidence. Publish the exact compiler/stdlib/host and reference-corpus pins. Keep MetaManifold integration behind a later tested consumer gate.

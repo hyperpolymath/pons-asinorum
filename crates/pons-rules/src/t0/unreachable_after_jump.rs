@@ -13,11 +13,12 @@ const LANGUAGES: &[Lang] = &[
     Lang::TypeScript,
     Lang::Tsx,
     Lang::Rust,
+    Lang::Php,
 ];
 
 fn query_source(lang: Lang) -> &'static str {
     match lang {
-        Lang::Php => unreachable!("PHP uses its native adapter rules"),
+        Lang::Php => include_str!("../../rules/unreachable-after-jump/php.scm"),
         Lang::Python => include_str!("../../rules/unreachable-after-jump/python.scm"),
         Lang::JavaScript => include_str!("../../rules/unreachable-after-jump/javascript.scm"),
         Lang::TypeScript => include_str!("../../rules/unreachable-after-jump/typescript.scm"),
@@ -120,6 +121,11 @@ impl Rule for UnreachableAfterJump {
             let Some(next) = next else {
                 continue;
             };
+            // A PHP goto can enter a label after a textual early exit.
+            // The local adjacency heuristic cannot establish its reachability.
+            if ctx.lang == Lang::Php && next.kind() == "named_label_statement" {
+                continue;
+            }
             let jump_kind = if jump.kind() == "expression_statement" {
                 jump.named_child(0).map(|n| n.kind()).unwrap_or(jump.kind())
             } else {
@@ -159,6 +165,28 @@ mod tests {
         let tree = parse::parse(&source).unwrap();
         let ctx = RuleCtx::new(&source.path, source.lang, &source.text, &tree);
         rule.check(&ctx)
+    }
+
+    #[test]
+    fn php_jump_candidates_stay_in_their_block() {
+        for source in [
+            "<?php function f() { return; /* comment */ work(); }",
+            "<?php function f() { throw new RuntimeException(); work(); }",
+            "<?php while ($x) { break; work(); }",
+            "<?php while ($x) { continue; work(); }",
+        ] {
+            assert_eq!(findings_for(Lang::Php, source).len(), 1, "{source}");
+        }
+        for source in [
+            "<?php function f($x) { if ($x) { return; } else { work(); } }",
+            "<?php function f($x) { if ($x) { throw new RuntimeException(); } work(); }",
+            "<?php function f() { return; /* trailing comment */ }",
+            "<?php function f() { goto target; return; target: work(); }",
+            "<?php function f($x) { $x && throw new RuntimeException(); work(); }",
+            "<?php function f() { try { return; } finally { cleanup(); } }",
+        ] {
+            assert!(findings_for(Lang::Php, source).is_empty(), "{source}");
+        }
     }
 
     #[test]
