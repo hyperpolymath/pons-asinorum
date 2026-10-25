@@ -20,8 +20,9 @@ impl Rule for EmptyPhpFunction {
         &[Lang::Php]
     }
     /// Return T0 warnings located at function and method bodies that are
-    /// empty or contain only comments. Declarations without bodies and
-    /// anonymous functions are ignored; intentional no-ops may still be flagged.
+    /// empty or contain only comments. Anonymous functions with bodies are also
+    /// checked. Declarations without bodies are ignored; intentional no-ops may
+    /// still be flagged.
     fn check(&self, ctx: &RuleCtx) -> Vec<RawFinding> {
         let mut findings = Vec::new();
         let mut pending = vec![ctx.tree.root_node()];

@@ -1,4 +1,4 @@
 <?php
 array_map(function ($item) {
-    // TODO: transform the item.
+    // Intentionally empty callback.
 }, $items);
