@@ -409,3 +409,80 @@ fn forced_parser_failure_preserves_language_version_and_artifact_identity() {
         .unwrap()
         .starts_with("blake3:"));
 }
+
+#[test]
+fn validator_accepts_large_valid_reports_and_rejects_trailing_garbage() {
+    let t = Temp::new();
+    fs::write(t.0.join("a.php"), "<?php function f() { echo $_GET['x']; }").unwrap();
+    let output = t.scan(&["--format", "json"]);
+    let mut report: Value = serde_json::from_slice(&output.stdout).unwrap();
+    report["findings"][0]["message"] = Value::String("x".repeat(17 * 1024 * 1024));
+    let path = t.0.join("report.json");
+    let mut bytes = serde_json::to_vec(&report).unwrap();
+    fs::write(&path, &bytes).unwrap();
+    let validate = || {
+        Command::new(env!("CARGO_BIN_EXE_pons"))
+            .arg("validate-report")
+            .arg(&path)
+            .output()
+            .unwrap()
+    };
+    assert_eq!(validate().status.code(), Some(0));
+    bytes.push(b'x');
+    fs::write(&path, bytes).unwrap();
+    assert_eq!(validate().status.code(), Some(2));
+}
+
+#[test]
+#[cfg(unix)]
+fn target_git_provenance_does_not_execute_fsmonitor() {
+    use std::os::unix::fs::PermissionsExt;
+    let t = Temp::new();
+    let git = |args: &[&str]| {
+        Command::new("git")
+            .arg("-C")
+            .arg(&t.0)
+            .args(args)
+            .output()
+            .unwrap()
+    };
+    assert!(git(&["init", "--quiet"]).status.success());
+    fs::write(t.0.join("a.php"), "<?php function f() { return 1; }").unwrap();
+    assert!(git(&["add", "a.php"]).status.success());
+    assert!(git(&[
+        "-c",
+        "user.name=Fixture",
+        "-c",
+        "user.email=fixture@example.invalid",
+        "-c",
+        "commit.gpgsign=false",
+        "commit",
+        "-qm",
+        "fixture"
+    ])
+    .status
+    .success());
+    let hook = t.0.join("monitor.sh");
+    fs::write(&hook, "#!/bin/sh\nprintf ran > fsmonitor-ran\n").unwrap();
+    fs::set_permissions(&hook, fs::Permissions::from_mode(0o700)).unwrap();
+    assert!(git(&["config", "core.fsmonitor", hook.to_str().unwrap()])
+        .status
+        .success());
+    let marker = t.0.join("fsmonitor-ran");
+    // Non-vacuity: Git's ordinary status actually executes this benign hook.
+    assert!(git(&["status", "--porcelain"]).status.success());
+    assert!(marker.exists());
+    fs::remove_file(&marker).unwrap();
+    let output = t.scan(&["--format", "json"]);
+    assert_eq!(output.status.code(), Some(0));
+    assert!(!marker.exists(), "static scan executed target fsmonitor");
+    let report: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(
+        report["evidence_contract"]["target"]["commit"]
+            .as_str()
+            .unwrap()
+            .len(),
+        40
+    );
+    assert!(report["evidence_contract"]["target"]["dirty"].is_null());
+}

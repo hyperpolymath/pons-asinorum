@@ -83,7 +83,7 @@ impl Protocol {
 
     /// Check the supported schema and internal consistency of this protocol.
     ///
-    /// Returns an error unless the schema is `0.1.0`, identity fields are
+    /// Returns an error unless the schema is `0.1.0` or `0.2.0`, identity fields are
     /// non-blank, states are unique and non-blank, and all state references
     /// exist. Transition calls must be non-blank and unique per source state.
     /// Operations must use kind `emit`, a non-blank call and message, and at
@@ -92,6 +92,9 @@ impl Protocol {
     pub fn validate(&self) -> Result<()> {
         if self.schema_version != "0.1.0" && self.schema_version != "0.2.0" {
             bail!("unsupported protocol schema {}", self.schema_version);
+        }
+        if self.schema_version == "0.1.0" && self.strict_transitions {
+            bail!("strict_transitions=true requires protocol schema 0.2.0");
         }
         if self.id.trim().is_empty()
             || self.channel.trim().is_empty()
@@ -267,6 +270,20 @@ mod tests {
             "{EGG}\n[[transition]]\non=\"eat\"\nfrom=\"available\"\nto=\"absent\"\n"
         ))
         .is_err());
+    }
+
+    #[test]
+    fn legacy_schema_cannot_enable_strict_transition_semantics() {
+        let mut protocol = Protocol::parse(EGG).unwrap();
+        protocol.strict_transitions = true;
+        assert!(protocol.validate().is_err());
+        assert!(protocol.check_trace(&[event("acquire", 1)]).is_err());
+        protocol.schema_version = "0.2.0".into();
+        assert!(protocol.validate().is_ok());
+        assert!(protocol
+            .check_trace(&[event("acquire", 1), event("eat", 2)])
+            .unwrap()
+            .is_empty());
     }
 
     #[test]

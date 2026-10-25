@@ -202,8 +202,8 @@ fn run(cli: Cli) -> Result<u8> {
             &require_language,
         ),
         Command::ValidateReport { path } => {
-            let text = read_text_limited(&path, 16 * 1024 * 1024)?;
-            let status = pons_core::report::validate::validate(&text)?;
+            let input = std::io::BufReader::new(std::fs::File::open(&path)?);
+            let status = pons_core::report::validate::validate_reader(input)?;
             emit(&format!(
                 "valid report schema; coverage={status} (not a security verdict)\n"
             ))?;
@@ -395,7 +395,25 @@ fn run_scan(
             .filter(|p| !p.as_os_str().is_empty())
             .unwrap_or(Path::new("."))
     };
+    // rev-parse only reads identity. Do not run status/diff in untrusted targets:
+    // index refresh can execute fsmonitor hooks or configured clean filters.
     if let Ok(output) = std::process::Command::new("git")
+        .args([
+            "-c",
+            "core.fsmonitor=false",
+            "-c",
+            "core.hooksPath=/dev/null",
+        ])
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env(
+            "GIT_CONFIG_GLOBAL",
+            if cfg!(windows) { "NUL" } else { "/dev/null" },
+        )
+        .env("GIT_CONFIG_COUNT", "0")
+        .env_remove("GIT_CONFIG_PARAMETERS")
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_COMMON_DIR")
         .arg("-C")
         .arg(dir)
         .args(["rev-parse", "HEAD"])
@@ -408,16 +426,8 @@ fn run_scan(
             }
         }
     }
-    if report.target.commit.is_some() {
-        report.target.dirty = std::process::Command::new("git")
-            .arg("-C")
-            .arg(dir)
-            .args(["status", "--porcelain"])
-            .output()
-            .ok()
-            .filter(|o| o.status.success())
-            .map(|o| !o.stdout.is_empty());
-    }
+    // Whole-target dirty state remains unknown. Inventory digests identify the
+    // original bytes read; a commit alone never certifies checkout cleanliness.
     for language in required_languages {
         let entries: Vec<_> = report
             .inventory
