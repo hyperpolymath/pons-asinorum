@@ -1,43 +1,50 @@
 # SPDX-License-Identifier: MPL-2.0
 name: Central Estate CI/CD Audit
 
+# Thin caller of the estate audit, which lives in hyperpolymath/cicd-suite as
+# a reusable workflow and reports five component checks: governance,
+# hygiene, manifests, languages, advisory. Do not copy the audit's steps in
+# here. A copy freezes this repository at whatever cicd-suite commit its
+# actions.lock happened to hold, and fixes made upstream never arrive.
+#
+# THE PIN, AND WHY IT MOVED
+# -------------------------
+# This file pinned cicd-suite 3bbdf75 (the single-job, 26-step audit). That
+# revision is two generations behind:
+#
+#   * cicd-suite#50 (376898b) split the audit into five component jobs, so a
+#     failing gate no longer hides the other 25 behind one red square, and
+#     every failing gate is reported at once.
+#   * cicd-suite#54 (9a947fa) added the language gates (Rust CI, Creusot,
+#     SPARK, miniKanren) and replaced zig-hexadeca-check with
+#     zig-unified-api-adapter-check.
+#
+# The old pin still ran, so nothing was RED — it was simply a stale audit
+# that could never report a gate that had been fixed or added upstream.
+# The pin is now cicd-suite main at the SHA below, whose own runs are green
+# (Central Estate CI/CD Audit, Secret Scanner, Language Gates Self-Test and
+# Code Hygiene Self-Test all pass at bf7dd95).
+#
+# Re-pinning by hand is the fallback; `track-estate-audit.yml` moves the pin
+# to cicd-suite HEAD weekly and opens a pull request whose own audit run is
+# the check. Nothing reaches main unreviewed.
+#
+# ⚠ DE-ONBOARDED from actions.lock, deliberately, like the secret-scanner
+# caller. A reusable workflow onboarded cross-repo startup-fails with zero
+# jobs under sha_pinning_required (see the header of cicd-suite's
+# main-estate-audit.yml). Do not run a full-directory `gh actions-lock` that
+# re-onboards this file. If one does, cicd-suite/scripts/deonboard-estate-audit.sh
+# reverses it.
+
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  workflow_call:
 
 permissions:
   contents: read
 
 jobs:
-  # Was pinned to @feat/cicd-workflow-call, a branch that no longer exists on
-  # cicd-suite. An unresolvable ref is not a failing job — the run dies at
-  # startup with jobs=0, so this audit has been reporting nothing at all.
-  #
-  # Repointed at a full commit SHA on cicd-suite main. That reusable workflow
-  # invokes all 26 estate gates from hyperpolymath/cicd-suite/actions/*, which
-  # is the canonical copy: vendoring those composites into this repo would fork
-  # a snapshot that is already stale (cicd-suite has since replaced
-  # zig-hexadeca-check with zig-unified-api-adapter-check).
-  #
-  # The SHA below is cicd-suite#36 (3bbdf75). Before it, the reusable invoked
-  # its 26 gates by BRANCH ref (`cicd-suite/actions/<gate>@main`) and relied on
-  # cicd-suite's actions.lock to pin them. That lock is honoured only inside
-  # cicd-suite. This repo's Actions policy sets sha_pinning_required, which
-  # applies to every step a called reusable runs, so from 2026-09-23 each
-  # `@main` ref killed this caller at startup with jobs=0. The earlier pin,
-  # 6cb08dd, still dies that way.
-  #
-  # At 3bbdf75 every gate and the checkout are literal full-SHA refs, and the
-  # reusable is no longer in cicd-suite's lock. The ref we call and the
-  # composites it runs are therefore fixed by this one SHA, with no lockfile
-  # between them. Run 36696994940, on #36's head (same reusable and actions/
-  # tree), ran estate-audit 30/30 steps.
-  #
-  # When re-pinning, check the STEP COUNT, not the square. The gates are only
-  # as fresh as the SHA they are pinned to inside the reusable. That drift goes
-  # red in cicd-suite's tests/lock-transitive-closure.sh, not silently here.
-  call-estate-audit:
-    uses: hyperpolymath/cicd-suite/.github/workflows/main-estate-audit.yml@3bbdf75987d120e552f4bc384283c47ee72833eb
+  estate:
+    uses: hyperpolymath/cicd-suite/.github/workflows/main-estate-audit.yml@bf7dd95cf49733019343ff485c2f45c6b261839c # cicd-suite main
