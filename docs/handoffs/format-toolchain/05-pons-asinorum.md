@@ -19,3 +19,85 @@ At inspection, PR #58 head e7872fb8f605f8da8779b68f8a8d11c15386c4aa includes nat
 9. Extend proof work only through bounded abstractions with executable conformance tests, then checker artifacts tied to the same semantics. Report existing fixed-point analyses separately from future SMT integration, source-to-protocol extraction and mechanized soundness.
 
 Done means tested code and report migration notes, truthful purpose/capability/proof documentation, current review resolution and reproducible portfolio coverage/evidence. If adding new coverage categories changes measured counts, rerun and label the new baseline instead of rewriting historical outcomes.
+
+---
+
+## Status update — 2026-10-25 (CI/CD, format policy, testing framework)
+
+Work done on the CI/CD and format side of this prompt, and what remains.
+
+**Done.**
+
+* *Obligation 4 (workflow checks use `yq`, and both dialects are tested).* The
+  workflow validator already used `yq`; it is now registered in the
+  provenance ledger as a suite, and its regression test (`tests/workflows/
+  validate_workflows_regression.sh`) exercises it against a block-YAML
+  document and a canonical flow-KYAML document. The repository's own
+  workflows are deliberately **not** converted to KYAML: step 6 of
+  YAML-POLICY §5 (`standards#1025`) has not started in the estate, and
+  converting them here would break the bot that updates them. The exclusion
+  is recorded in `ci/yaml-ratchet.kyaml` with its reason.
+* *Obligation 4 (missing-tool failure).* Every gate added here exits `2`,
+  never `0`, when a tool it needs is missing. `tests/format_ratchet.sh`
+  refuses to run at all if the `yq` on PATH cannot write KYAML, because a
+  formatter that cannot write cannot report a file clean.
+* *Obligation 4 (comments, exact pins, lockfiles).* No workflow's comments
+  were touched, no action pin was changed, and no lockfile was reformatted.
+  The only workflow edits were the `uses:` owner spelling (below) and the
+  addition of new workflows.
+* *Obligation 6 (canonical report bytes, honestly).* This is **not** done,
+  and the honest position is now written down: the JSON report's field
+  order is contractual (`docs/PLAN.adoc` Appendix G) and therefore not
+  RFC 8785 canonical, and the estate policy's framing requirement (exactly
+  one final LF) is enforced for every JSON file by `tests/format_ratchet.sh`.
+  The distinction between a *published* form and a *canonical* form — and
+  whether the estate wants one for artefacts that cross a trust boundary —
+  is asked in `docs/handoffs/upstream-prompts.adoc`, prompt 3. Historical
+  raw evidence under `docs/evidence/` is unchanged, and the reasons are
+  recorded per file in `ci/json-ratchet.kyaml`.
+* *Obligation 6 (record exceptions).* `ci/json-ratchet.kyaml` and
+  `ci/yaml-ratchet.kyaml` are the exception records. They are closed
+  inventories: every YAML and JSON file in the tree is accounted for, and a
+  file that no ratchet accounts for fails the build.
+* *Obligation 5 (ijson-jcs).* The estate tool is now wired in
+  (`.github/workflows/format-policy.yml`), pinned to a commit and verified
+  by sha256, and every JSON file is checked for I-JSON validity. The
+  *library*-level adoption the prompt describes — a strict raw-input API
+  that rejects duplicate keys before serde map construction, applied to
+  reports as they cross the trust boundary — is **not** done, and cannot be
+  done here without regenerating `Cargo.lock` against a git dependency.
+  That is the remaining part of obligation 5.
+* *Obligation 7 (kyq).* Unchanged: kyq is not consumed. Its installed CLI
+  does not pass the required contract, and the estate's own tooling
+  (`yq`, `ijson-jcs`) is used instead, pinned and verified. A missing kyq is
+  never a successful format check: the gate here does not use kyq at all,
+  so there is nothing for it to silently pass.
+
+**The CI/CD blocker that was found and fixed.** The required secret-scan
+check `scan / gitleaks` had never been emitted: the caller spelled the
+shared reusable's owner `metadatastician/standards`, which the estate's
+Actions allowlist does not admit (it admits `hyperpolymath/*`), so every
+run died at startup with no job and **no check run**. Every pull request
+was permanently unmergeable, invisibly. `docs/CI-CD.adoc` records the
+diagnosis, the signature (`gh run list --json conclusion` reports
+`startup_failure`; `gh pr checks` shows nothing) and the fix. The
+underlying allowlist gap is asked about upstream in
+`docs/handoffs/upstream-prompts.adoc`, prompt 1.
+
+**Still open, and deliberately so.**
+
+* The generic empty-PHP-function rule that PR #57 proposed. It contradicts
+  #63's reconciled contract — main's `php-empty-security-function` negative
+  corpus asserts that an empty *non-security* function produces no finding,
+  and PR #57's rule would fire on it. The narrower rule that would be
+  correct (empty *anonymous* callables) is specified in
+  `docs/PR57-RECONCILIATION.adoc` and needs a compiler in hand.
+* The benchmark *regression* comparison, which the estate's taxonomy
+  requires to be cut from ten CI runs on main. The measurement is running;
+  the comparison is recorded as an Unproven gap rather than as a passing
+  gate, because a baseline cut from fewer than ten runs would be
+  mathematically inert and the framework's own checker says so.
+* A machine-checked proof artefact. Pons has none, so the Actually-Proven
+  tier is unreachable and the provenance gate fails any claim of it. That
+  is the correct state, and the gate enforces it rather than accepting the
+  claim.
