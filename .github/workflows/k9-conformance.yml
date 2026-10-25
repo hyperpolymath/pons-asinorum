@@ -57,6 +57,8 @@
 # keeps the file valid while the real lane stays unwired: dispatching it
 # reports the measured status and exits 0.
 
+name: k9-conformance
+
 on:
   workflow_dispatch:
 
