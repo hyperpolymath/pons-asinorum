@@ -17,6 +17,7 @@ const LANGUAGES: &[Lang] = &[
 
 fn query_source(lang: Lang) -> &'static str {
     match lang {
+        Lang::Php => unreachable!("this rule does not declare PHP support"),
         Lang::Python => include_str!("../../rules/div-by-literal-zero/python.scm"),
         Lang::JavaScript => include_str!("../../rules/div-by-literal-zero/javascript.scm"),
         Lang::TypeScript => include_str!("../../rules/div-by-literal-zero/typescript.scm"),

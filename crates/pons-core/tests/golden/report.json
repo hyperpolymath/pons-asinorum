@@ -1,10 +1,82 @@
 {
-  "schema_version": "0.3.0",
+  "schema_version": "0.4.0",
   "tool": {
     "name": "pons",
     "version": "0.1.0"
   },
   "scanned": {
+    "coverage": {
+      "status": "partial",
+      "scope": "Enumerated regular files after ignore/hidden/build-directory policy; unsupported recognised source/config inputs are gaps; other extensions are explicitly excluded. Pruned directories are not enumerated. PHP is T0 syntax only; Python alone has CFG/dataflow.",
+      "candidate_files": 8,
+      "analyzed_files": 7,
+      "inputs": [
+        {
+          "path": "app/svc.py",
+          "status": "analyzed",
+          "language": null,
+          "analyzer": null,
+          "rules": [],
+          "reason": null
+        },
+        {
+          "path": "app/math.ts",
+          "status": "analyzed",
+          "language": null,
+          "analyzer": null,
+          "rules": [],
+          "reason": null
+        },
+        {
+          "path": "app/quiet.py",
+          "status": "analyzed",
+          "language": null,
+          "analyzer": null,
+          "rules": [],
+          "reason": null
+        },
+        {
+          "path": "app/algo.py",
+          "status": "analyzed",
+          "language": null,
+          "analyzer": null,
+          "rules": [],
+          "reason": null
+        },
+        {
+          "path": "app/clean1.py",
+          "status": "analyzed",
+          "language": null,
+          "analyzer": null,
+          "rules": [],
+          "reason": null
+        },
+        {
+          "path": "app/clean2.py",
+          "status": "analyzed",
+          "language": null,
+          "analyzer": null,
+          "rules": [],
+          "reason": null
+        },
+        {
+          "path": "app/clean3.py",
+          "status": "analyzed",
+          "language": null,
+          "analyzer": null,
+          "rules": [],
+          "reason": null
+        },
+        {
+          "path": "app/broken.py",
+          "status": "unreadable",
+          "language": null,
+          "analyzer": null,
+          "rules": [],
+          "reason": "could not read"
+        }
+      ]
+    },
     "root": ".",
     "files": 7,
     "suppressed_findings": 0,

@@ -14,6 +14,7 @@ const LANGUAGES: &[Lang] = &[Lang::Python, Lang::JavaScript, Lang::TypeScript, L
 
 fn query_source(lang: Lang) -> &'static str {
     match lang {
+        Lang::Php => unreachable!("this rule does not declare PHP support"),
         Lang::Python => include_str!("../../rules/string-concat-in-loop/python.scm"),
         Lang::JavaScript => include_str!("../../rules/string-concat-in-loop/javascript.scm"),
         Lang::TypeScript => include_str!("../../rules/string-concat-in-loop/typescript.scm"),
@@ -24,6 +25,7 @@ fn query_source(lang: Lang) -> &'static str {
 
 fn loop_kinds(lang: Lang) -> &'static [&'static str] {
     match lang {
+        Lang::Php => unreachable!("this rule does not declare PHP support"),
         Lang::Python => &["for_statement", "while_statement"],
         Lang::JavaScript | Lang::TypeScript | Lang::Tsx => &[
             "for_statement",
@@ -41,6 +43,7 @@ fn loop_kinds(lang: Lang) -> &'static [&'static str] {
 /// rule targets, so the walk stops there rather than crediting the loop.
 fn boundary_kinds(lang: Lang) -> &'static [&'static str] {
     match lang {
+        Lang::Php => unreachable!("this rule does not declare PHP support"),
         Lang::Python => &["function_definition", "lambda"],
         Lang::JavaScript | Lang::TypeScript | Lang::Tsx => &[
             "function_declaration",
@@ -59,6 +62,7 @@ fn boundary_kinds(lang: Lang) -> &'static [&'static str] {
 /// matches: without it, any augmented assignment would qualify.
 fn string_literal_kinds(lang: Lang) -> &'static [&'static str] {
     match lang {
+        Lang::Php => unreachable!("this rule does not declare PHP support"),
         Lang::Python => &["string"],
         Lang::JavaScript | Lang::TypeScript | Lang::Tsx => &["string", "template_string"],
         Lang::Rust => &[],
@@ -107,6 +111,7 @@ fn declares_target_as_string(
     let text_of = |n: Node| n.utf8_text(text).unwrap_or_default();
 
     match lang {
+        Lang::Php => unreachable!("this rule does not declare PHP support"),
         Lang::Python => {
             let candidate = if node.kind() == "expression_statement" {
                 node.named_child(0)

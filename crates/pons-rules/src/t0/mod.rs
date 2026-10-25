@@ -3,6 +3,7 @@
 pub mod constant_condition;
 pub mod div_by_literal_zero;
 pub mod empty_effect_loop;
+pub mod empty_php_function;
 pub mod self_assignment;
 pub mod string_concat_in_loop;
 pub mod swallowed_error;

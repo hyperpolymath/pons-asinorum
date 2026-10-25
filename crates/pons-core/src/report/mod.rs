@@ -68,6 +68,29 @@ pub(crate) mod fixture {
     pub(crate) fn report() -> ScanReport {
         ScanReport {
             root: ".".to_string(),
+            input_coverage: [
+                "app/svc.py",
+                "app/math.ts",
+                "app/quiet.py",
+                "app/algo.py",
+                "app/clean1.py",
+                "app/clean2.py",
+                "app/clean3.py",
+            ]
+            .iter()
+            .map(|path| {
+                crate::coverage::InputCoverage::new(
+                    std::path::Path::new(path),
+                    crate::coverage::InputStatus::Analyzed,
+                    "",
+                )
+            })
+            .chain(std::iter::once(crate::coverage::InputCoverage::new(
+                std::path::Path::new("app/broken.py"),
+                crate::coverage::InputStatus::Unreadable,
+                "could not read",
+            )))
+            .collect(),
             // Already in the order `Engine::scan_files` sorts into: by file,
             // then byte offset.
             findings: vec![

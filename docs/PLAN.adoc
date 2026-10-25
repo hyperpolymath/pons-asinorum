@@ -385,7 +385,7 @@ unless `--lang` forces one.
 [source,json]
 ----
 {
-  "schema_version": "0.3.0",
+  "schema_version": "0.4.0",
   "tool": { "name": "pons", "version": "<cargo pkg version>" },
   "scanned": { "root": "<root exactly as given on the command line>",
                "files": 123, "suppressed_findings": 2,
@@ -451,3 +451,25 @@ very bump was nearly missed: re-blessing the golden file with `PONS_BLESS=1`
 absorbs a new key silently and turns every other test in the module green again.
 Measured — with the guard removed, a mutant adding a field and a re-bless leaves
 the whole suite passing at an unchanged `schema_version`.
+
+== PHP and coverage correction (25 October 2026)
+
+Envelope 0.4.0 adds `scanned.coverage`: status, declared scope, candidate and
+analysed counts, and a per-input ledger. SARIF carries the same object in run
+properties. Findings and suppressions never change coverage.
+
+Native PHP grammar: tree-sitter-php =0.25.1 with tree-sitter =0.27.0. PHP has
+T0 empty-callable and unreachable-after-jump rules only. Python remains the
+only CFG/dataflow language; PHP Composer resolution, WordPress authorization,
+interprocedural taint and protocol inference remain unimplemented.
+
+`--fail-on-skips` now rejects unsupported recognised source/config inputs,
+parsed inputs with no enabled rule, and zero-file runs. Without that flag the
+CLI retains exploratory exit behavior and emits explicit partial/failed/no-input
+state. Ignore/hidden/build-directory policies prune the traversal; the ledger
+describes enumerated inputs, not the contents of those pruned directories.
+Each source read is capped at 16 MiB. Rules do not yet have a global time budget.
+
+The portfolio's Rust false positive was a comment after a return, not a
+sibling branch. Tests cover comments, real statements after comments, and
+alternate conditional branches.

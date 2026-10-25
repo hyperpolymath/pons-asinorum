@@ -4,7 +4,7 @@
 
 Reviewed snapshot of `pons catalogue`, which is generated from
 `RuleRegistry::all()`. The drift test compares the rule IDs below with the live
-registry. Ten rules are registered on this branch: eight T0 syntactic checks
+registry. Eleven rules are registered on this branch: nine T0 syntactic checks
 and two T1 Python dataflow checks. T2 source typestate and T3 speculative rules
 are planned, not registered.
 
@@ -104,3 +104,16 @@ Tier/evidence: T1 / DATAFLOW. Severity: WARN. Forward may-unbound analysis over
 the Python CFG, with explicit pruning for unreachable predecessors, guaranteed
 non-empty literal loops, and narrowly correlated pure `is [not] None` guards.
 The analysis remains path-insensitive in general; see ADR-0002.
+
+== 11. `empty-php-function`
+
+A concrete PHP function or method has no executable body.
+
+Languages: php.
+
+Tier/evidence: T0 / HEURISTIC. Severity: WARN. Counter-condition: an
+intentional no-op lifecycle hook or override. This rule does not establish
+interprocedural behavior or WordPress authorization.
+
+The `unreachable-after-jump` rule also supports PHP. Comments after a jump
+are skipped as non-executable; subsequent executable statements remain checked.

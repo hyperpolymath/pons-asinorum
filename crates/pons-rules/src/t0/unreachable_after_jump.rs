@@ -13,6 +13,7 @@ const LANGUAGES: &[Lang] = &[
     Lang::TypeScript,
     Lang::Tsx,
     Lang::Rust,
+    Lang::Php,
 ];
 
 fn query_source(lang: Lang) -> &'static str {
@@ -22,6 +23,7 @@ fn query_source(lang: Lang) -> &'static str {
         Lang::TypeScript => include_str!("../../rules/unreachable-after-jump/typescript.scm"),
         Lang::Tsx => include_str!("../../rules/unreachable-after-jump/tsx.scm"),
         Lang::Rust => include_str!("../../rules/unreachable-after-jump/rust.scm"),
+        Lang::Php => include_str!("../../rules/unreachable-after-jump/php.scm"),
     }
 }
 
@@ -107,6 +109,17 @@ impl Rule for UnreachableAfterJump {
                 continue;
             };
 
+            // Comments are named tree-sitter nodes but are not executable
+            // statements. Advance to the next named sibling so a comment
+            // cannot either become a finding or hide genuinely dead code.
+            let mut next = Some(next);
+            while next
+                .is_some_and(|n| matches!(n.kind(), "comment" | "line_comment" | "block_comment"))
+            {
+                next = next.and_then(|n| n.next_named_sibling());
+            }
+            let Some(next) = next else { continue };
+
             let keyword = jump_keyword(jump.kind());
 
             findings.push(RawFinding::new(
@@ -180,5 +193,34 @@ mod tests {
     fn does_not_fire_on_rust_return_as_tail_expression() {
         let findings = findings_for(Lang::Rust, "fn f() -> i32 { do_thing(); return 1 }\n");
         assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn trailing_comment_is_not_an_unreachable_statement() {
+        let findings = findings_for(
+            Lang::Rust,
+            "fn has_cycle(a: bool, b: bool) -> bool { if a { if b { return true; } } else if b { return true; // Back edge found - cycle detected\n } false }",
+        );
+        assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn comment_does_not_hide_the_next_unreachable_statement() {
+        for (lang, source) in [
+            (
+                Lang::Rust,
+                "fn f() { return; // comment\n /* another */ dead(); }",
+            ),
+            (
+                Lang::JavaScript,
+                "function f() { return; // comment\n dead(); }",
+            ),
+            (
+                Lang::Python,
+                "def f():\n    return\n    # comment\n    dead()\n",
+            ),
+        ] {
+            assert_eq!(findings_for(lang, source).len(), 1, "{lang:?}");
+        }
     }
 }

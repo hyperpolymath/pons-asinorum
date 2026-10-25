@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
+use crate::coverage::{Coverage, InputCoverage, InputStatus, SCOPE};
+
 use std::cell::OnceCell;
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -107,11 +109,39 @@ pub struct ScanReport {
     pub files_scanned: usize,
     pub languages: Vec<Lang>,
     pub skipped: Vec<SkippedFile>,
+    pub input_coverage: Vec<InputCoverage>,
     /// Files decoded from a non-UTF-8 artifact. Their byte offsets are not
     /// artifact offsets; SARIF omits those fields rather than lie (#33).
     pub transcoded: BTreeSet<String>,
     pub suppressed_findings: usize,
     pub rules: Vec<RuleInfo>,
+}
+
+impl ScanReport {
+    pub fn coverage(&self) -> Coverage<'_> {
+        Coverage {
+            status: if self.files_scanned == 0 && !self.skipped.is_empty() {
+                "failed"
+            } else if self.files_scanned == 0 {
+                "no_applicable_input"
+            } else if !self.skipped.is_empty() {
+                "partial"
+            } else {
+                "complete"
+            },
+            scope: SCOPE,
+            candidate_files: self
+                .input_coverage
+                .iter()
+                .filter(|f| f.status != InputStatus::Excluded)
+                .count(),
+            analyzed_files: self.files_scanned,
+            inputs: &self.input_coverage,
+        }
+    }
+    pub fn incomplete(&self) -> bool {
+        self.files_scanned == 0 || !self.skipped.is_empty()
+    }
 }
 
 /// One ordering for skips, wherever they came from.
@@ -161,6 +191,8 @@ impl Engine {
         let discovery = source::discover(root)?;
         let mut report = self.scan_files(root, &discovery.files);
         report.skipped.extend(discovery.skipped);
+        report.input_coverage.extend(discovery.coverage);
+        report.input_coverage.sort_by(|a, b| a.path.cmp(&b.path));
         // `scan_files` sorted what it produced; the discovery skips arrive
         // after that, so the merged list is sorted again rather than left in
         // two concatenated runs.
@@ -180,6 +212,7 @@ impl Engine {
     /// Panics from rule checks propagate to the caller.
     pub fn scan_files(&self, root: &Path, files: &[DiscoveredFile]) -> ScanReport {
         let mut findings = Vec::new();
+        let mut input_coverage = Vec::new();
         let mut skipped = Vec::new();
         let mut languages = BTreeSet::new();
         let mut transcoded = BTreeSet::new();
@@ -190,6 +223,11 @@ impl Engine {
             let src = match source::read(file) {
                 Ok(src) => src,
                 Err(e) => {
+                    input_coverage.push(InputCoverage::new(
+                        &file.path,
+                        InputStatus::Unreadable,
+                        &e.to_string(),
+                    ));
                     skipped.push(SkippedFile {
                         path: file.path.display().to_string(),
                         reason: format!("could not read: {e}"),
@@ -201,6 +239,11 @@ impl Engine {
             let tree = match parse::parse(&src) {
                 Ok(tree) => tree,
                 Err(e) => {
+                    input_coverage.push(InputCoverage::new(
+                        &file.path,
+                        InputStatus::ParseError,
+                        &e.to_string(),
+                    ));
                     skipped.push(SkippedFile {
                         path: file.path.display().to_string(),
                         reason: format!("could not parse: {e}"),
@@ -209,6 +252,27 @@ impl Engine {
                 }
             };
 
+            let applicable: Vec<String> = self
+                .rules
+                .iter()
+                .filter(|r| r.languages().contains(&src.lang))
+                .map(|r| r.id().to_string())
+                .collect();
+            if applicable.is_empty() {
+                let reason = "no enabled rules for parsed language";
+                input_coverage.push(InputCoverage::new(&file.path, InputStatus::NoRules, reason));
+                skipped.push(SkippedFile {
+                    path: file.path.display().to_string(),
+                    reason: reason.to_string(),
+                });
+                continue;
+            }
+            let mut entry = InputCoverage::new(&file.path, InputStatus::Analyzed, "");
+            entry.language = Some(src.lang.name().to_string());
+            entry.analyzer =
+                Some("tree-sitter syntax; enabled rule IDs define analysis depth".to_string());
+            entry.rules = applicable;
+            input_coverage.push(entry);
             files_scanned += 1;
             languages.insert(src.lang);
             if src.transcoded {
@@ -253,6 +317,7 @@ impl Engine {
             files_scanned,
             languages: languages.into_iter().collect(),
             skipped,
+            input_coverage,
             transcoded,
             suppressed_findings,
             rules: self
@@ -323,7 +388,7 @@ mod tests {
     }
 
     #[test]
-    fn scan_with_zero_rules_yields_zero_findings() {
+    fn scan_with_zero_rules_is_incomplete_even_without_findings() {
         let dir = std::env::temp_dir().join(format!("pons-engine-test-{}", nanos()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("a.py"), "x = 1\n").unwrap();
@@ -331,8 +396,11 @@ mod tests {
         let engine = Engine::new(Vec::new());
         let report = engine.scan(&dir).unwrap();
         assert!(report.findings.is_empty());
-        assert_eq!(report.files_scanned, 1);
-        assert_eq!(report.languages, vec![Lang::Python]);
+        assert_eq!(report.files_scanned, 0);
+        assert!(report.incomplete());
+        assert_eq!(report.input_coverage[0].status, InputStatus::NoRules);
+        assert!(report.languages.is_empty());
+        assert_eq!(report.skipped.len(), 1);
 
         std::fs::remove_dir_all(&dir).unwrap();
     }

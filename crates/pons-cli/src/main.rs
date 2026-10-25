@@ -53,7 +53,7 @@ enum Command {
         /// Include evidence class and tier in human output.
         #[arg(long)]
         explain: bool,
-        /// Treat any skipped file or subtree as an incomplete scan and exit 2.
+        /// Exit 2 for skipped/unsupported inputs, no applicable rules or zero analysed files.
         #[arg(long)]
         fail_on_skips: bool,
     },
@@ -102,6 +102,7 @@ enum Language {
     Typescript,
     Tsx,
     Rust,
+    Php,
 }
 
 impl Language {
@@ -113,6 +114,7 @@ impl Language {
             Language::Typescript => Lang::TypeScript,
             Language::Tsx => Lang::Tsx,
             Language::Rust => Lang::Rust,
+            Language::Php => Lang::Php,
         }
     }
 }
@@ -342,7 +344,7 @@ fn run_scan(
     emit(&rendered)?;
     report_to_stderr(&report);
 
-    if fail_on_skips && !report.skipped.is_empty() {
+    if fail_on_skips && report.incomplete() {
         return Ok(2);
     }
 
@@ -362,6 +364,7 @@ fn run_scan(
 /// stdout byte-for-byte parseable while still making a partial scan
 /// impossible to mistake for a clean one.
 fn report_to_stderr(report: &ScanReport) {
+    eprintln!("pons: coverage {}", report.coverage().status);
     for skipped in &report.skipped {
         eprintln!("pons: skipped {}: {}", skipped.path, skipped.reason);
     }

@@ -5,6 +5,7 @@ use pons_core::engine::Rule;
 use crate::t0::constant_condition::ConstantCondition;
 use crate::t0::div_by_literal_zero::DivByLiteralZero;
 use crate::t0::empty_effect_loop::EmptyEffectLoop;
+use crate::t0::empty_php_function::EmptyPhpFunction;
 use crate::t0::self_assignment::SelfAssignment;
 use crate::t0::string_concat_in_loop::StringConcatInLoop;
 use crate::t0::swallowed_error::SwallowedError;
@@ -33,6 +34,7 @@ impl RuleRegistry {
             Box::new(StringConcatInLoop::new()),
             Box::new(DeadStore::new()),
             Box::new(ReadBeforeInit::new()),
+            Box::new(EmptyPhpFunction),
         ]
     }
 }
@@ -56,7 +58,8 @@ mod tests {
                 "unreachable-after-jump",
                 "string-concat-in-loop",
                 "dead-store",
-                "read-before-init"
+                "read-before-init",
+                "empty-php-function"
             ]
         );
     }

@@ -3,6 +3,80 @@
   "version": "2.1.0",
   "runs": [
     {
+      "properties": {
+        "coverage": {
+          "analyzed_files": 7,
+          "candidate_files": 8,
+          "inputs": [
+            {
+              "analyzer": null,
+              "language": null,
+              "path": "app/svc.py",
+              "reason": null,
+              "rules": [],
+              "status": "analyzed"
+            },
+            {
+              "analyzer": null,
+              "language": null,
+              "path": "app/math.ts",
+              "reason": null,
+              "rules": [],
+              "status": "analyzed"
+            },
+            {
+              "analyzer": null,
+              "language": null,
+              "path": "app/quiet.py",
+              "reason": null,
+              "rules": [],
+              "status": "analyzed"
+            },
+            {
+              "analyzer": null,
+              "language": null,
+              "path": "app/algo.py",
+              "reason": null,
+              "rules": [],
+              "status": "analyzed"
+            },
+            {
+              "analyzer": null,
+              "language": null,
+              "path": "app/clean1.py",
+              "reason": null,
+              "rules": [],
+              "status": "analyzed"
+            },
+            {
+              "analyzer": null,
+              "language": null,
+              "path": "app/clean2.py",
+              "reason": null,
+              "rules": [],
+              "status": "analyzed"
+            },
+            {
+              "analyzer": null,
+              "language": null,
+              "path": "app/clean3.py",
+              "reason": null,
+              "rules": [],
+              "status": "analyzed"
+            },
+            {
+              "analyzer": null,
+              "language": null,
+              "path": "app/broken.py",
+              "reason": "could not read",
+              "rules": [],
+              "status": "unreadable"
+            }
+          ],
+          "scope": "Enumerated regular files after ignore/hidden/build-directory policy; unsupported recognised source/config inputs are gaps; other extensions are explicitly excluded. Pruned directories are not enumerated. PHP is T0 syntax only; Python alone has CFG/dataflow.",
+          "status": "partial"
+        }
+      },
       "tool": {
         "driver": {
           "name": "pons",

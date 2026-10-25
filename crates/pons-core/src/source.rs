@@ -3,6 +3,7 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::coverage::{self, InputCoverage, InputStatus};
 use crate::engine::SkippedFile;
 use crate::lang::Lang;
 
@@ -51,6 +52,7 @@ pub struct SourceFile {
 pub struct Discovery {
     pub files: Vec<DiscoveredFile>,
     pub skipped: Vec<SkippedFile>,
+    pub coverage: Vec<InputCoverage>,
 }
 
 /// The path an [`ignore::Error`] is about, if it names one.
@@ -170,6 +172,7 @@ pub fn discover(root: &Path) -> anyhow::Result<Discovery> {
 
     let mut files = Vec::new();
     let mut skipped = Vec::new();
+    let mut coverage = Vec::new();
 
     let walker = ignore::WalkBuilder::new(root)
         .add_custom_ignore_filename(".ponsignore")
@@ -199,6 +202,23 @@ pub fn discover(root: &Path) -> anyhow::Result<Discovery> {
             .and_then(|ext| ext.to_str())
             .and_then(Lang::from_extension)
         else {
+            let status = if coverage::is_candidate(path) {
+                InputStatus::Unsupported
+            } else {
+                InputStatus::Excluded
+            };
+            let reason = if status == InputStatus::Unsupported {
+                "unsupported source/config language"
+            } else {
+                "extension outside declared source/config scope"
+            };
+            coverage.push(InputCoverage::new(path, status, reason));
+            if status == InputStatus::Unsupported {
+                skipped.push(SkippedFile {
+                    path: path.display().to_string(),
+                    reason: reason.to_string(),
+                });
+            }
             continue;
         };
 
@@ -208,7 +228,11 @@ pub fn discover(root: &Path) -> anyhow::Result<Discovery> {
         });
     }
 
-    Ok(Discovery { files, skipped })
+    Ok(Discovery {
+        files,
+        skipped,
+        coverage,
+    })
 }
 
 /// Read one [`DiscoveredFile`] into a [`SourceFile`].
@@ -217,7 +241,16 @@ pub fn discover(root: &Path) -> anyhow::Result<Discovery> {
 /// into the resulting text then differ from offsets into the original file.
 /// File read errors propagate; the engine records them as per-file skips.
 pub fn read(file: &DiscoveredFile) -> anyhow::Result<SourceFile> {
-    let bytes = std::fs::read(&file.path)?;
+    use std::io::Read as _;
+    const MAX_BYTES: u64 = 16 * 1024 * 1024;
+    let mut bytes = Vec::new();
+    std::fs::File::open(&file.path)?
+        .take(MAX_BYTES + 1)
+        .read_to_end(&mut bytes)?;
+    anyhow::ensure!(
+        bytes.len() as u64 <= MAX_BYTES,
+        "source exceeds 16 MiB analysis limit"
+    );
     let (text, transcoded) = match String::from_utf8(bytes) {
         Ok(text) => (text, false),
         Err(e) => {

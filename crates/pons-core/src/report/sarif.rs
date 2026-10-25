@@ -190,6 +190,7 @@ struct Sarif {
 
 #[derive(Serialize)]
 struct Run {
+    properties: serde_json::Value,
     tool: SarifTool,
     /// Declared explicitly rather than left to the default.
     ///
@@ -344,6 +345,15 @@ struct ResultProperties {
 /// Findings in transcoded files retain line and column locations but omit
 /// artifact byte offsets and lengths. JSON serialisation errors propagate.
 pub fn render(report: &ScanReport) -> anyhow::Result<String> {
+    let mut coverage = serde_json::to_value(report.coverage())?;
+    if let Some(inputs) = coverage["inputs"].as_array_mut() {
+        for input in inputs {
+            if let Some(path) = input["path"].as_str() {
+                input["path"] = serde_json::Value::String(artifact_uri(path, &report.root));
+            }
+        }
+    }
+
     let descriptions: BTreeMap<&str, &str> =
         report.rules.iter().map(|r| (r.id, r.description)).collect();
 
@@ -438,6 +448,7 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
         schema: SARIF_SCHEMA,
         version: "2.1.0",
         runs: vec![Run {
+            properties: serde_json::json!({"coverage": coverage}),
             tool: SarifTool {
                 driver: Driver {
                     name: "pons",
@@ -499,6 +510,11 @@ mod tests {
         use crate::lang::Lang;
 
         ScanReport {
+            input_coverage: vec![crate::coverage::InputCoverage::new(
+                std::path::Path::new(file),
+                crate::coverage::InputStatus::Analyzed,
+                "",
+            )],
             root: root.to_string(),
             findings: vec![Finding::new(
                 "div-by-literal-zero",

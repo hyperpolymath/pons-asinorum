@@ -9,6 +9,7 @@ pub enum Lang {
     TypeScript,
     Tsx,
     Rust,
+    Php,
 }
 
 impl Lang {
@@ -22,6 +23,7 @@ impl Lang {
             "ts" => Some(Lang::TypeScript),
             "tsx" => Some(Lang::Tsx),
             "rs" => Some(Lang::Rust),
+            "php" | "php3" | "php4" | "php5" | "php7" | "php8" | "phtml" | "inc" => Some(Lang::Php),
             _ => None,
         }
     }
@@ -37,6 +39,7 @@ impl Lang {
             Lang::TypeScript => "typescript",
             Lang::Tsx => "tsx",
             Lang::Rust => "rust",
+            Lang::Php => "php",
         }
     }
 
@@ -47,6 +50,7 @@ impl Lang {
             Lang::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
             Lang::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
             Lang::Rust => tree_sitter_rust::LANGUAGE.into(),
+            Lang::Php => tree_sitter_php::LANGUAGE_PHP.into(),
         }
     }
 }
@@ -73,6 +77,7 @@ mod tests {
             Lang::TypeScript,
             Lang::Tsx,
             Lang::Rust,
+            Lang::Php,
         ] {
             let mut parser = tree_sitter::Parser::new();
             parser

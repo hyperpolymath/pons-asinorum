@@ -10,3 +10,5 @@ pub mod parse;
 pub mod report;
 pub mod source;
 pub mod suppress;
+
+pub mod coverage;

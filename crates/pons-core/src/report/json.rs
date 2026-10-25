@@ -32,7 +32,7 @@ use crate::finding::{EvidenceClass, Finding};
 ///
 /// Not to be confused with the `schema_version` in a protocol TOML
 /// (ADR-0003), which versions a different file entirely.
-pub const SCHEMA_VERSION: &str = "0.3.0";
+pub const SCHEMA_VERSION: &str = "0.4.0";
 
 #[derive(Serialize)]
 struct Envelope<'a> {
@@ -51,6 +51,7 @@ struct Tool {
 
 #[derive(Serialize)]
 struct Scanned<'a> {
+    coverage: crate::coverage::Coverage<'a>,
     root: &'a str,
     files: usize,
     suppressed_findings: usize,
@@ -116,6 +117,7 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
             version: env!("CARGO_PKG_VERSION"),
         },
         scanned: Scanned {
+            coverage: report.coverage(),
             root: &report.root,
             files: report.files_scanned,
             suppressed_findings: report.suppressed_findings,
@@ -265,6 +267,7 @@ mod tests {
             (
                 "scanned",
                 &[
+                    "coverage",
                     "files",
                     "languages",
                     "root",

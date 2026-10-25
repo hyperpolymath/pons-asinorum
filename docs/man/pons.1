@@ -103,3 +103,9 @@ The following are planned and are not accepted by this binary:
 .BR docs/EXNOVATION-ROADMAP.adoc .
 .SH AUTHOR
 Jonathan D.A. Jewell.
+
+.SH COVERAGE AND PHP
+JSON schema 0.4.0 includes a per-input coverage ledger. The fail-on-skips
+option also rejects unsupported source/config inputs and zero-file scans.
+PHP has T0 empty-callable and unreachable-code checks; Python alone has
+CFG/dataflow support.

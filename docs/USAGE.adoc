@@ -131,3 +131,15 @@ they are not accepted by `--help`:
 
 Optional adapters must remain explicit, locally invoked, time/output bounded,
 and never run scanned project code by default.
+
+== Coverage and PHP
+
+`pons scan source --format json --fail-on-skips` fails with exit 2 when
+recognised source/config inputs are unsupported, parsing/reading fails, no
+enabled rule applies, or no files are analysed. JSON schema 0.4.0 records
+`scanned.coverage`; SARIF exposes the same information in run properties.
+Complete describes the declared scan scope, not security certification.
+
+PHP and PHTML use the native mixed PHP/template grammar. `--lang php` forces
+that grammar for a single file. Only T0 empty-function and unreachable-code
+checks apply to PHP; Python alone has CFG/dataflow.

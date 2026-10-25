@@ -16,6 +16,7 @@ pub fn render(findings: &[Finding]) -> String {
 /// class and tier that back (or qualify) each finding.
 pub fn render_report(report: &ScanReport, explain: bool) -> String {
     let mut out = render_detailed(&report.findings, explain);
+    let _ = writeln!(out, "coverage: {}", report.coverage().status);
     let _ = writeln!(
         out,
         "scanned: {} file(s), {} finding(s), {} suppressed, {} skipped, {} transcoded",
