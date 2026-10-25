@@ -65,7 +65,7 @@ fn empty_corpus_is_explicit_and_strict_mode_fails() {
 fn mixed_corpus_accounts_for_every_enumerated_input() {
     let corpus = Corpus::new(&[
         ("good.php", "<?php function good() { return 1; }"),
-        ("stub.php", "<?php function encrypt($data) { /* TODO */ }"),
+        ("stub.php", "<?php function encrypt($data) { /* fixture */ }"),
         ("bad.php", "<?php function broken( {"),
         ("Main.hs", "module Main where\n"),
         ("README.md", "Documentation"),
