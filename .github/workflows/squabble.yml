@@ -1,0 +1,140 @@
+# SPDX-License-Identifier: MPL-2.0
+name: CI/CD Squabble
+
+# The estate's CI/CD fighter, run against this repository's own pull
+# requests.
+#
+# WHY THIS IS HERE, SPECIFICALLY
+# ------------------------------
+# This repository's required secret-scan check, `scan / gitleaks`, was
+# `startup_failure` on every run for weeks: the workflow called the shared
+# reusable under its transferred owner spelling (`metadatastician/standards`),
+# which the estate's Actions allowlist does not admit, so the call was
+# refused before any job started and NO check run was ever emitted. Nothing
+# was red. The pull request was simply unmergeable, with no square anywhere
+# to explain why — and `gh pr checks` showed nothing at all, because a
+# rejected run produces no check run.
+#
+# `squabble` is the tool for exactly that class of failure. It reads both
+# protection surfaces (branch rulesets and classic branch protection),
+# compares the required-context set against the realised rollup, and — this
+# is the part that matters here — when a required context refuses to start
+# it probes the repository's Actions permissions and attributes the refusal
+# to the POSTURE that caused it rather than to the reusable's owner or to a
+# security scan. Its invariant is proved in SPARK: green means a required
+# check actually ran and passed. An admin override, a dropped required
+# context or a renamed check are provably not paths to green.
+#
+# WHAT BLOCKS AND WHAT DOES NOT
+# The INSTALLATION blocks: the pinned, sha256- and attestation-verified
+# squabble release must install and run, or this job is red. The DIAGNOSTIC
+# does not block: `squabble fetch` needs Administration:read, which
+# `GITHUB_TOKEN` does not hold. With a token that cannot read the rules the
+# tool says so and exits non-zero, and this workflow reports that plainly
+# rather than pretending the check ran. It is a diagnostic, and a
+# diagnostic that cannot look must not report a pass.
+#
+# To give it teeth, add a repository secret named `SQUABBLE_TOKEN`: a
+# GitHub App installation token for this repository with Administration:read.
+# The steps fall back to `github.token` until one exists.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  squabble:
+    name: squabble
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Install the pinned, sha256- and attestation-verified squabble
+      # release. The action refuses any artefact whose digest or build
+      # provenance does not match, so nothing is executed until both hold.
+      - name: Install the pinned, attested squabble release
+        id: squabble
+        uses: hyperpolymath/cicd-squabbler/.github/actions/squabble@14f853fde902ab2d7631070d87a9dc9122e01013 # cicd-squabbler main
+
+      # BLOCKING: the fighter must be present and runnable. A CI/CD gate
+      # that cannot be fought cannot be proved.
+      - name: squabble runs
+        env:
+          SQUABBLE_PATH: ${{ steps.squabble.outputs.path }}
+        run: |
+          set -euo pipefail
+          test -n "$SQUABBLE_PATH"
+          test -x "$SQUABBLE_PATH"
+          "$SQUABBLE_PATH" --version
+
+      # The diagnostic. Its exit code is captured rather than propagated: 3 is
+      # the tool's finding ("no required status checks apply to this base
+      # branch"), 2 is a failure (usually the token), and neither is a red
+      # build for this repository.
+      - name: Fetch this pull request's gate
+        id: fetch
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.SQUABBLE_TOKEN || github.token }}
+          SQUABBLE_PATH: ${{ steps.squabble.outputs.path }}
+        run: |
+          set -uo pipefail
+          rc=0
+          "$SQUABBLE_PATH" fetch "$GITHUB_REPOSITORY" "${{ github.event.pull_request.number }}" \
+            > "$RUNNER_TEMP/gate.json" 2> "$RUNNER_TEMP/fetch.err" || rc=$?
+          printf 'exit-code=%d\n' "$rc" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/fetch.err" || true
+          exit 0
+
+      - name: Report what squabble saw, and what it could not see
+        env:
+          SQUABBLE_PATH: ${{ steps.squabble.outputs.path }}
+          EXIT_CODE: ${{ steps.fetch.outputs.exit-code }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -uo pipefail
+          {
+            echo "### squabble"
+            echo
+            if [ "${EXIT_CODE:-}" = "0" ] && [ -s "$RUNNER_TEMP/gate.json" ]; then
+              echo "squabble fetched this pull request's gate. Its report follows."
+              echo
+              echo '```'
+              "$SQUABBLE_PATH" diagnose "$RUNNER_TEMP/gate.json" 2>&1 || true
+              echo '```'
+            else
+              echo "**No gate was fetched.** squabble exited \`${EXIT_CODE:-unknown}\`."
+              echo
+              case "${EXIT_CODE:-}" in
+                3)
+                  echo "Exit 3 is the tool's *finding*, not a malfunction: the base branch carries no \`required_status_checks\` ruleset rule, so there is nothing to squabble over. Both protection surfaces were consulted."
+                  ;;
+                2)
+                  echo "Exit 2 is a failure: squabble could not read this repository's gate. The usual cause is the token — reading branch rulesets and classic branch protection needs **Administration:read**, which \`GITHUB_TOKEN\` does not hold. Give this repository a \`SQUABBLE_TOKEN\` secret (a GitHub App installation token with Administration:read) and the diagnostic will run."
+                  echo
+                  echo "**The check did not run.** That is reported here rather than swallowed."
+                  ;;
+                *)
+                  echo "The tool exited \`${EXIT_CODE:-unknown}\`, which it does not use for 'nothing to report'."
+                  ;;
+              esac
+              if [ -s "$RUNNER_TEMP/fetch.err" ]; then
+                echo
+                echo '```'
+                cat "$RUNNER_TEMP/fetch.err"
+                echo '```'
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
