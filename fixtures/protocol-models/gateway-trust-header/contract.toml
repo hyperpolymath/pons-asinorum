@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: MPL-2.0
+schema_version = "0.2.0"
+strict_transitions = true
+id = "gateway-trust-header"
+description = "Reduced explicit-event model; not source-derived evidence"
+channel = "fixture-instance"
+states = ["raw", "stripped", "bounded", "verified", "owned", "forwarded"]
+initial = "raw"
+
+[[transition]]
+on = "strip_untrusted"
+from = "raw"
+to = "stripped"
+
+[[transition]]
+on = "enforce_limits"
+from = "stripped"
+to = "bounded"
+
+[[transition]]
+on = "resolve_plugin_api"
+from = "bounded"
+to = "verified"
+
+[[transition]]
+on = "assign_owned_headers"
+from = "verified"
+to = "owned"
+
+[[transition]]
+on = "forward"
+from = "owned"
+to = "forwarded"

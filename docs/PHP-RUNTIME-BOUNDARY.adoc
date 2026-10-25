@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= PHP runtime incident boundary — checked 25 October 2026
+
+Official sources consulted:
+
+* https://www.php.net/archive/2026.php[PHP 2026 announcements], including the
+  21 October security notice and 23 October upload-progress follow-up.
+* https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w[OOM corruption advisory].
+* https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp[Stale global-state advisory].
+
+The 21 October notice identifies PHP 8.5.12, 8.4.27, 8.3.36 and 8.2.35 as the
+fixed releases for the two critical issues. The follow-up concerns an additional
+upload-progress configuration/runtime-handler combination. Deployment-specific
+version, vendor backports, worker restart and configuration evidence must be
+collected separately; no deployed runtime was inspected in this task.
+
+Pons application analysis cannot certify the interpreter. The advisories include
+operations before ordinary application initialization, so a WordPress hook is
+not assumed to execute early enough to protect request parsing. The reduced
+request-lifetime model exercises publication/reset/release/next-request ordering
+only. It is a research fixture, not a C-engine proof or a live exploit test.

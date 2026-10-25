@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: MPL-2.0
+schema_version = "0.2.0"
+strict_transitions = true
+id = "rate-limit-atomicity"
+description = "Reduced explicit-event model; not source-derived evidence"
+channel = "fixture-instance"
+states = ["unlocked", "locked", "read", "written"]
+initial = "unlocked"
+
+[[transition]]
+on = "lock"
+from = "unlocked"
+to = "locked"
+
+[[transition]]
+on = "read"
+from = "locked"
+to = "read"
+
+[[transition]]
+on = "write"
+from = "read"
+to = "written"
+
+[[transition]]
+on = "unlock"
+from = "written"
+to = "unlocked"
+
+[[transition]]
+on = "unlock"
+from = "locked"
+to = "unlocked"

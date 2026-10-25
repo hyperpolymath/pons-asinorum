@@ -175,9 +175,11 @@ into "this cannot happen".
 Classical Hoare-style verification aims to prove absence of bad states;
 incorrectness logic aims to prove that a reachable bad state exists. Pons is
 primarily a bug-finder. When it reports a potential `UnboundLocalError`, the
-honest claim is existential over the abstract model. Future "clean" claims must
-be under-approximations with explicit coverage, not silent complements of
-findings.
+honest claim is existential over the abstract model. Absence-of-bad-state claims
+need a sound over-approximation excluding bad states, with explicit premises and
+coverage. An under-approximation or validated concrete witness can establish a
+reachable defect; it cannot establish absence. Neither claim follows from the
+silent complement of today's findings.
 
 === CEGAR and path sensitivity
 

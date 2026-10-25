@@ -12,7 +12,7 @@ while IFS= read -r -d '' file; do
     echo "Missing MPL-2.0 source header: $file" >&2
     exit 1
   fi
-done < <(find src crates -type f -name '*.rs' -print0)
+done < <(rg --files -0 crates -g '*.rs')
 test "$count" -gt 0 || { echo 'No Rust source inspected' >&2; exit 1; }
 if grep -n '6a2/' README.adoc docs/PLAN.adoc .machine_readable/descriptiles/*.a2ml; then
   echo 'Retired descriptive-anchor path is still live' >&2

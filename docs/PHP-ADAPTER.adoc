@@ -1,0 +1,51 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Native PHP adapter and model boundary
+
+Native tree-sitter-php 0.25.1 parses `.php`, `.phtml`, `.php5`, `.inc`, including
+mixed templates, namespaces, traits, closures and callback syntax. This is
+syntax coverage. There is no PHP-to-JavaScript or PHP-to-Python transcoder.
+
+`php-empty-security-function` and `php-unresolved-include` are T0 HEURISTIC.
+Security-like names do not establish caller expectations. Literal includes are
+checked relative to the source directory, with `__DIR__` concatenation supported;
+PHP cwd/include_path and generated files can invalidate that assumption.
+Composer autoloading, dynamic includes, WordPress hook registration/dispatch,
+trait dispatch and cross-file summaries remain unresolved and are disclosed.
+
+`php-context-flow` is T1 DATAFLOW over a deliberately small intraprocedural CFG.
+Each function has independent locals. Blocks have explicit if/elseif/else joins,
+while-loop backedges, break/continue edges and terminal returns. Conditions must
+be free of unsupported side effects. Short-circuit expressions with assignments
+or unknown calls make the scope opaque; they are not flattened into unconditional
+assignments. Try/catch/finally, references, dynamic names and unknown calls also
+make the scope opaque. PHP exceptions/finally are not modelled yet. Python's
+existing CFG handles its documented exception/finally model independently.
+
+The worklist unions source-line/context facts at joins. Transfers are monotone
+over finite maps; no widening is necessary. Limits: 1024 blocks/scope, 512 locals,
+50000 transfers. Exceeding a limit emits an unknown reason and no verdict from
+that scope. Unknown scopes are listed in inventory `analysis_notes`, with
+`analysis_complete=false`; required-language coverage fails for them. This flag
+is completeness within the declared rule models, not full language verification.
+
+Sources are GET/POST/REQUEST/COOKIE superglobals. Parameters and capture values
+are not inferred. Sinks are echo (HTML text), mysqli_query (SQL query), shell
+command calls, header and wp_redirect. HTML escaping only clears HTML text.
+`strip_tags`, `addslashes`, `esc_js`, `esc_url`, `esc_sql`, `escapeshellarg` and
+`json_encode` are not universal sanitizers. A shell argument is not a whole shell
+command contract. JavaScript safety is a separate domain without a registered
+sink in this slice. Echo in mixed markup is withheld because attribute/script
+context is unresolved. Namespaces, imports (including function aliases and grouped uses), or locally
+shadowed HTML sanitizers also
+withhold flow analysis. Standard unshadowed builtin/WordPress semantics and
+unrebound superglobals are explicit premises, not established facts.
+
+Flow evidence gives source lines, sink line and output context. These are may
+flows, not executable exploit proofs: correlated predicates can make a path
+infeasible. No claim of authorization completeness or PHP interpreter safety is
+made. Per-file parse success with opaque scopes must not be rendered as a full
+security pass.
+
+The async accept-loop control no longer gets the tight-loop heuristic when an
+await exists in the loop's own scope. Await does not prove cancellation,
+throughput or progress. These require separate protocol/runtime evidence.

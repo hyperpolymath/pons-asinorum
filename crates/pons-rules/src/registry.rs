@@ -33,6 +33,9 @@ impl RuleRegistry {
             Box::new(StringConcatInLoop::new()),
             Box::new(DeadStore::new()),
             Box::new(ReadBeforeInit::new()),
+            Box::new(crate::php::PhpContextFlow),
+            Box::new(crate::php::PhpEmptySecurityFunction),
+            Box::new(crate::php::PhpUnresolvedInclude),
         ]
     }
 }
@@ -56,7 +59,10 @@ mod tests {
                 "unreachable-after-jump",
                 "string-concat-in-loop",
                 "dead-store",
-                "read-before-init"
+                "read-before-init",
+                "php-context-flow",
+                "php-empty-security-function",
+                "php-unresolved-include"
             ]
         );
     }

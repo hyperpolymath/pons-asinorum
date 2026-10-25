@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MPL-2.0
+schema_version = "0.2.0"
+strict_transitions = true
+id = "bootstrap-order"
+description = "Reduced explicit-event model; not source-derived evidence"
+channel = "fixture-instance"
+states = ["empty", "loaded", "initialized", "invoked"]
+initial = "empty"
+
+[[transition]]
+on = "load_dependency"
+from = "empty"
+to = "loaded"
+
+[[transition]]
+on = "initialize"
+from = "loaded"
+to = "initialized"
+
+[[transition]]
+on = "callback"
+from = "initialized"
+to = "invoked"

@@ -12,9 +12,34 @@ use crate::source::SourceFile;
 pub fn parse(source: &SourceFile) -> anyhow::Result<Tree> {
     let mut parser = Parser::new();
     parser.set_language(&source.lang.tree_sitter_language())?;
+    let started = std::time::Instant::now();
+    let mut progress = |_: &tree_sitter::ParseState| {
+        if started.elapsed() >= std::time::Duration::from_millis(250) {
+            std::ops::ControlFlow::Break(())
+        } else {
+            std::ops::ControlFlow::Continue(())
+        }
+    };
+    let text = source.text.as_bytes();
     let tree = parser
-        .parse(&source.text, None)
-        .ok_or_else(|| anyhow::anyhow!("tree-sitter produced no tree for {:?}", source.path))?;
+        .parse_with_options(
+            &mut |offset, _| &text[offset..],
+            None,
+            Some(tree_sitter::ParseOptions::new().progress_callback(&mut progress)),
+        )
+        .ok_or_else(|| anyhow::anyhow!("parser budget exhausted (250 ms)"))?;
+    // Protect recursive analysis consumers from adversarial tree depth/size.
+    let mut pending = vec![(tree.root_node(), 0usize)];
+    let mut count = 0;
+    while let Some((node, depth)) = pending.pop() {
+        count += 1;
+        anyhow::ensure!(
+            count <= 100_000 && depth <= 256,
+            "AST budget exhausted (100000 nodes / depth 256)"
+        );
+        let mut cursor = node.walk();
+        pending.extend(node.named_children(&mut cursor).map(|n| (n, depth + 1)));
+    }
     if tree.root_node().has_error() {
         anyhow::bail!(
             "tree-sitter recovered from a syntax error in {}",

@@ -19,7 +19,7 @@ use pons_rules::registry::RuleRegistry;
     name = "pons",
     version,
     about = "pons asinorum — a falsifier-first static analyzer",
-    long_about = "Pons scans source without executing project code. Findings carry an evidence class; SPECULATIVE findings never gate a build. Exit codes: 0 completed below threshold, 1 threshold reached, 2 invalid input or, with --fail-on-skips, an incomplete scan."
+    long_about = "Pons scans source without executing project code. Findings carry an evidence class; SPECULATIVE findings never gate a build. Exit codes: 0 completed below threshold, 1 threshold reached, 2 invalid input, no applicable input, failed required-language coverage, or incomplete inventory with --fail-on-skips. Additional extract/challenge adapters remain planned."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -56,11 +56,18 @@ enum Command {
         /// Treat any skipped file or subtree as an incomplete scan and exit 2.
         #[arg(long)]
         fail_on_skips: bool,
+        /// Require complete coverage of a language (repeatable, e.g. php or haskell).
+        #[arg(long)]
+        require_language: Vec<String>,
     },
     /// Print the rule catalogue generated from the live registry.
     Catalogue,
-    /// Generate a man page from the same command model as `--help`.
-    Man,
+    /// Check supplied Wharf events against the bounded transfer model.
+    WharfTrace { path: PathBuf },
+    /// Validate a scan report; schema validity alone is not an assurance pass.
+    ValidateReport { path: PathBuf },
+    /// Generate the main or a subcommand man page from the live command model.
+    Man { command: Option<String> },
     /// Show optional adapter executables without claiming they are tested.
     Doctor,
     /// Check an explicit ordered JSON event trace against a TOML protocol.
@@ -102,6 +109,7 @@ enum Language {
     Typescript,
     Tsx,
     Rust,
+    Php,
 }
 
 impl Language {
@@ -113,6 +121,7 @@ impl Language {
             Language::Typescript => Lang::TypeScript,
             Language::Tsx => Lang::Tsx,
             Language::Rust => Lang::Rust,
+            Language::Php => Lang::Php,
         }
     }
 }
@@ -157,6 +166,16 @@ fn emit(text: &str) -> Result<()> {
 /// Returns 0 for informational commands; scans return their gating status,
 /// and traces return 1 when violations are found. File access, input
 /// validation, rendering and output errors propagate to the caller.
+fn read_text_limited(path: &Path, limit: usize) -> Result<String> {
+    use std::io::Read as _;
+    let mut bytes = Vec::new();
+    std::fs::File::open(path)?
+        .take(limit as u64 + 1)
+        .read_to_end(&mut bytes)?;
+    anyhow::ensure!(bytes.len() <= limit, "input exceeds {limit} byte limit");
+    Ok(String::from_utf8(bytes)?)
+}
+
 fn run(cli: Cli) -> Result<u8> {
     match cli.command {
         Command::Scan {
@@ -169,6 +188,7 @@ fn run(cli: Cli) -> Result<u8> {
             no_speculative,
             explain,
             fail_on_skips,
+            require_language,
         } => run_scan(
             &path,
             fail_on,
@@ -179,14 +199,42 @@ fn run(cli: Cli) -> Result<u8> {
             no_speculative,
             explain,
             fail_on_skips,
+            &require_language,
         ),
+        Command::ValidateReport { path } => {
+            let text = read_text_limited(&path, 16 * 1024 * 1024)?;
+            let status = pons_core::report::validate::validate(&text)?;
+            emit(&format!(
+                "valid report schema; coverage={status} (not a security verdict)\n"
+            ))?;
+            Ok(0)
+        }
+        Command::WharfTrace { path } => {
+            let text = read_text_limited(&path, 16 * 1024 * 1024)?;
+            let events: Vec<pons_protocols::wharf::Event> = serde_json::from_str(&text)?;
+            let violations = pons_protocols::wharf::check(&events)?;
+            let report = serde_json::json!({"schema_version":"0.1.0","tool":"pons","mode":"wharf-explicit-trace",
+                "evidence":"PROTOCOL","assumptions":["Events and cryptographic/durability flags are accurate producer assertions", "Nonce replay memory is limited to this trace", "No source extraction or runtime cryptographic verification"],"violations":violations});
+            emit(&format!("{}\n", serde_json::to_string_pretty(&report)?))?;
+            Ok(u8::from(!violations.is_empty()))
+        }
         Command::Catalogue => {
             emit(&pons_rules::catalogue())?;
             Ok(0)
         }
-        Command::Man => {
+        Command::Man { command } => {
             let mut rendered = Vec::new();
-            clap_mangen::Man::new(Cli::command()).render(&mut rendered)?;
+            let mut cli = Cli::command();
+            cli.build();
+            let man = if let Some(name) = command {
+                let sub = cli
+                    .find_subcommand(&name)
+                    .with_context(|| format!("unknown man-page command: {name}"))?;
+                clap_mangen::Man::new(sub.clone()).title(format!("pons-{name}"))
+            } else {
+                clap_mangen::Man::new(cli)
+            };
+            man.render(&mut rendered)?;
             let text = String::from_utf8(rendered)?;
             emit(
                 &(text
@@ -194,6 +242,8 @@ fn run(cli: Cli) -> Result<u8> {
                     .map(str::trim_end)
                     .collect::<Vec<_>>()
                     .join("\n")
+                    .trim_end()
+                    .to_string()
                     + "\n"),
             )?;
             Ok(0)
@@ -203,9 +253,9 @@ fn run(cli: Cli) -> Result<u8> {
             Ok(0)
         }
         Command::Trace { path, protocol } => {
-            let protocol_text = std::fs::read_to_string(&protocol)
+            let protocol_text = read_text_limited(&protocol, 1024 * 1024)
                 .with_context(|| format!("cannot read protocol {}", protocol.display()))?;
-            let trace_text = std::fs::read_to_string(&path)
+            let trace_text = read_text_limited(&path, 16 * 1024 * 1024)
                 .with_context(|| format!("cannot read trace {}", path.display()))?;
             let protocol = pons_protocols::Protocol::parse(&protocol_text)?;
             let events: Vec<pons_protocols::Event> = serde_json::from_str(&trace_text)?;
@@ -279,6 +329,7 @@ fn run_scan(
     no_speculative: bool,
     explain: bool,
     fail_on_skips: bool,
+    required_languages: &[String],
 ) -> Result<u8> {
     if !path.exists() {
         bail!("no such path: {}", path.display());
@@ -316,7 +367,10 @@ fn run_scan(
     let engine = Engine::with_config(rules, compiled);
 
     let mut report = if let Some(lang) = forced_lang {
-        let root = path.parent().unwrap_or_else(|| Path::new("."));
+        let root = path
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or_else(|| Path::new("."));
         let file = DiscoveredFile {
             path: path.to_path_buf(),
             lang: lang.lang(),
@@ -334,6 +388,67 @@ fn run_scan(
         report.suppressed_findings += before - report.findings.len();
     }
 
+    let dir = if path.is_dir() {
+        path
+    } else {
+        path.parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or(Path::new("."))
+    };
+    if let Ok(output) = std::process::Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args(["rev-parse", "HEAD"])
+        .output()
+    {
+        if output.status.success() {
+            let commit = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if commit.len() == 40 && commit.bytes().all(|b| b.is_ascii_hexdigit()) {
+                report.target.commit = Some(commit);
+            }
+        }
+    }
+    if report.target.commit.is_some() {
+        report.target.dirty = std::process::Command::new("git")
+            .arg("-C")
+            .arg(dir)
+            .args(["status", "--porcelain"])
+            .output()
+            .ok()
+            .filter(|o| o.status.success())
+            .map(|o| !o.stdout.is_empty());
+    }
+    for language in required_languages {
+        let entries: Vec<_> = report
+            .inventory
+            .iter()
+            .filter(|e| &e.language == language)
+            .collect();
+        if entries.is_empty()
+            || entries.iter().any(|e| {
+                e.outcome != pons_core::coverage::Outcome::Analysed || !e.analysis_complete
+            })
+        {
+            report.coverage_failures.push(format!(
+                "required language {language}: absent or incomplete"
+            ));
+        }
+    }
+
+    let coverage_failed = report.files_scanned == 0
+        || !report.coverage_failures.is_empty()
+        || (fail_on_skips && !report.skipped.is_empty());
+    let finding_threshold = fail_on.is_some_and(|threshold| {
+        report.findings.iter().any(|f| {
+            f.evidence() != EvidenceClass::Speculative
+                && severity_rank(f.severity()) >= threshold.rank()
+        })
+    });
+    report.exit_code = Some(if coverage_failed {
+        2
+    } else {
+        u8::from(finding_threshold)
+    });
     let rendered = match format {
         Format::Human => Ok(human::render_report(&report, explain)),
         Format::Json => json::render(&report),
@@ -342,19 +457,9 @@ fn run_scan(
     emit(&rendered)?;
     report_to_stderr(&report);
 
-    if fail_on_skips && !report.skipped.is_empty() {
-        return Ok(2);
-    }
-
-    // SPECULATIVE findings can never trigger a non-zero exit, regardless of
-    // --fail-on: the tool never dresses a heuristic as a verdict.
-    let should_fail = fail_on.is_some_and(|threshold| {
-        report.findings.iter().any(|f| {
-            f.evidence() != EvidenceClass::Speculative
-                && severity_rank(f.severity()) >= threshold.rank()
-        })
-    });
-    Ok(u8::from(should_fail))
+    Ok(report
+        .exit_code
+        .expect("CLI set exit code before rendering"))
 }
 
 /// Everything the operator needs and no machine consumer asked for goes to

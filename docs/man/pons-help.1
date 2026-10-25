@@ -1,0 +1,34 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH pons-help 1  "help "
+.SH NAME
+pons\-help \- Print this message or the help of the given subcommand(s)
+.SH SYNOPSIS
+\fBpons help\fR [\fIsubcommands\fR]
+.SH DESCRIPTION
+Print this message or the help of the given subcommand(s)
+.SH SUBCOMMANDS
+.TP
+pons\-help\-scan(1)
+Scan a file or directory and report findings
+.TP
+pons\-help\-catalogue(1)
+Print the rule catalogue generated from the live registry
+.TP
+pons\-help\-wharf\-trace(1)
+Check supplied Wharf events against the bounded transfer model
+.TP
+pons\-help\-validate\-report(1)
+Validate a scan report; schema validity alone is not an assurance pass
+.TP
+pons\-help\-man(1)
+Generate the main or a subcommand man page from the live command model
+.TP
+pons\-help\-doctor(1)
+Show optional adapter executables without claiming they are tested
+.TP
+pons\-help\-trace(1)
+Check an explicit ordered JSON event trace against a TOML protocol
+.TP
+pons\-help\-help(1)
+Print this message or the help of the given subcommand(s)

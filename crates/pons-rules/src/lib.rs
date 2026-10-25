@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
+pub mod php;
 pub mod registry;
 pub mod t0;
 pub mod t1;
@@ -27,7 +28,7 @@ pub fn catalogue() -> String {
             .join(", ");
         let _ = writeln!(out, "Languages: {languages}.\n");
     }
-    out
+    out.trim_end().to_string() + "\n"
 }
 
 #[cfg(test)]

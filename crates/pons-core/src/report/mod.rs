@@ -3,6 +3,7 @@
 pub mod human;
 pub mod json;
 pub mod sarif;
+pub mod validate;
 
 /// A colour-independent suffix demoting `SPECULATIVE` findings from a verdict
 /// to a heuristic.
@@ -67,6 +68,11 @@ pub(crate) mod fixture {
 
     pub(crate) fn report() -> ScanReport {
         ScanReport {
+            inventory: Vec::new(),
+            target: crate::evidence::Target::default(),
+            exit_code: None,
+            anchors: std::collections::BTreeMap::new(),
+            coverage_failures: Vec::new(),
             root: ".".to_string(),
             // Already in the order `Engine::scan_files` sorts into: by file,
             // then byte offset.

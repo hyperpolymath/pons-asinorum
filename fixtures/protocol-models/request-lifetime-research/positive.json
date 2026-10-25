@@ -1,0 +1,27 @@
+[
+  {
+    "instance": "case",
+    "call": "initialize",
+    "line": 1
+  },
+  {
+    "instance": "case",
+    "call": "publish_request_state",
+    "line": 2
+  },
+  {
+    "instance": "case",
+    "call": "release_request",
+    "line": 3
+  },
+  {
+    "instance": "case",
+    "call": "start_next_request",
+    "line": 4
+  },
+  {
+    "instance": "case",
+    "call": "consume",
+    "line": 5
+  }
+]

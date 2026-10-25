@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: MPL-2.0
+schema_version = "0.2.0"
+strict_transitions = true
+id = "context-encoding"
+description = "Reduced explicit-event model; not source-derived evidence"
+channel = "fixture-instance"
+states = ["raw", "html", "javascript", "emitted"]
+initial = "raw"
+
+[[transition]]
+on = "escape_html"
+from = "raw"
+to = "html"
+
+[[transition]]
+on = "escape_javascript"
+from = "raw"
+to = "javascript"
+
+[[transition]]
+on = "emit_html"
+from = "html"
+to = "emitted"
+
+[[transition]]
+on = "emit_javascript"
+from = "javascript"
+to = "emitted"

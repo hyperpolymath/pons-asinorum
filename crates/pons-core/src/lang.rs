@@ -9,6 +9,7 @@ pub enum Lang {
     TypeScript,
     Tsx,
     Rust,
+    Php,
 }
 
 impl Lang {
@@ -16,11 +17,12 @@ impl Lang {
     /// `tree-sitter-javascript` grammar parses JSX natively, and TSX is
     /// reserved for files with actual TypeScript type annotations.
     pub fn from_extension(ext: &str) -> Option<Self> {
-        match ext {
+        match ext.to_ascii_lowercase().as_str() {
             "py" => Some(Lang::Python),
             "js" | "mjs" | "cjs" | "jsx" => Some(Lang::JavaScript),
-            "ts" => Some(Lang::TypeScript),
+            "ts" | "mts" | "cts" => Some(Lang::TypeScript),
             "tsx" => Some(Lang::Tsx),
+            "php" | "phtml" | "php5" | "inc" => Some(Lang::Php),
             "rs" => Some(Lang::Rust),
             _ => None,
         }
@@ -37,6 +39,16 @@ impl Lang {
             Lang::TypeScript => "typescript",
             Lang::Tsx => "tsx",
             Lang::Rust => "rust",
+            Lang::Php => "php",
+        }
+    }
+
+    pub fn parser_version(self) -> &'static str {
+        match self {
+            Lang::Python | Lang::JavaScript => "0.25.0",
+            Lang::TypeScript | Lang::Tsx => "0.23.2",
+            Lang::Rust => "0.24.2",
+            Lang::Php => "0.25.1",
         }
     }
 
@@ -47,6 +59,7 @@ impl Lang {
             Lang::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
             Lang::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
             Lang::Rust => tree_sitter_rust::LANGUAGE.into(),
+            Lang::Php => tree_sitter_php::LANGUAGE_PHP.into(),
         }
     }
 }
@@ -73,6 +86,7 @@ mod tests {
             Lang::TypeScript,
             Lang::Tsx,
             Lang::Rust,
+            Lang::Php,
         ] {
             let mut parser = tree_sitter::Parser::new();
             parser

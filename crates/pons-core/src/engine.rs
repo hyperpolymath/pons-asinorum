@@ -8,6 +8,7 @@ use tree_sitter::Tree;
 
 use crate::cfg::{self, FunctionUnit};
 use crate::config::CompiledConfig;
+use crate::coverage::{InventoryEntry, Outcome};
 use crate::finding::{Finding, RawFinding};
 use crate::lang::Lang;
 use crate::source::DiscoveredFile;
@@ -23,6 +24,7 @@ pub struct RuleCtx<'a> {
     /// (and, from M5, T2) rule. Rebuilding it per rule would be exactly the
     /// wasted work this tool exists to flag.
     units: OnceCell<Vec<FunctionUnit>>,
+    php: OnceCell<crate::php::Analysis>,
 }
 
 impl<'a> RuleCtx<'a> {
@@ -37,6 +39,7 @@ impl<'a> RuleCtx<'a> {
             text,
             tree,
             units: OnceCell::new(),
+            php: OnceCell::new(),
         }
     }
 
@@ -44,6 +47,11 @@ impl<'a> RuleCtx<'a> {
     /// Python, so a JS/TS/Rust file never pays for a Python CFG.
     /// Builds and caches the units on first access, including opaque units.
     /// Panics from [`cfg::build_units`] propagate to the caller.
+    pub fn php(&self) -> &crate::php::Analysis {
+        self.php
+            .get_or_init(|| crate::php::analyse(self.tree, self.text))
+    }
+
     pub fn units(&self) -> &[FunctionUnit] {
         self.units.get_or_init(|| match self.lang {
             Lang::Python => cfg::build_units(self.path, self.text, self.tree),
@@ -100,6 +108,11 @@ pub struct RuleInfo {
 /// same, and per-file tolerance needs somewhere to put what it skipped.
 #[derive(Debug, Clone)]
 pub struct ScanReport {
+    pub inventory: Vec<InventoryEntry>,
+    pub target: crate::evidence::Target,
+    pub exit_code: Option<u8>,
+    pub anchors: std::collections::BTreeMap<String, String>,
+    pub coverage_failures: Vec<String>,
     /// The root exactly as the caller gave it — never canonicalised, so
     /// relative invocations stay relative in the output.
     pub root: String,
@@ -112,6 +125,24 @@ pub struct ScanReport {
     pub transcoded: BTreeSet<String>,
     pub suppressed_findings: usize,
     pub rules: Vec<RuleInfo>,
+}
+
+impl ScanReport {
+    pub fn coverage_status(&self) -> &'static str {
+        if self.files_scanned == 0 {
+            "no-applicable-input"
+        } else if !self.skipped.is_empty()
+            || !self.coverage_failures.is_empty()
+            || self
+                .inventory
+                .iter()
+                .any(|e| e.outcome == Outcome::Analysed && !e.analysis_complete)
+        {
+            "partial"
+        } else {
+            "complete-within-policy"
+        }
+    }
 }
 
 /// One ordering for skips, wherever they came from.
@@ -160,6 +191,16 @@ impl Engine {
     pub fn scan(&self, root: &Path) -> anyhow::Result<ScanReport> {
         let discovery = source::discover(root)?;
         let mut report = self.scan_files(root, &discovery.files);
+        report.inventory.extend(discovery.inventory);
+        for skip in &discovery.skipped {
+            if !report.inventory.iter().any(|e| e.path == skip.path) {
+                report.inventory.push(InventoryEntry::unreadable_path(
+                    Path::new(&skip.path),
+                    &skip.reason,
+                ));
+            }
+        }
+        report.inventory.sort_by(|a, b| a.path.cmp(&b.path));
         report.skipped.extend(discovery.skipped);
         // `scan_files` sorted what it produced; the discovery skips arrive
         // after that, so the merged list is sorted again rather than left in
@@ -180,6 +221,9 @@ impl Engine {
     /// Panics from rule checks propagate to the caller.
     pub fn scan_files(&self, root: &Path, files: &[DiscoveredFile]) -> ScanReport {
         let mut findings = Vec::new();
+        let mut anchors = std::collections::BTreeMap::new();
+        let mut occurrences = std::collections::BTreeMap::<String, usize>::new();
+        let mut inventory = Vec::new();
         let mut skipped = Vec::new();
         let mut languages = BTreeSet::new();
         let mut transcoded = BTreeSet::new();
@@ -187,9 +231,21 @@ impl Engine {
         let mut files_scanned = 0usize;
 
         for file in files {
-            let src = match source::read(file) {
+            let (src, digest) = match source::read_with_digest(file) {
                 Ok(src) => src,
                 Err(e) => {
+                    inventory.push(
+                        InventoryEntry::new(
+                            &file.path,
+                            if e.to_string().contains("analysis limit") {
+                                Outcome::Timeout
+                            } else {
+                                Outcome::Unreadable
+                            },
+                            e.to_string(),
+                        )
+                        .with_language(file.lang),
+                    );
                     skipped.push(SkippedFile {
                         path: file.path.display().to_string(),
                         reason: format!("could not read: {e}"),
@@ -201,6 +257,16 @@ impl Engine {
             let tree = match parse::parse(&src) {
                 Ok(tree) => tree,
                 Err(e) => {
+                    let outcome = if e.to_string().contains("budget exhausted") {
+                        Outcome::Timeout
+                    } else {
+                        Outcome::ParseError
+                    };
+                    let mut item = InventoryEntry::new(&file.path, outcome, e.to_string())
+                        .with_language(file.lang);
+                    item.artifact_digest = Some(digest);
+                    item.transcoded = src.transcoded;
+                    inventory.push(item);
                     skipped.push(SkippedFile {
                         path: file.path.display().to_string(),
                         reason: format!("could not parse: {e}"),
@@ -209,13 +275,57 @@ impl Engine {
                 }
             };
 
+            if !self.rules.is_empty()
+                && !self.rules.iter().any(|r| r.languages().contains(&src.lang))
+            {
+                let reason = "no selected rule applies to this grammar";
+                let mut item = InventoryEntry::new(&file.path, Outcome::Unsupported, reason)
+                    .with_language(src.lang);
+                item.artifact_digest = Some(digest);
+                item.transcoded = src.transcoded;
+                inventory.push(item);
+                skipped.push(SkippedFile {
+                    path: file.path.display().to_string(),
+                    reason: reason.into(),
+                });
+                continue;
+            }
+            let ctx = RuleCtx::new(&src.path, src.lang, &src.text, &tree);
+            let mut item = InventoryEntry::new(
+                &file.path,
+                Outcome::Analysed,
+                "native AST; only registered applicable rules executed",
+            );
+            item.language = src.lang.name().into();
+            item.artifact_digest = Some(digest);
+            item.analysis_complete = true;
+            item.parser = Some(format!(
+                "tree-sitter 0.27.0 / {} {}",
+                src.lang.name(),
+                src.lang.parser_version()
+            ));
+            item.transcoded = src.transcoded;
+            if src.lang == Lang::Php {
+                let a = ctx.php();
+                item.analysis_complete = a.unknowns.is_empty();
+                item.analysis_notes = a.unknowns.clone();
+                item.analysis_notes.push("PHP: local CFG/may-flow only; no Composer/include/callback/trait dispatch summaries; no exception/finally flow".into());
+            }
+            if src.lang == Lang::Python {
+                for unit in ctx.units() {
+                    if let FunctionUnit::Opaque { name, reason, .. } = unit {
+                        item.analysis_complete = false;
+                        item.analysis_notes
+                            .push(format!("opaque Python function {name}: {reason}"));
+                    }
+                }
+            }
+            inventory.push(item);
             files_scanned += 1;
             languages.insert(src.lang);
             if src.transcoded {
                 transcoded.insert(src.path.display().to_string());
             }
-
-            let ctx = RuleCtx::new(&src.path, src.lang, &src.text, &tree);
 
             for rule in &self.rules {
                 if rule.languages().contains(&src.lang) {
@@ -226,6 +336,28 @@ impl Engine {
                         {
                             suppressed_findings += 1;
                         } else {
+                            let loc = finding.location();
+                            let snippet = src
+                                .text
+                                .get(loc.byte_start..loc.byte_end)
+                                .unwrap_or("")
+                                .split_whitespace()
+                                .collect::<Vec<_>>()
+                                .join(" ");
+                            let occurrence = occurrences
+                                .entry(format!("{}:{}:{}", rule.id(), loc.file, snippet))
+                                .or_default();
+                            anchors.insert(
+                                format!(
+                                    "{}:{}:{}:{}",
+                                    rule.id(),
+                                    loc.file,
+                                    loc.byte_start,
+                                    loc.byte_end
+                                ),
+                                format!("{snippet}#{occurrence}"),
+                            );
+                            *occurrence += 1;
                             findings.push(finding);
                         }
                     }
@@ -245,9 +377,15 @@ impl Engine {
                 .then(x.byte_start.cmp(&y.byte_start))
                 .then_with(|| a.rule_id().cmp(b.rule_id()))
         });
+        findings.dedup_by(|a, b| a.rule_id() == b.rule_id() && a.location() == b.location());
         sort_skips(&mut skipped);
 
         ScanReport {
+            inventory,
+            target: crate::evidence::Target::default(),
+            exit_code: None,
+            anchors,
+            coverage_failures: Vec::new(),
             root: root.display().to_string(),
             findings,
             files_scanned,

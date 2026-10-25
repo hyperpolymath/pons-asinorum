@@ -1,0 +1,411 @@
+// SPDX-License-Identifier: MPL-2.0
+use serde_json::Value;
+use std::{fs, path::PathBuf, process::Command};
+struct Temp(PathBuf);
+impl Temp {
+    fn new() -> Self {
+        let p = std::env::temp_dir().join(format!(
+            "pons-cli-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&p).unwrap();
+        Self(p)
+    }
+    fn scan(&self, args: &[&str]) -> std::process::Output {
+        Command::new(env!("CARGO_BIN_EXE_pons"))
+            .arg("scan")
+            .arg(&self.0)
+            .args(args)
+            .output()
+            .unwrap()
+    }
+}
+impl Drop for Temp {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+#[test]
+fn no_input_is_not_success_even_without_strict_flag() {
+    let t = Temp::new();
+    for format in ["human", "json", "sarif"] {
+        let out = t.scan(&["--format", format]);
+        assert_eq!(out.status.code(), Some(2));
+        assert!(String::from_utf8_lossy(&out.stdout).contains("no-applicable-input"));
+    }
+}
+#[test]
+fn inventory_accounts_for_supported_unsupported_excluded_and_parse_error() {
+    let t = Temp::new();
+    for (name, text) in [
+        ("good.py", "x = 1"),
+        ("bad.py", "def (:"),
+        ("app.hs", "main = pure ()"),
+        ("config.json", "{}"),
+        ("notes.txt", "words"),
+        ("ignored.py", "x = 2"),
+        (".ponsignore", "ignored.py\n"),
+    ] {
+        fs::write(t.0.join(name), text).unwrap();
+    }
+    let out = t.scan(&["--format", "json", "--fail-on-skips"]);
+    assert_eq!(out.status.code(), Some(2));
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["schema_version"], "0.4.0");
+    let inv = v["scanned"]["inventory"].as_array().unwrap();
+    assert_eq!(inv.len(), 7);
+    for (name, status) in [
+        ("good.py", "analysed"),
+        ("bad.py", "parse-error"),
+        ("app.hs", "unsupported"),
+        ("config.json", "unsupported"),
+        ("notes.txt", "excluded-by-policy"),
+        ("ignored.py", "excluded-by-policy"),
+    ] {
+        assert_eq!(
+            inv.iter()
+                .find(|e| e["path"].as_str().unwrap().ends_with(name))
+                .unwrap()["outcome"],
+            status
+        );
+    }
+    assert_eq!(v["scanned"]["coverage_status"], "partial");
+}
+#[test]
+fn absent_required_language_cannot_be_suppressed() {
+    let t = Temp::new();
+    fs::write(t.0.join("ok.py"), "x = 1").unwrap();
+    let out = t.scan(&["--format", "json", "--require-language", "haskell"]);
+    assert_eq!(out.status.code(), Some(2));
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(
+        v["scanned"]["coverage_failures"].as_array().unwrap().len(),
+        1
+    );
+}
+#[test]
+fn generated_report_validates_and_malformed_claims_fail_closed() {
+    let t = Temp::new();
+    fs::write(
+        t.0.join("sample.php"),
+        "<?php function render() { echo $_GET['x']; }",
+    )
+    .unwrap();
+    let out = t.scan(&["--format", "json"]);
+    assert_eq!(out.status.code(), Some(0));
+    let original = String::from_utf8(out.stdout).unwrap();
+    assert!(pons_core::report::validate::validate(&original).is_ok());
+    let v: Value = serde_json::from_str(&original).unwrap();
+    for (path, bad) in [
+        ("/scanned/files", serde_json::json!(0)),
+        ("/findings/0/evidence", serde_json::json!("PROTOCOL")),
+        ("/counts/total", serde_json::json!(999)),
+        ("/schema_version", serde_json::json!("0.3.0")),
+        ("/tool/name", serde_json::json!("another-tool")),
+        ("/tool/source_dirty", serde_json::json!("maybe")),
+        (
+            "/evidence_contract/records/0/path",
+            serde_json::json!("other.php"),
+        ),
+        ("/evidence_contract/records/0/line", serde_json::json!(99)),
+        (
+            "/evidence_contract/records/0/trace",
+            serde_json::json!("different trace"),
+        ),
+        (
+            "/evidence_contract/records/0/counterconditions",
+            serde_json::json!(["different premise"]),
+        ),
+        (
+            "/evidence_contract/records/0/assumptions",
+            serde_json::json!(["unconditional proof"]),
+        ),
+        (
+            "/evidence_contract/records/0/unknown_edges",
+            serde_json::json!(["different unknown"]),
+        ),
+        (
+            "/evidence_contract/records/0/fingerprint",
+            serde_json::json!("fake"),
+        ),
+    ] {
+        let mut m = v.clone();
+        *m.pointer_mut(path).unwrap() = bad;
+        assert!(
+            pons_core::report::validate::validate(&m.to_string()).is_err(),
+            "accepted {path}"
+        );
+    }
+    for field in ["severity", "message", "counter_condition"] {
+        let mut m = v.clone();
+        m["findings"][0].as_object_mut().unwrap().remove(field);
+        assert!(
+            pons_core::report::validate::validate(&m.to_string()).is_err(),
+            "accepted missing {field}"
+        );
+    }
+    for path in ["", "/tool", "/findings/0", "/scanned"] {
+        let mut m = v.clone();
+        m.pointer_mut(path)
+            .unwrap()
+            .as_object_mut()
+            .unwrap()
+            .insert("unknown_property".into(), serde_json::json!(true));
+        assert!(
+            pons_core::report::validate::validate(&m.to_string()).is_err(),
+            "accepted extra property at {path}"
+        );
+    }
+    assert!(pons_core::report::validate::validate("{}").is_err());
+    assert!(pons_core::report::validate::validate("not json").is_err());
+}
+
+#[test]
+fn forced_parser_without_applicable_rule_keeps_actual_provenance() {
+    let t = Temp::new();
+    let file = t.0.join("script.py");
+    // Non-UTF-8 source exercises the transcode provenance as well.
+    fs::write(&file, b"<?php // caf\xe9\nfunction f() { return 1; }").unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_pons"))
+        .arg("scan")
+        .arg(&file)
+        .args([
+            "--lang",
+            "php",
+            "--rule",
+            "self-assignment",
+            "--format",
+            "json",
+            "--require-language",
+            "php",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    let entry = &v["scanned"]["inventory"][0];
+    assert_eq!(entry["language"], "php");
+    assert_eq!(entry["outcome"], "unsupported");
+    assert!(entry["parser"].as_str().unwrap().contains("php 0.25.1"));
+    assert!(entry["artifact_digest"]
+        .as_str()
+        .unwrap()
+        .starts_with("blake3:"));
+    assert_eq!(entry["transcoded"], true);
+    assert!(pons_core::report::validate::validate(&String::from_utf8(out.stdout).unwrap()).is_ok());
+}
+
+#[test]
+fn imported_sanitizer_alias_is_partial_and_fails_required_php_coverage() {
+    let t = Temp::new();
+    fs::write(t.0.join("alias.php"), "<?php use function App\\identity as htmlspecialchars; function f() { echo htmlspecialchars($_GET['x']); }").unwrap();
+    let out = t.scan(&["--format", "json", "--require-language", "php"]);
+    assert_eq!(out.status.code(), Some(2));
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["scanned"]["coverage_status"], "partial");
+    assert_eq!(v["scanned"]["inventory"][0]["analysis_complete"], false);
+    assert!(v["scanned"]["inventory"][0]["analysis_notes"]
+        .to_string()
+        .contains("import"));
+    let human = t.scan(&["--format", "human"]);
+    let human = String::from_utf8(human.stdout).unwrap();
+    assert!(human.contains("alias.php"));
+    assert!(human.contains("analysis incomplete:") && human.contains("import"));
+}
+
+#[test]
+fn estate_formats_are_visible_unsupported_configuration() {
+    let t = Temp::new();
+    for name in [
+        "repo.deed",
+        "component.k9",
+        "coordination.k9",
+        "config.kyaml",
+        "records.jsonl",
+    ] {
+        fs::write(t.0.join(name), "placeholder").unwrap();
+    }
+    let out = t.scan(&["--format", "json", "--fail-on-skips"]);
+    assert_eq!(out.status.code(), Some(2));
+    let value: Value = serde_json::from_slice(&out.stdout).unwrap();
+    let inventory = value["scanned"]["inventory"].as_array().unwrap();
+    assert_eq!(inventory.len(), 5);
+    assert!(inventory.iter().all(|e| e["outcome"] == "unsupported"
+        && e["language"] == "configuration"
+        && e["parser"].is_null()));
+    assert_eq!(value["scanned"]["skipped"].as_array().unwrap().len(), 5);
+}
+
+#[test]
+fn bare_forced_file_has_nonempty_root_and_valid_evidence_offline() {
+    let t = Temp::new();
+    fs::write(
+        t.0.join("extensionless"),
+        "<?php function f() { echo $_GET['x']; }",
+    )
+    .unwrap();
+    for args in [vec!["--lang", "php"], vec![]] {
+        let file = if args.is_empty() {
+            "sample.php"
+        } else {
+            "extensionless"
+        };
+        fs::copy(t.0.join("extensionless"), t.0.join("sample.php")).unwrap();
+        let output = Command::new(env!("CARGO_BIN_EXE_pons"))
+            .current_dir(&t.0)
+            .args(["scan", file, "--format", "json"])
+            .args(args)
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(0));
+        let text = String::from_utf8(output.stdout).unwrap();
+        let value: Value = serde_json::from_str(&text).unwrap();
+        assert!(!value["scanned"]["root"].as_str().unwrap().is_empty());
+        assert!(!value["findings"].as_array().unwrap().is_empty());
+        fs::remove_file(t.0.join(file)).unwrap();
+        assert!(pons_core::report::validate::validate(&text).is_ok());
+        fs::write(
+            t.0.join("extensionless"),
+            "<?php function f() { echo $_GET['x']; }",
+        )
+        .unwrap();
+    }
+}
+
+#[test]
+fn inline_suppression_requires_distinct_reason_owner_and_expiry() {
+    let t = Temp::new();
+    for (metadata, expected) in [
+        ("owner=me | expires=4102444800", 0),
+        ("expires=4102444800 | owner=me", 0),
+        ("fixture | owner=me | owner=other | expires=4102444800", 0),
+        (
+            "fixture | owner=me | expires=4102444800 | expires=4102444801",
+            0,
+        ),
+        ("fixture | owner=me | expires=4102444800", 1),
+        ("fixture | expires=4102444800 | owner=me", 1),
+    ] {
+        fs::write(
+            t.0.join("a.py"),
+            format!("# pons:allow self-assignment -- {metadata}\nx = x\n"),
+        )
+        .unwrap();
+        let out = t.scan(&["--format", "json", "--rule", "self-assignment"]);
+        assert_eq!(out.status.code(), Some(0));
+        let value: Value = serde_json::from_slice(&out.stdout).unwrap();
+        assert_eq!(
+            value["scanned"]["suppressed_findings"], expected,
+            "{metadata}"
+        );
+        assert_eq!(value["counts"]["total"], 1 - expected, "{metadata}");
+    }
+}
+#[test]
+fn fingerprints_survive_checkout_move_and_blank_line_insertion() {
+    let a = Temp::new();
+    let b = Temp::new();
+    fs::write(
+        a.0.join("x.php"),
+        "<?php function render() { echo $_GET['x']; }",
+    )
+    .unwrap();
+    fs::write(
+        b.0.join("x.php"),
+        "<?php\n\nfunction render() { echo $_GET['x']; }",
+    )
+    .unwrap();
+    let av: Value = serde_json::from_slice(&a.scan(&["--format", "json"]).stdout).unwrap();
+    let bv: Value = serde_json::from_slice(&b.scan(&["--format", "json"]).stdout).unwrap();
+    assert_eq!(
+        av["evidence_contract"]["records"][0]["fingerprint"],
+        bv["evidence_contract"]["records"][0]["fingerprint"]
+    );
+}
+#[test]
+fn suppression_metadata_is_required_and_never_hides_coverage() {
+    let t = Temp::new();
+    fs::write(t.0.join("a.py"), "x = x\n").unwrap();
+    fs::write(t.0.join("b.ex"), "defmodule B do end\n").unwrap();
+    fs::write(
+        t.0.join("pons.toml"),
+        r#"[[suppress.allow]]
+rule="self-assignment"
+path="a.py"
+reason="fixture"
+owner="test"
+expires=4102444800
+"#,
+    )
+    .unwrap();
+    let out = t.scan(&["--format", "json", "--fail-on-skips"]);
+    assert_eq!(out.status.code(), Some(2));
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["scanned"]["suppressed_findings"], 1);
+    assert!(v["scanned"]["skipped"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|e| e["path"].as_str().unwrap().ends_with("b.ex")));
+    for config in ["[suppress]\npaths=['**']", "[[suppress.allow]]\nrule='self-assignment'\npath='a.py'\nreason='x'\nowner='test'\nexpires=1"] {
+        fs::write(t.0.join("pons.toml"),config).unwrap();assert_eq!(t.scan(&[]).status.code(),Some(2));
+    }
+}
+#[test]
+fn dir_include_resolution_agrees_for_relative_and_absolute_scan_roots() {
+    let t = Temp::new();
+    fs::write(
+        t.0.join("load.php"),
+        "<?php require __DIR__ . '/ready.php';",
+    )
+    .unwrap();
+    fs::write(
+        t.0.join("ready.php"),
+        "<?php function ready() { return true; }",
+    )
+    .unwrap();
+    let absolute = t.scan(&["--format", "json", "--rule", "php-unresolved-include"]);
+    let relative = Command::new(env!("CARGO_BIN_EXE_pons"))
+        .current_dir(&t.0)
+        .args([
+            "scan",
+            ".",
+            "--format",
+            "json",
+            "--rule",
+            "php-unresolved-include",
+        ])
+        .output()
+        .unwrap();
+    for out in [absolute, relative] {
+        assert_eq!(out.status.code(), Some(0));
+        let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+        assert_eq!(v["findings"].as_array().unwrap().len(), 0);
+    }
+}
+#[test]
+fn forced_parser_failure_preserves_language_version_and_artifact_identity() {
+    let t = Temp::new();
+    let file = t.0.join("extensionless");
+    fs::write(&file, "<?php function (").unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_pons"))
+        .arg("scan")
+        .arg(&file)
+        .args(["--lang", "php", "--format", "json"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    let entry = &v["scanned"]["inventory"][0];
+    assert_eq!(entry["language"], "php");
+    assert_eq!(entry["outcome"], "parse-error");
+    assert!(entry["parser"].as_str().unwrap().contains("0.25.1"));
+    assert!(entry["artifact_digest"]
+        .as_str()
+        .unwrap()
+        .starts_with("blake3:"));
+}

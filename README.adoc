@@ -12,27 +12,32 @@ image:https://api.scorecard.dev/projects/github.com/hyperpolymath/pons-asinorum/
 image:https://archive.softwareheritage.org/badge/origin/https://github.com/hyperpolymath/pons-asinorum/[Archived in Software Heritage,link="https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/hyperpolymath/pons-asinorum"]
 
 *pons-asinorum* — after the _pons asinorum_ (Euclid I.5, the "bridge of asses"), the
-historical test that separates real understanding from rote. A lightweight,
-multi-language static scanner that flags the small set of mistakes
-mathematicians and computing experts spot on sight but ordinary coders miss —
-*dead work*, *self-contradiction*, and *missing escape hatches* — and reports
-each finding with an honest label for how strong the evidence is.
+historical test that separates real understanding from rote. An
+evidence-conscious structural, dataflow and protocol analyser for *dead work*,
+*self-contradiction*, unsafe value flows and broken operation-order contracts.
+Each finding states what supports it and where the analysis stops.
 
 Design companion to
-https://github.com/hyperpolymath/panic-attack[panic-attack]: panic-attack is
-breadth (49 languages, security/panic weak points, line-level patterns +
-relational reasoning); pons-asinorum is depth (a few languages, parse trees + real
-dataflow + typestate, waste/contradiction smells). See
-link:docs/adr/0004-companion-to-panic-attack.adoc[ADR-0004].
+https://github.com/hyperpolymath/panic-attack[panic-attack]: its security and
+resilience analysis complements Pons's narrow structural and contract models.
+They exchange versioned evidence while retaining independent analyses and
+identities. Pons currently checks explicit protocol traces; source-derived
+typestate remains planned. Read
+link:docs/PURPOSE-AND-PROOF.adoc[purpose, differences, limits and proof opportunities]
+and link:docs/adr/0004-companion-to-panic-attack.adoc[ADR-0004].
 
 == Status
 
 *Implementation in progress toward v0.1.0.* Milestones M0–M4 are present: the
-Rust workspace, scanning engine, five tree-sitter languages, eight T0 rules,
-JSON/SARIF reporters, and a Python CFG with two T1 dataflow rules. Ten rules
-are registered. `pons scan <PATH>`, `pons catalogue`, `pons man`, `pons doctor`
-and `pons trace` exist; `pons.toml` suppression, inline allowances, rule/language
-selection, `--explain`, `--no-speculative` and `--fail-on-skips` are implemented.
+Rust workspace, scanning engine, six native tree-sitter grammars including PHP,
+JSON 0.4.0/SARIF reporters, Python CFG/dataflow and a bounded PHP context-flow
+slice. Thirteen source rules are registered (ten T0, three T1).
+`pons scan <PATH>`, `pons catalogue`, `pons man`, `pons doctor`, `pons trace`,
+`pons wharf-trace` and `pons validate-report` exist;
+`pons.toml` suppression, inline allowances, rule/language
+selection, `--explain`, `--no-speculative`, `--fail-on-skips` and required-language
+coverage are implemented. Unsupported and opaque inputs remain visible; a
+zero-file run exits 2. See link:docs/COVERAGE-MIGRATION.adoc[migration notes].
 
 Still open for the v0.1.0 acceptance sweep: source-derived T2 typestate, T3
 speculative rules, external-corpus precision/recall gates with confidence
@@ -61,7 +66,10 @@ Read in this order:
   implementation plan with acceptance gates and appendices (dataflow
   equations, query guidance, JSON schema, SARIF mapping, dependency pins).
 
-For formal verification and proof status, see link:PROOF-PROGRESS.adoc[PROOF-PROGRESS.adoc].
+Working finite-domain dataflow solvers and explicit-trace models are present.
+No integrated SMT backend or machine-checked soundness proof is present. See
+link:PROOF-PROGRESS.adoc[PROOF-PROGRESS.adoc] and the
+link:docs/PORTFOLIO-UPGRADE-REPORT.adoc[measured portfolio report].
 
 == The one-line contract
 

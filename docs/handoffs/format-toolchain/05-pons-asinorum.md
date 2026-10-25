@@ -1,0 +1,21 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+
+# Prompt: finish Pons's format adoption without overstating analysis
+
+Continue the existing hyperpolymath/pons-asinorum upgrade and PR #58. Preserve the original eleven-target PHP/WordPress/Wharf audit scope, coverage correction, false-positive control and evidence tiers. This prompt supplements that work.
+
+Before editing, read the current repository instructions, deed, coordination.k9, plans, issues and open PRs. Recheck the pinned observations below against current HEAD. Preserve concurrent work and use bounded, reviewable commits. Implement and test; do not stop at recommendations. Record exact commands, tool/source versions, exit codes, fixed seeds, resource limits and actual outcomes. Missing tooling, skipped inputs and unsupported features must remain visible. Do not replace failing gates with placeholders, broad exclusions or optimistic metadata. Keep tests, finite checks, conjectures and machine-checked proofs distinct. Follow metadatastician/standards for DEED/K9, KYAML and I-JSON/JCS. A migration is complete only when its consumers and validators work, not when extensions are renamed.
+
+At inspection, PR #58 head e7872fb8f605f8da8779b68f8a8d11c15386c4aa includes native PHP parsing, bounded intraprocedural taint, finite Python dataflow worklists, supplied-event protocol models and a purpose/proof guide. It does not establish a source-derived universal verifier or machine-checked soundness.
+
+1. Resolve current review findings, rerun meaningful checks and complete the authorized push/merge only with required protection intact. Reconcile overlapping PR #57 rather than merging incompatible schemas independently.
+2. Inventory .deed, .k9, .kyaml, .json and .jsonl before adapter selection. Account for unsupported configuration and legacy A2ML explicitly. Filename recognition is not parsing or security analysis; strict coverage must remain non-green for unsupported inputs.
+3. Migrate repository metadata using metadatastician/standards' actual DEED grammar and K9 coordination contract. Keep the front door pointer-only, put attested reality in the repository deed, and audit live readers before retiring legacy files. Do not copy stale “planning” or unimplemented proof claims.
+4. Repair workflow/configuration field checks to use yq and test both block YAML and canonical flow KYAML, malformed inputs and missing-tool failure. Preserve tool-required filenames, comments, exact action pins and lockfiles.
+5. Adopt a tested, pinned hyperpolymath/ijson-jcs strict raw-input API where reports cross the trust boundary. Reject duplicate keys before serde map construction; then apply the versioned JSON schema and semantic cross-record checks. Compare copied evidence locations, traces, assumptions and counterconditions to their findings.
+6. Define canonical report bytes and LF framing through a documented schema/CLI migration. Do not pretend sorted serde output is RFC 8785. Keep historical raw evidence unchanged; convert newly authored policy/schema files only with tested tooling and record exceptions.
+7. Consume kyq only after its installed CLI passes the required contract. In the meantime use functioning, pinned tools; missing kyq must never become a successful format check. DEED/K9 validation and source security analysis remain separate capabilities.
+8. Keep Pons's purpose explicit: structural, dataflow and protocol evidence with traces, assumptions, counterconditions, unknown edges and complete coverage accounting. panic-attack remains an independently identifiable producer. Shared fixtures and correlated heuristics do not become independent proof.
+9. Extend proof work only through bounded abstractions with executable conformance tests, then checker artifacts tied to the same semantics. Report existing fixed-point analyses separately from future SMT integration, source-to-protocol extraction and mechanized soundness.
+
+Done means tested code and report migration notes, truthful purpose/capability/proof documentation, current review resolution and reproducible portfolio coverage/evidence. If adding new coverage categories changes measured counts, rerun and label the new baseline instead of rewriting historical outcomes.
