@@ -76,8 +76,10 @@ extraction, exhaustive source model checking, cryptographic verification or
 durability verification. A passing trace says nothing about unobserved runs.
 |T3 speculative tier |Demotion and reporting plumbing is tested.
 |No registered T3 source rule. Tiers classify evidence, not a ladder of proof.
-|SMT / proof assistant |No backend dependency, proof artefact or proof-checking
-CI gate in the inspected workspace. The roadmap states proof obligations.
+|SMT / proof assistant |No backend dependency, proof artefact or working local
+proof-checking gate. The vendored `proof-runner-check` is an unconfigured
+placeholder; its status output establishes no proof. The central estate audit
+uses external composites and a green audit does not establish a Pons theorem.
 |SMT discharge, CEGAR, mechanised transfer soundness, termination and
 source-to-model correspondence proofs remain future work.
 |===

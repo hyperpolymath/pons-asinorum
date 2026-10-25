@@ -64,7 +64,13 @@ retain their boundary kind; and the CI example writes reports outside its scan.
 
 The review follow-up passed 213 Rust tests, 46 e2e checks, formatting, clippy,
 documentation drift and repository-aspect checks. All eleven archived upgraded
-reports pass the stronger runtime validator. These checks ran on the working
+reports pass the stronger runtime validator. The release binary at clean commit
+`4f962ce11114228f6c6575aca7627d452e68e712` also reran all eleven targets: analysed
+file/finding counts are unchanged, ten runs remain partial and Gateway has
+no applicable input; all strict exits are 2. Fresh wall/RSS measurements and
+per-language outcomes are in
+link:evidence/2026-10-25/review-portfolio-summary.json[the follow-up summary], with
+link:evidence/2026-10-25/review-portfolio-raw.jsonl.gz[raw reports]. These checks ran on the working
 tree based on `5e0585c0917cdf7262e5d1b25c803248e644ca02`; the earlier measurements
 below remain attributed to their original tested commit, not retroactively to
 the follow-up. See link:evidence/2026-10-25/review-hardening.json[review test log].

@@ -140,8 +140,11 @@ the abstraction, corpus revision and denominator.
 | Gap | Detail
 
 | SMT and machine-checked proofs
-| No backend integration, proof artefact or proof-checking CI gate exists in
-this workspace. Finite-domain convergence arguments and tested transfer
+| No backend integration, proof artefact or working local proof-checking gate
+exists. The vendored proof-runner action is an unconfigured placeholder and
+now reports that honestly; it previously printed success with commands commented
+out. An external estate audit's green status is not a Pons proof.
+Finite-domain convergence arguments and tested transfer
 functions are not a proof of source-to-model correspondence or soundness.
 
 | Source-derived T2 typestate

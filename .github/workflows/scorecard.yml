@@ -20,4 +20,5 @@ permissions:
 
 jobs:
   scorecard:
-    uses: metadatastician/standards/.github/workflows/scorecard-reusable.yml@1f3eef621985b2dd0e7e2d3ac265c0f0ba6b0a78
+    # Same repaired defining lockfile as the scanner; existing token grants suffice.
+    uses: metadatastician/standards/.github/workflows/scorecard-reusable.yml@cf8f91219d80da55cf8cbbfcd587d00c2d8798ed
