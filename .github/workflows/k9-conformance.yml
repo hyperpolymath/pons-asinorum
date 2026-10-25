@@ -50,3 +50,29 @@
 #     uses: metadatastician/standards/.github/workflows/k9-conformance.yml@<accepted-pin>
 #     with:
 #       require-files: true
+
+# A workflow file needs a valid `on:` — a trigger-less file makes GitHub
+# manufacture a failing run attributed to the FILE path on every push (the
+# same artifact documented in secret-scanner.yml). This dispatch-only stub
+# keeps the file valid while the real lane stays unwired: dispatching it
+# reports the measured status and exits 0.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: report measured status
+        run: |
+          echo "k9-conformance: not wirable from this repository (measured 2026-10-25)."
+          echo "The org Actions allowlist does not yet list"
+          echo "  metadatastician/standards/.github/workflows/k9-conformance.yml"
+          echo "so every pin dies at job setup with startup_failure, no job, no log."
+          echo "Intended lane: estate K9 validator over the six verb contracts under .machine_readable/contractiles/*/."
+          echo "See the measured record above; restore the call once the estate lists the reusable."
