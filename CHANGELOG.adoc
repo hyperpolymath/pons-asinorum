@@ -108,6 +108,41 @@
 
 * `docs/CI-CD.adoc`: the CI/CD contract — what runs, what is required, what
   each gate may assume, and the failure modes this repository actually hit.
+* The #55/#56 production-hardening pass, recorded here so the log names it:
+  reconciled documentation and actual capabilities; SARIF invocation
+  notifications for skips and incompleteness (issue #32); artifact-correct
+  byte offsets, omitted for transcoded inputs (issue #33); inline and
+  project-scoped suppression with a compiled `pons.toml`; the
+  `catalogue`/`man`/`doctor`/`trace` commands generated from live
+  definitions; explicit ordered trace-protocol checking (`pons-protocols`);
+  the measured false-positive repairs to `read-before-init` (bounded
+  correlated-guard pruning, source-ordered pairing); and the e2e harness fix
+  that stopped exit codes being read stale across command substitutions.
+* Estate deed-era metadata (A2ML retired per owner rulings D99, D269c, D312,
+  D313): `pons-asinorum_chora.deed` (the repository's facts),
+  `0-AI-MANIFEST.deed` (the agent front door: purpose, routing, invariants,
+  attestation) and `coordination.k9` (the nerve receptor, schema 1.2.0).
+  Both deeds pass the estate's normative DEED linter (grammar v1.2.0); the
+  legacy `.machine_readable/` descriptiles remain as frozen source pointers
+  and are not extended.
+* DEED and K9 conformance lanes are PREPARED but not wirable from this
+  repository — measured, twice, on the first runs of this change: called at
+  the accepted pin (`cf8f9121`, the one the secret-scanner lane runs) and
+  at master, both calls die at job setup with `startup_failure`, no job and
+  no log. The variable is not the pin: it is the org Actions allowlist.
+  Under the estate's `selected` actions posture GitHub kills at startup any
+  `uses:` of a reusable workflow the org's live `patterns_allowed` does not
+  list; the secret-scanner reusable is listed, `deed-conformance.yml` and
+  `k9-conformance.yml` are not, and both workflow files here document the
+  measurement and the exact calls to restore once the estate lists them.
+  The conformance evidence of record meanwhile: both deeds pass the estate's
+  normative `deed_lint.js` (grammar v1.2.0); the six verb contracts are
+  adopted canon and conform under `k9-validate.sh` (layer 1; layers 2-3
+  skipped honestly, not run); `estate / manifests` passes on this tree.
+* `wiki/` reconciliation: Home, Roadmap and Rule-Catalogue now state the
+  live registry (13 rules over six grammars including PHP), what is
+  verified, and the open precision debt (issue #47) with its Wilson
+  interval.
 * The format policy gates. `ci/yaml-ratchet.kyaml` and
   `ci/json-ratchet.kyaml` account for **every** YAML and JSON file in the
   tree; a file that no ratchet accounts for fails the build. Every JSON
@@ -149,7 +184,6 @@
   run. The installation blocks; the diagnostic reports, because
   `squabble fetch` needs Administration:read, which `GITHUB_TOKEN` does
   not hold.
-
 === Changed
 
 * The estate's format gates are enforced by *closed inventory* rather than
@@ -158,6 +192,21 @@
   Every gate here exits `2` — never `0` — when it cannot look, and every
   gate has a companion test that plants one defect at a time and asserts
   that the gate goes red and names it.
+* The six contractile K9 contracts (`adjust`, `bust`, `dust`, `intend`,
+  `must`, `trust`), `_base.ncl` and `INDEX.a2ml` are adopted from the
+  estate canon (metadatastician/standards at `8e48b1c`). The contracts now
+  carry the v1.0.0 pedigree — `schema_version`, `component_type`, declared
+  `capabilities`, honest `side_effects`, and the required signature block —
+  and import `../_base.ncl` directly; the phantom `../k9/template-*.k9.ncl`
+  imports (relocated estate-wide by ADR-001) are gone. All six conform
+  under `k9-validate.sh` (contract v1.0.0); Nickel layer 2 and the Ed25519
+  layer 3 were not run locally and are reported as skips, never passes —
+  CI's K9 lane runs layer 2 with pinned Nickel.
+* `contractiles/README.adoc` documents the relocated k9 layer (a signpost,
+  not a verb) instead of the superseded per-repo template exception.
+* The YAML ratchet's closed inventory accounts for the two new workflow
+  files, so the format gate stays total.
+
 
 * Add RSR capability metadata: machine-readable scorecard, descriptiles and
   rsr-profile under `.machine_readable/`.
@@ -171,8 +220,9 @@
 * Record ADR-0005 (rookie scanner development direction).
 
 Deferred to follow-up work (see branch history at 172f455): the rookie
-repository-hygiene rules (assets/budget/documents/repository), the bounded
-text/spelling/OCR adapters and the event-trace protocol contracts. These
-require porting onto the current `pons-core` engine API (registry +
-`Rule{id, description, languages, check}`) rather than the superseded
-September-9 crate layout.
+repository-hygiene rules (assets/budget/documents/repository) and the
+bounded text/spelling/OCR adapters, still to be ported onto the current
+`pons-core` engine API (registry + `Rule{id, description, languages,
+check}`) rather than the superseded September-9 crate layout. The
+event-trace protocol contracts are no longer deferred: `pons-protocols`
+and the `pons trace` command shipped in the #55 hardening pass.

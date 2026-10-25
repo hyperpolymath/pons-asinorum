@@ -10,54 +10,57 @@ archived: false
 
 # Rule Catalogue
 
-The v0.1.0 starter catalogue — ~15 rules. Each maps to one of the two species
-(**wasted work** / **contradiction**) or the small **missing escape hatch** shape, and
-to exactly one tier. Every rule ships positive **and** negative fixture corpora;
-the negative corpus is the falsifier (see [[Evidence Tiers]]).
+This page mirrors the **live registry** (`crates/pons-rules/src/registry.rs`):
+13 registered rules, each shipping positive **and** negative fixture corpora;
+the negative corpus is the falsifier (see [[Evidence Tiers]]). The generated,
+authoritative copy is `docs/catalogue.adoc` (`pons catalogue`); the doc-drift
+gate fails CI if the docs and the binary disagree.
 
-> **Note**
->
-> Not implemented yet. This is the ratified catalogue from
-> `docs/pons-kickoff.adoc`; once built, `docs/catalogue.adoc` is **generated** from
-> the live rule registry and is the authoritative copy.
-
-## T0 — syntactic / structural (`HEURISTIC`)
+## Registered — T0 (syntactic / structural, `HEURISTIC`)
 
 | Rule | Fires on | When it is actually fine (counter-condition) |
 |---|---|---|
-| `div-by-literal-zero` | `/` or `%` whose right-hand side is a literal `0` / `0.0`. | Sits in provably dead code (T0 can't see that → stays `HEURISTIC`, never `ERROR`). General **variable** divisor is a separate T3 rule. |
-| `self-assignment` | `x = x` — same lexeme both sides, target has no side-effecting setter. | Property setters with effects (`obj.p = obj.p`); volatile reads. (In Rust, `let x = x;` is a **shadow**, not this — excluded.) |
-| `constant-condition` | `if (true)`, `if (false)`, `while (false)`. | Debug / feature-flag constants edited in place. |
-| `while-true-no-break` | `while (true)` / `loop` with no reachable `break` / `return` / `throw`. | Intentional daemon / event loop → `WARN` + suppressible, **never** `ERROR`. |
-| `empty-effect-loop` | A loop whose body is empty or only no-ops — entered and exited for nothing. | Deliberate spin-wait on a volatile / side-effecting condition. |
-| `unreachable-after-jump` | Statements textually after `return` / `throw` / `break` / `continue` in the same block. | Labels / fallthrough constructs. |
-| `swallowed-error` | A `catch` / `except` whose body is empty or only `pass`. | A documented, intentional swallow (a comment, or a re-raise elsewhere). |
-| `string-concat-in-loop` | Immutable-string `+=` / `+` accumulation inside a loop (quadratic build). | Tiny bounded loops; languages with mutable strings / ropes. |
+| `div-by-literal-zero` | `/` or `%` whose right-hand side is a literal `0` / `0.0`. | Sits in provably dead code (T0 can't see that → stays `HEURISTIC`, never `ERROR`). |
+| `self-assignment` | `x = x` — same lexeme both sides, target has no side-effecting setter. | Property setters with effects (`obj.p = obj.p`); volatile reads. (`let x = x;` in Rust is a shadow, not this — excluded.) |
+| `constant-condition` | A literal boolean in a condition slot, so the branch is decided before it runs. | Debug / feature-flag constants edited in place. |
+| `while-true-no-break` | An unconditional loop with no reachable `break` / `return` / `throw`. | Intentional daemon / event loop → `WARN` + suppressible, **never** `ERROR`. |
+| `empty-effect-loop` | A loop whose body is empty or does nothing observable. | Deliberate spin-wait on a volatile / side-effecting condition. |
+| `unreachable-after-jump` | A statement immediately after `return` / `throw` / `raise` / `break` / `continue`. | Labels / fallthrough constructs. |
+| `swallowed-error` | A `catch` / `except` block that discards the error without acting on it. | A documented, intentional swallow (a comment, or a re-raise elsewhere). |
+| `string-concat-in-loop` | Repeated string concatenation inside a loop — quadratic where a join is linear. | Tiny bounded loops; languages with mutable strings / ropes. |
+| `php-empty-security-function` *(PHP)* | A security-named PHP function has an empty executable body. | The body carries a real check the name doesn't reveal. |
 
-## T1 — intraprocedural dataflow (`DATAFLOW`, Python in v0.1.0)
+## Registered — T1 (intraprocedural dataflow, `DATAFLOW`)
 
-| Rule | Fires on | Counter-condition |
+| Rule | Fires on | Languages / counter-condition |
 |---|---|---|
-| `dead-store` | A local assigned a value never read on any path before reassignment or scope end (live-variable analysis). | The store is dead but the right-hand side has **side effects** → flagged `INFO` with a note to keep the call, drop the binding. Target named `_`/`_x` → suppressed. |
-| `read-before-init` | A path on which a local is read before any assignment (may-be-unbound analysis) — Python raises `UnboundLocalError`. | Essentially none in Python (no default init) — which is **why** Python is the clean T1 language. `global`/`nonlocal`/free names are excluded by scope. |
+| `dead-store` | A value stored and never read before it is redefined or the function ends (live-variable analysis). | Python. The store is dead but the right-hand side has side effects → noted, keep the call drop the binding. |
+| `read-before-init` | A local read on a path where it may not yet be bound (may-be-unbound analysis). Bounded correlated-guard pruning; handler-exit and loop-aware. | Python. `global`/`nonlocal`/free names excluded by scope. |
+| `php-context-flow` *(PHP)* | Request data may reach an output context without a matching escape contract. | PHP; escapes/contracts the analysis can see make it silent — it never invents a violation. |
+| `php-unresolved-include` *(PHP)* | A literal PHP include is empty or absent relative to the source directory. | PHP; dynamic/constructed paths are out of T0/T1 sight. |
 
-## T2 — typestate / protocol (`PROTOCOL`, against a supplied contract)
+## Registered — planned but **not** built
 
-| Rule | Fires on | Note |
-|---|---|---|
-| `suppress-then-emit` **(flagship)** | An emit to a channel on a path reachable **after** the channel was suppressed, with no intervening un-suppress — a typestate walk against your protocol. | Detects a violation of a **supplied** contract; never guesses the contract. Syntactic channel key, no alias analysis → may miss bugs, never invents them. |
-| `resource-acquired-not-released` **(optional v0.1.0)** | Same shape generalised (open/close, lock/unlock) with a `must_exit_in` terminal obligation. | Identical machinery, different protocol. |
+These come from the ratified plan and are **not registered**; no rule by these
+names runs today:
 
-## T3 — undecidable / heuristic (`SPECULATIVE` — a smell, not a verdict)
-
-| Rule | Fires on | Why only speculative |
-|---|---|---|
-| `possible-superlinear` | Nested loops depth ≥ 2 over the **same** collection, or depth ≥ 3 over data-dependent bounds. | Real complexity is undecidable (Rice). Intended pairwise work is often correct → always `INFO`. |
-| `no-interrupt-on-long-op` | A loop with a data-dependent / unbounded bound and no cancellation check inside (no break-on-flag, timeout, or cooperative yield). | Heuristic over loop bound + body; bounded loops and I/O-with-timeouts are fine. |
-| `general-div-by-zero` | `/` or `%` by a **variable** the analysis cannot prove non-zero. | The honest sibling of `div-by-literal-zero`: an upstream guard the local analysis can't see may make it safe. |
+- **T2 typestate** (`PROTOCOL`, against a supplied contract): `suppress-then-emit`
+  (flagship), `resource-acquired-not-released`. Groundwork only: `pons trace`
+  checks an explicit ordered event trace against a TOML protocol; no
+  source-derived typestate rule exists.
+- **T3 speculative** (`SPECULATIVE`): `possible-superlinear`,
+  `no-interrupt-on-long-op`, `general-div-by-zero`.
 
 ## The severity ceiling
 
-No T0 rule exceeds `WARN`. `div-by-literal-zero` and `while-true-no-break` are
-capped as noted. All T3 rules are `INFO`. Severity is advisory; the *evidence
-class* is the load-bearing signal — see [[Evidence Tiers]].
+T0 findings can never be more than `WARN`; a T0 rule that "proves" an error is
+lying about what syntax can show. Only `DATAFLOW` evidence may raise a finding
+to `ERROR`, and even then the counter-condition column is part of the message.
+`SPECULATIVE` findings can never fail a scan.
+
+## Adding a rule
+
+See [[For Developers]]. In short: the rule ships with both corpora, registers
+in `registry.rs` (the single source of truth for the CLI and the falsifier
+gate), and the falsifier fails the build if it ever fires in its own negative
+corpus.

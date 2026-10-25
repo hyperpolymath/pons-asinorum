@@ -83,6 +83,21 @@ own negative corpus is demoted or removed, enforced in CI.
 
 Jonathan D.A. Jewell.
 
+== Estate metadata (for agents and tooling)
+
+Repository facts and agent rules live in the estate's deed-era files:
+
+* `pons-asinorum_chora.deed` — the repository's facts: identity, authority,
+  routing, status sources, licensing policy.
+* `0-AI-MANIFEST.deed` — the agent front door: purpose, routing, invariants
+  (never dress a heuristic up as a proof; the falsifier gate; no silent
+  skips), startup checklist, attestation.
+* `coordination.k9` — the nerve receptor: what the repo emits, responds to,
+  and guards (schema `k9-coordination` 1.2.0).
+
+The legacy `.machine_readable/` descriptiles are frozen source pointers:
+A2ML is retired estate-wide and must not be extended.
+
 == Licence
 
 Dual, by artefact type (ratified 2026-07-08):

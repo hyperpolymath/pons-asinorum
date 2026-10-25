@@ -1,0 +1,28 @@
+;; SPDX-License-Identifier: MPL-2.0
+;; SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
+(repo-deed
+  :schema-version "1.0.0"
+  :canonical-name "pons-asinorum"
+  :repo-uuid #u8"gv-clade-index:github.com/hyperpolymath/pons-asinorum"
+  :beholding-chora #u5"estate/chora"
+  (identity :owner "hyperpolymath" :primary-forge github)
+  (front-doors :human "README.adoc" :agent "0-AI-MANIFEST.deed")
+  (authority
+    :constitution "GOVERNANCE.adoc"
+    :licensing "LICENSE.adoc"
+    :agent-policy "0-AI-MANIFEST.deed")
+  (routing
+    :scanner "crates/"
+    :contracts ".machine_readable/contractiles/"
+    :evidence "fixtures/"
+    :enforcement ".github/workflows/"
+    :governance "docs/"
+    :current-project-state "pons-asinorum_chora.deed")
+  (status
+    :evidence-source ".machine_readable/descriptiles/STATE.a2ml"
+    :interaction-source ".machine_readable/descriptiles/AGENTIC.a2ml"
+    :evidence-status "Legacy source pointers, not revalidated readiness claims; A2ML is retired and must not be extended. Current capability and its verification status are stated in docs/USAGE.adoc and docs/EXNOVATION-ROADMAP.adoc. The doc-drift gate checks CLI documentation, catalogue IDs and man pages against the live binary; it does not validate roadmap capability or verification-status claims.")
+  (policies
+    (licensing
+      :initial-assignment "Agents may author new files with the correct SPDX under repository policy (MPL-2.0 for code and configuration, CC-BY-SA-4.0 for prose documentation), and initialise a brand-new repository's LICENSE."
+      :existing-declarations "Manual-Only; changes restricted to registered codeowner-admins. Agents flag drift and never sweep or relicense existing content.")))

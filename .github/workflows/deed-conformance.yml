@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: MPL-2.0
+# DEED conformance lane — STATUS: NOT WIRABLE FROM THIS REPO (measured 2026-10-25).
+#
+# The intended lane calls the estate's shared DEED linter (grammar v1.2.0,
+# normative) over every committed *.deed file, with `require-files: true` so
+# an empty corpus fails the gate rather than passing vacuously.
+#
+# MEASURED, twice, on PR #65:
+#   * pinned to master (metadatastician/standards@8e48b1c): `startup_failure`
+#     — no job, no log;
+#   * pinned to cf8f9121 (the commit whose actions.lock GitHub accepts, and
+#     where deed-conformance.yml exists; the same pin the secret-scanner lane
+#     runs successfully): `startup_failure` again.
+# The pin is therefore not the variable. The variable is the org Actions
+# allowlist: under the estate's `selected` actions posture, GitHub kills at
+# startup any `uses:` of a reusable workflow that is not on the org's live
+# `patterns_allowed` — zero jobs, no log (rhodium-standard-repositories/
+# actions-allowlist/README.adoc documents the mechanism and its history).
+# The secret-scanner reusable is on the org's live list; deed-conformance
+# is not. That is an estate-admin change, not a repository change.
+#
+# The conformance evidence of record meanwhile:
+#   * both deeds pass the estate's normative deed_lint.js (grammar v1.2.0)
+#     — run under node, the same linter CI would run;
+#   * `estate / manifests` (the estate CI/CD audit) passes on this tree;
+#   * the doc-drift and e2e gates keep the surrounding docs honest.
+#
+# TO WIRE once the estate adds
+# `metadatastician/standards/.github/workflows/deed-conformance.yml@<pinned-sha>`
+# to the org's allowed patterns — restore the call (the owner spelling is
+# load-bearing: the Actions resolver does not follow the estate rename,
+# measured in #64):
+#
+# name: deed-conformance
+#
+# on:
+#   push:
+#     branches: [main]
+#   pull_request:
+#   workflow_dispatch:
+#
+# permissions:
+#   contents: read
+#
+# jobs:
+#   deed:
+#     permissions:
+#       contents: read
+#     uses: metadatastician/standards/.github/workflows/deed-conformance.yml@<accepted-pin>
+#     with:
+#       require-files: true
+
+# A workflow file needs a valid `on:` — a trigger-less file makes GitHub
+# manufacture a failing run attributed to the FILE path on every push (the
+# same artifact documented in secret-scanner.yml). This dispatch-only stub
+# keeps the file valid while the real lane stays unwired: dispatching it
+# reports the measured status and exits 0.
+
+name: deed-conformance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: report measured status
+        run: |
+          echo "deed-conformance: not wirable from this repository (measured 2026-10-25)."
+          echo "The org Actions allowlist does not yet list"
+          echo "  metadatastician/standards/.github/workflows/deed-conformance.yml"
+          echo "so every pin dies at job setup with startup_failure, no job, no log."
+          echo "Intended lane: DEED linter (grammar v1.2.0, normative) over every committed *.deed file."
+          echo "See the measured record above; restore the call once the estate lists the reusable."

@@ -1,0 +1,188 @@
+K9!
+# SPDX-License-Identifier: MPL-2.0
+# coordination.k9 — AI Coordination Protocol for pons-asinorum
+#
+# The nerve receptor for the pons-asinorum repository. It declares what
+# this repo emits (afferent), responds to (efferent), and guards (reflex).
+#
+# Conforms to 2-protocols/k9-coordination/spec/abnf/coordination-k9-grammar_v1.2.abnf
+# in metadatastician/standards. A2ML is retired: legacy .machine_readable
+# descriptiles are frozen source pointers; new metadata lives in the repo
+# deeds (pons-asinorum_chora.deed, 0-AI-MANIFEST.deed) and this file.
+#
+# Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath)
+# <j.d.a.jewell@open.ac.uk>
+
+metadata:
+  schema: k9-coordination
+  schema_version: 1.2.0
+  generated_by: manual
+  last_updated: 2026-10-25
+
+project:
+  name: "pons-asinorum"
+  description: "Falsifier-first static scanner flagging wasted work, self-contradiction and missing escape hatches, with an honest evidence tier on every finding."
+  license: MPL-2.0
+  repo: hyperpolymath/pons-asinorum
+  languages:
+    - Rust
+    - Bash
+  build_system: just
+
+build_commands:
+  - command: "just build"
+    purpose: "Build the workspace (pons-cli, pons-core, pons-rules, pons-protocols)"
+  - command: "just test"
+    purpose: "Run the full workspace test suite"
+  - command: "just fmt"
+    purpose: "Format all Rust sources"
+  - command: "just lint"
+    purpose: "Clippy with warnings denied"
+  - command: "just falsify"
+    purpose: "Falsifier gate: no rule may fire in its own negative corpus"
+  - command: "just e2e"
+    purpose: "End-to-end suite against the built binary, including the ADR-0005 exit-code matrix"
+  - command: "just e2e-mutant"
+    purpose: "Non-vacuity check: the e2e suite must reject a stub binary"
+  - command: "just doc-drift"
+    purpose: "Docs, help text and rule catalogue must agree with the live binary"
+  - command: "just check"
+    purpose: "The whole gate: fmt, lint, test, doc-drift, e2e"
+
+invariants:
+  - id: evidence-tiers-are-honest
+    rule: "Never dress a heuristic up as a proof: every finding carries its evidence tier (PROTOCOL, DATAFLOW, HEURISTIC, SPECULATIVE), and no claim is called verified without compile, test, e2e and CI evidence"
+    reason: "The tool's entire value is that its labels can be trusted; one inflated claim destroys the product."
+    severity: critical
+  - id: falsifier-gate
+    rule: "Every registered rule ships a negative corpus, and a rule that fires in its own negative corpus is falsified and blocked"
+    reason: "Known-answer controls are what keep the rule set honest; the falsifier gate is the repo's founding discipline."
+    severity: critical
+  - id: no-silent-skips
+    rule: "Skipped files, transcoded inputs and speculative findings are reported as such in every output format, never silently dropped"
+    reason: "A scan that hides what it did not look at manufactures false confidence."
+    severity: critical
+  - id: no-banned-languages
+    rule: "No TypeScript, handwritten JavaScript, Ruby or Python scripts in this repository's tooling; analysed-language fixtures are data, not tooling"
+    reason: "Repository constraint from the estate language policy; the scanner is Rust with Bash project tooling."
+    severity: critical
+  - id: a2ml-retired
+    rule: "A2ML is retired (owner rulings D99, D269c, D312, D313): legacy descriptiles under .machine_readable/ must not be extended; new metadata goes to the repo deeds or this file"
+    reason: "Writing a new A2ML file resurrects a format the estate has ruled dead."
+    severity: high
+  - id: mpl-code-cc-by-sa-prose
+    rule: "Original code, configuration and scripts are MPL-2.0; prose documentation is CC-BY-SA-4.0. Licence changes are owner-approved, per file"
+    reason: "Estate licence policy; the two-licence split is declared in LICENSE.adoc and the chora deed."
+    severity: high
+  - id: sha-pinned-actions
+    rule: "All GitHub Actions must be SHA-pinned, not version-tagged"
+    reason: "Version tags are mutable; SHA pins are immutable. This is a security invariant."
+    severity: high
+
+protected:
+  - path: crates/
+    reason: "The scanner itself: core engine, rules, CLI, protocols"
+  - path: fixtures/
+    reason: "Known-answer positive and negative corpora — the falsifier gate's evidence"
+  - path: docs/
+    reason: "Usage truth, ADRs, the exnovation roadmap; held to the live binary by the doc-drift gate"
+  - path: protocols/
+    reason: "Explicit ordered trace protocol contracts"
+  - path: .machine_readable/
+    reason: "Contractile tridents and frozen legacy descriptiles"
+  - path: coordination.k9
+    reason: "This file — the nerve receptor"
+  - path: pons-asinorum_chora.deed
+    reason: "The repository's facts in the deed era"
+  - path: 0-AI-MANIFEST.deed
+    reason: "The agent front door: purpose, routing, invariants, attestation"
+
+architecture:
+  - id: falsifier-first
+    decision: "Rules are admitted only with known-answer positive and negative corpora, and the e2e suite asserts the invariant through the real binary"
+    reason: "A scanner's failure mode is silent wrongness; the falsifier gate converts that into a loud build failure."
+    alternatives_rejected:
+      - "Precision measured only by post-hoc corpus studies (issue #47 showed 3/78 on flatbuffers — measurement without the gate arrives too late)"
+      - "Confidence scores per finding (invents a number no evidence supports)"
+  - id: evidence-tiers
+    decision: "Four evidence tiers (PROTOCOL, DATAFLOW, HEURISTIC, SPECULATIVE) flow from rule to finding to reporter to exit code, with speculative findings unable to fail a scan by default"
+    reason: "The tier is the contract between the analyser's certainty and the user's trust."
+  - id: deed-era-metadata
+    decision: "Repository metadata lives in the chora deed, the agent front-door deed and this coordination file; A2ML descriptiles are frozen legacy pointers"
+    reason: "Owner rulings retired A2ML estate-wide; pons migrates rather than maintaining two sources of truth."
+
+innervation:
+  afferent:
+    - signal: "corpus.changed"
+      description: "A fixture corpus or rule changed"
+      triggers_on: "push to crates/pons-rules/ or fixtures/"
+      consumers:
+        - falsifier-gate
+        - e2e-suite
+    - signal: "docs.changed"
+      description: "Documentation or help-facing text changed"
+      triggers_on: "push to docs/ or tests/doc_drift.sh"
+      consumers:
+        - doc-drift-gate
+  efferent:
+    - signal: "scan.reported"
+      action: "Emit human, JSON and SARIF reports; SARIF carries tool execution notifications for skips and incompleteness"
+      auto_fix: false
+  reflex:
+    - trigger: "pre-commit"
+      guard: "Repository hygiene checks"
+      action: "Block the commit on failing checks"
+    - trigger: "ci"
+      guard: "fmt, clippy -D warnings, tests, doc-drift, e2e, falsifier"
+      action: "Block the merge on any red gate; a skipped gate is a failure, not a pass"
+
+do_not_create:
+  - pattern: "**/*.ts"
+    reason: "TypeScript is banned in this repository's tooling"
+  - pattern: "*.py"
+    reason: "Python scripts are banned in root tooling; analysed-language fixtures are data and live under fixtures/"
+  - pattern: "scripts/**/*.py"
+    reason: "Python scripts are banned in project tooling"
+  - pattern: "tools/**/*.py"
+    reason: "Python scripts are banned in project tooling"
+  - pattern: ".github/**/*.py"
+    reason: "Python scripts are banned in CI tooling"
+  - pattern: ".machine_readable/scripts/**/*.py"
+    reason: "Python scripts are banned in estate tooling"
+  - pattern: "tests/**/*.py"
+    reason: "Python scripts are banned in test tooling"
+  - pattern: "benches/**/*.py"
+    reason: "Python scripts are banned in benchmark tooling"
+  - pattern: "Makefile"
+    reason: "Use Justfile — Makefiles are forbidden estate-wide"
+  - pattern: "STATE.a2ml"
+    reason: "A2ML is retired; legacy descriptiles are frozen and new state goes to the chora deed"
+  - pattern: "META.a2ml"
+    reason: "A2ML is retired; see the chora deed"
+
+terminology:
+  - correct: evidence tier
+    incorrect:
+      - confidence score
+      - certainty level
+    context: "Findings carry a named tier from a closed set (PROTOCOL, DATAFLOW, HEURISTIC, SPECULATIVE); pons does not invent numeric confidence."
+  - correct: falsified
+    incorrect:
+      - buggy
+      - broken
+    context: "A rule that fires in its own negative corpus is 'falsified' by the falsifier gate — the estate's term of art for a failed known-answer control."
+
+ecosystem:
+  depends_on:
+    - name: standards
+      role: "metadatastician/standards — estate governance, deed and K9 formats, CI reusables this repo calls"
+    - name: tree-sitter
+      role: "Upstream grammars and Rust bindings for the five analysed language families"
+    - name: rsr-template-repo
+      role: "Scaffolding template this repository's estate files derive from"
+  consumed_by:
+    - name: hyperpolymath-estate
+      role: "Repositories scanned by pons during the exnovation programme; SARIF output is the integration surface"
+  related:
+    - name: panic-attack
+      role: "Independent security/robustness scanner; separate SARIF runs, no shared findings"

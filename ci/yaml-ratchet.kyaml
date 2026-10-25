@@ -28,7 +28,9 @@
     {
       paths: [
         ".github/workflows/codeql.yml",
+        ".github/workflows/deed-conformance.yml",
         ".github/workflows/format-policy.yml",
+        ".github/workflows/k9-conformance.yml",
         ".github/workflows/label-triage.yml",
         ".github/workflows/labels.yml",
         ".github/workflows/main-estate-audit.yml",
