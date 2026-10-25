@@ -81,31 +81,58 @@ check run.
 | Not required.
 |===
 
-== The required check, and the spelling that makes it exist
+== The required check, and the three ways of losing it
 
 The `Secret-Scan-Floor` ruleset requires exactly one context:
 `scan / gitleaks`. It is produced by this repository's `scan` job calling
 the estate's `secret-scanner-reusable.yml`, whose own job is named
 `gitleaks`.
 
-The reusable is called as `hyperpolymath/standards/...`, and the spelling
-is load-bearing. `hyperpolymath/standards` and `metadatastician/standards`
-are the same repository — the former was transferred to the latter, and
-GitHub's API resolves the old owner to the new one — but the estate's
-canonical Actions allowlist admits `hyperpolymath/*` and does not list
-`metadatastician/*`. The allowlist is matched against the owner string as
-it is *written* in the `uses:` line, so the transferred spelling is refused
-at startup even though it resolves to the very same commit.
+Three different mistakes each lose that context, and **all three are
+silent**. This repository has been through all of them, and the signatures
+are worth recording because none of them looks like a failure of the
+workflow you are looking at.
 
-The failure is total and silent: no job starts, no check run is created,
-and the required context is never emitted. `gh pr checks` shows nothing,
-because a rejected run produces no check run. Only
-`gh run list --json conclusion` reveals it — the conclusion is
-`startup_failure`.
+. *The wrong owner spelling.* The shared reusable lives at
+  `metadatastician/standards`. The repository was transferred to the
+  `metadatastician` organisation, and GitHub's REST API follows the old
+  name — `GET /repos/hyperpolymath/standards` answers
+  `full_name: metadatastician/standards` — but the **Actions resolver does
+  not**. Measured here, on the same pinned commit, with the same job key
+  and the same grants:
 
-The same spelling is used for `scorecard.yml` and for `cicd-suite`'s
-reusables. `hyperpolymath/cicd-suite` is admitted by the same
-`hyperpolymath/*` pattern.
+  * `uses: hyperpolymath/standards/...@<sha>` — no job starts. The run is
+    attributed to the workflow *file*
+    (`.github/workflows/secret-scanner.yml`), not to the workflow.
+    Conclusion `failure`, zero jobs, no log.
+  * `uses: metadatastician/standards/...@<sha>` — the workflow starts, the
+    reusable's jobs run, and the check is published.
+
+  The run that carries the file's name does not even look like the
+  workflow it is. The only way to see it is
+  `gh run list --json conclusion`.
+
+. *A stale pin.* The reusable at an older commit asked for more
+  permission than the caller grants, and a called workflow cannot exceed
+  its caller's job-level grant, so the call is refused at startup with
+  `startup_failure` and no job. The pin and the owner are separate
+  variables: a caller pinned to a bad commit fails whatever it spells the
+  owner.
+
+. *`secrets: inherit`.* The reusable declares no `workflow_call.secrets`
+  and references no `secrets.*` context, so there is nothing to inherit;
+  and forwarding every repository and organisation secret the caller can
+  see to a scanner that needs none is CWE-250. The caller passes no
+  `secrets:` line.
+
+The shared reusable is called at `metadatastician/standards`, at the
+commit whose own actions.lock GitHub accepts at job setup.
+
+The estate's canonical Actions allowlist still names only
+`hyperpolymath/*`, while the repository it describes now lives at
+`metadatastician/standards`. Every live caller in the estate that spells
+the old owner is in the first failure mode above. That is asked upstream
+in `docs/handoffs/upstream-prompts.adoc`, prompt 1.
 
 == The format policy
 

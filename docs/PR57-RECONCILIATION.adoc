@@ -115,12 +115,18 @@ area is unchanged. Concretely, and with the reasons:
   specified in `docs/PHP-ADAPTER.adoc`'s successor work item; it needs a
   compiler in hand to land, because it changes the registered rule set,
   the catalogue and the golden corpus.
-* *Workflows* — main's callers now spell the shared reusable's owner the
-  way the estate's Actions allowlist admits (`hyperpolymath/standards`).
-  PR #57's branch carries the spelling that is *not* admitted, which is
-  what produced the `startup_failure` described in `docs/CI-CD.adoc`. That
-  is the change PR #57's commit 59ebbd0 made, and it is the single most
-  consequential difference between the branch and main.
+* *Workflows* — PR #57's branch was the first to move the shared
+  reusable's owner to `metadatastician/standards`, and that move was
+  CORRECT: the repository was transferred, GitHub's REST API follows the
+  old name, and the Actions resolver does not. What the branch still had
+  at its tip was the *stale pin* to the reusable at `1f3eef62` — a
+  revision that asked for more permission than the caller grants, which
+  is refused at startup with `startup_failure` and no job. Main re-pinned
+  to `cf8f9121` in #58 and the scanner has been green since. All three
+  ways of losing the required context `scan / gitleaks` are now written
+  down at the call site in `.github/workflows/secret-scanner.yml`, and
+  `docs/CI-CD.adoc` records them; none of the three looks like a failure
+  of the workflow you are looking at.
 * *The unreachable-after-jump comment handling* — main keeps the
   direct-parent and immediate-sibling guards, and the behaviour PR #57
   fixed is already covered by main's

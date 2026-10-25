@@ -5,16 +5,25 @@
 
 === Fixed
 
-* The required secret-scan check now runs. `.github/workflows/secret-scanner.yml`
-  and `.github/workflows/scorecard.yml` called the estate's reusable under
-  the transferred owner spelling `metadatastician/standards`. That
-  repository is the same one `hyperpolymath/standards` resolves to, but the
-  estate's canonical Actions allowlist admits `hyperpolymath/*` and does not
-  list `metadatastician/*`, so the call was refused at startup. Every run
-  died with `startup_failure` and produced **no check run at all**, so the
-  ruleset-required context `scan / gitleaks` was never emitted and every
-  pull request was permanently unmergeable with no red square to explain
-  why. The callers now spell the owner the allowlist admits.
+* The shared secret scanner's owner spelling is now recorded where it is
+  written, with the measurement behind it. The shared reusable lives at
+  `metadatastician/standards`: the repository was transferred to the
+  `metadatastician` organisation, GitHub's REST API follows the old name,
+  and the **Actions resolver does not**. Measured here, on the same pinned
+  commit, `uses: hyperpolymath/standards/...` starts no job at all — the
+  run is attributed to the workflow *file* rather than to the workflow,
+  with zero jobs and no log — while `uses: metadatastician/standards/...`
+  starts, runs and publishes the check.
+
+  That matters because the ruleset-required context `scan / gitleaks` is
+  produced by that call, and the failure is invisible: `gh pr checks`
+  shows nothing, because a rejected run produces no check run, and the
+  only symptom is `gh run list --json conclusion`. Two further failure
+  modes lose the same context the same way — a stale pin to a reusable
+  revision that asks for more permission than the caller grants
+  (`startup_failure`), and `secrets: inherit` against a reusable that
+  declares no secrets — and all three are now written down at the call
+  site.
 * The estate audit is no longer two generations stale.
   `.github/workflows/main-estate-audit.yml` pinned cicd-suite `3bbdf75`, the
   single-job 26-step audit. It now pins `bf7dd95`, whose reusable reports

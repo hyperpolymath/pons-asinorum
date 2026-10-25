@@ -9,47 +9,79 @@ Each prompt below is written to be pasted as-is into an issue or a pull
 request request. They are ordered by how much they unblock: the first two
 are merge blockers that this repository cannot fix alone.
 
-== 1. `hyperpolymath/standards` — the Actions allowlist names only one owner
+== 1. `standards` — the transfer broke every caller that spells the old
+owner, and the failure has no job and no log
 
-*Priority: high. This is the merge blocker for pons-asinorum.*
+*Priority: highest. This is measured, it is live, and it is breaking CI in
+repositories that have not noticed.*
 
-The estate's canonical allowlist
-(`rhodium-standard-repositories/actions-allowlist/allowed-actions.json`)
-lists `hyperpolymath/*` but does not list `metadatastician/*`. The
-`standards` repository was transferred to the `metadatastician`
-organisation, and GitHub's API resolves the old owner to the new one — but
-the allowlist is matched against the owner string *as written* in a
-`uses:` line, so a caller that writes `metadatastician/standards/...` is
-refused at startup while a caller that writes
-`hyperpolymath/standards/...` resolves to the very same commit.
+The `standards` repository was transferred to the `metadatastician`
+organisation. GitHub's REST API follows the old name —
+`GET /repos/hyperpolymath/standards` answers
+`full_name: metadatastician/standards` — but the **Actions resolver does
+not**. A `uses:` reference under the old owner no longer resolves to a
+repository.
 
-The failure is total and silent: no job starts, no check run is created,
-and the required context is never emitted. In pons-asinorum this made every
-pull request permanently unmergeable while `gh pr checks` showed nothing,
-because a rejected run produces no check run. The only visible symptom was
-`gh run list --json conclusion` reporting `startup_failure`.
+Measured in pons-asinorum, on the same pinned commit, with the same job
+key and the same grants:
 
-> Add `metadatastician/*` to
-> `rhodium-standard-repositories/actions-allowlist/allowed-actions.json`,
-> alongside the existing `hyperpolymath/*`, so that a caller may spell the
-> owner either way while the repository is called
-> `metadatastician/standards` on its own API.
+[cols="2,4",options="header"]
+|===
+| `uses:` | What happens
+
+| `hyperpolymath/standards/.github/workflows/secret-scanner-reusable.yml@<sha>`
+| No job starts. The run is attributed to the workflow **file**
+(`.github/workflows/secret-scanner.yml`), not to the workflow. Conclusion
+`failure`. Zero jobs. No log. `gh pr checks` shows nothing, because a
+rejected run produces no check run — the only symptom is
+`gh run list --json conclusion`, where the run's name is the file path.
+
+| `metadatastician/standards/.github/workflows/secret-scanner-reusable.yml@<sha>`
+| The workflow starts, the reusable's jobs run, and the check is published
+under the context the ruleset requires.
+|===
+
+The run that carries the file's name does not look like the workflow it
+is, so this is very easy to miss.
+
+> Please move every live `uses:` reference to the shared reusables to
+> `metadatastician/standards`. As of 2026-10-25 the live callers still
+> spelling the old owner are:
 >
-> Please also state the rule in YAML-POLICY or the Actions-policy
-> documentation, because the current position is a trap: the two spellings
-> resolve to the same repository, the allowlist covers only one of them,
-> and the failure mode produces no check run at all. A note that the
-> allowlist is matched on the *written* owner string, and that a
-> `startup_failure` with zero jobs is the signature of a refused `uses:`,
-> would save the next repository a week.
+> * `standards` itself — `.github/workflows/ci-pipeline.yml` (two
+>   callers), and `.github/workflows/actions.lock`.
+> * `hyperpolymath/cicd-suite` — `.github/workflows/secret-scanner.yml`
+>   and `.github/workflows/spark-gate.yml`.
+> * `hyperpolymath/rsr-template-repo` — `dogfood-gate.yml` (two),
+>   `governance.yml`, `hypatia-scan.yml`, `mirror.yml`, `rust-ci.yml`,
+>   `scorecard.yml`, `secret-scanner.yml`, and `actions.lock`.
+> * `hyperpolymath/cicd-squabbler` — `actions.lock`.
+>
+> Two of those repositories' last green runs predate the transfer, so they
+> have not run since it and do not know yet. cicd-suite's secret scanner
+> last ran successfully on 2026-10-19; the transfer is later than that.
+>
+> Please also add `metadatastician/*` to
+> `rhodium-standard-repositories/actions-allowlist/allowed-actions.json`,
+> which still lists only `hyperpolymath/*`. A repository whose live
+> Actions policy has been migrated to the new owner is therefore NOT a
+> superset of the canonical list, and `scripts/check-actions-policy.sh`
+> will report it as non-compliant — the two halves of the estate disagree
+> about the name of the repository they are describing.
+>
+> And please record the fact where callers are documented: **the REST
+> API's redirect does not carry over to the Actions resolver**. Every
+> other transfer-shaped mistake in this estate has been diagnosed from a
+> red log; this one has no log, and the run is filed against the file
+> rather than the workflow.
 
-Note: this repository has already moved its own callers to the
-`hyperpolymath/standards` spelling, so the fix is not urgent for
-pons-asinorum — but the trap is still armed for every repository that
-adopts the transferred spelling, and `standards` itself is the repository
-whose name changed.
+This is the same family as standards#1336 and #1337 — a required context
+that cannot be produced, so every pull request is unmergeable while every
+visible check is green — but it is a different mechanism, and it is
+currently live in repositories that have not yet noticed.
 
-== 2. `hyperpolymath/standards` — step 6 of the KYAML migration (workflows)
+
+== 2. `standards` — step 6 of the KYAML migration (workflows)
 
 *Priority: medium. It blocks the estate-wide YAML migration, not this
 repository.*
@@ -87,7 +119,7 @@ repository.*
 > reason recorded. When step 6 opens, that repository's workflows join the
 > ratchet by being converted, not by being waived.
 
-== 3. `hyperpolymath/standards` — the JSON policy's canonical-bytes contract
+== 3. `standards` — the JSON policy's canonical-bytes contract
 
 *Priority: medium. It decides whether pons-asinorum's report contract
 changes.*

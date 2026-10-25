@@ -73,15 +73,26 @@ Work done on the CI/CD and format side of this prompt, and what remains.
   never a successful format check: the gate here does not use kyq at all,
   so there is nothing for it to silently pass.
 
-**The CI/CD blocker that was found and fixed.** The required secret-scan
-check `scan / gitleaks` had never been emitted: the caller spelled the
-shared reusable's owner `metadatastician/standards`, which the estate's
-Actions allowlist does not admit (it admits `hyperpolymath/*`), so every
-run died at startup with no job and **no check run**. Every pull request
-was permanently unmergeable, invisibly. `docs/CI-CD.adoc` records the
-diagnosis, the signature (`gh run list --json conclusion` reports
-`startup_failure`; `gh pr checks` shows nothing) and the fix. The
-underlying allowlist gap is asked about upstream in
+**The CI/CD failure mode that was found, measured and recorded.** The
+shared secret scanner's caller has three ways of losing the
+estate-required context `scan / gitleaks`, and all three are silent. The
+one this repository was actually bitten by is the *owner spelling*: the
+`standards` repository was transferred to the `metadatastician`
+organisation, GitHub's REST API follows the old name, and the Actions
+resolver does not. Measured here on the same pinned commit,
+`uses: hyperpolymath/standards/...` starts no job at all — the run is
+attributed to the workflow *file*, with zero jobs and no log — while
+`uses: metadatastician/standards/...` starts, runs and publishes the
+check. The other two are a stale pin to a reusable revision that asks for
+more permission than the caller grants (`startup_failure`, no job), and
+`secrets: inherit` against a reusable that declares no secrets.
+
+None of the three looks like a failure of the workflow you are looking
+at, which is why all three are now written down at the call site in
+`.github/workflows/secret-scanner.yml` and in `docs/CI-CD.adoc`. The
+estate-wide consequence — every live caller still spelling the old owner,
+in `standards` itself, `cicd-suite`, `rsr-template-repo` and
+`cicd-squabbler` — is asked about upstream in
 `docs/handoffs/upstream-prompts.adoc`, prompt 1.
 
 **Still open, and deliberately so.**
