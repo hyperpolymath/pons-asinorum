@@ -73,8 +73,8 @@ fi
 
 echo "== YAML inventory =="
 
-mapfile -t YAML_CONVERTED < <(yq -r '.converted[]' "$YAML_RATCHET")
-mapfile -t YAML_EXCLUDED < <(yq -r '.excluded[].paths[]' "$YAML_RATCHET")
+mapfile -t YAML_CONVERTED < <(yq -p yaml -r '.converted[]' "$YAML_RATCHET")
+mapfile -t YAML_EXCLUDED < <(yq -p yaml -r '.excluded[].paths[]' "$YAML_RATCHET")
 mapfile -t YAML_TREE < <(git ls-files -- '*.yml' '*.yaml' '*.kyaml')
 
 # Accounted set, as an associative array for O(1) membership.
@@ -115,8 +115,8 @@ echo "  yaml files in tree: ${#YAML_TREE[@]}; converted: ${#YAML_CONVERTED[@]}; 
 
 echo "== JSON inventory =="
 
-mapfile -t JSON_CANONICAL < <(yq -r '.canonical[]' "$JSON_RATCHET")
-mapfile -t JSON_NONCANONICAL_PATTERNS < <(yq -r '.declared_non_canonical[].paths[]' "$JSON_RATCHET")
+mapfile -t JSON_CANONICAL < <(yq -p yaml -r '.canonical[]' "$JSON_RATCHET")
+mapfile -t JSON_NONCANONICAL_PATTERNS < <(yq -p yaml -r '.declared_non_canonical[].paths[]' "$JSON_RATCHET")
 mapfile -t JSON_TREE < <(git ls-files -- '*.json' '*.jsonl')
 
 declare -A JSON_IS_CANONICAL=()

@@ -91,7 +91,7 @@ jobs:
       - name: Converted YAML stays KYAML
         run: |
           set -euo pipefail
-          mapfile -t converted < <(yq -r '.converted[]' ci/yaml-ratchet.kyaml)
+          mapfile -t converted < <(yq -p yaml -r '.converted[]' ci/yaml-ratchet.kyaml)
           if [ "${#converted[@]}" -eq 0 ]; then
             echo "::error::ci/yaml-ratchet.kyaml lists no converted files; the KYAML gate would check nothing." >&2
             exit 1
