@@ -71,7 +71,7 @@ invariants:
     reason: "Writing a new A2ML file resurrects a format the estate has ruled dead."
     severity: high
   - id: mpl-code-cc-by-sa-prose
-    rule: "Original code, configuration and scripts are MPL-2.0-or-later; prose documentation is CC-BY-SA-4.0. Licence changes are owner-approved, per file"
+    rule: "Original code, configuration and scripts are MPL-2.0; prose documentation is CC-BY-SA-4.0. Licence changes are owner-approved, per file"
     reason: "Estate licence policy; the two-licence split is declared in LICENSE.adoc and the chora deed."
     severity: high
   - id: sha-pinned-actions
@@ -139,8 +139,20 @@ innervation:
 do_not_create:
   - pattern: "**/*.ts"
     reason: "TypeScript is banned in this repository's tooling"
-  - pattern: "**/*.py"
-    reason: "Python scripts are banned in tooling; analysed-language fixtures are data and live under fixtures/"
+  - pattern: "*.py"
+    reason: "Python scripts are banned in root tooling; analysed-language fixtures are data and live under fixtures/"
+  - pattern: "scripts/**/*.py"
+    reason: "Python scripts are banned in project tooling"
+  - pattern: "tools/**/*.py"
+    reason: "Python scripts are banned in project tooling"
+  - pattern: ".github/**/*.py"
+    reason: "Python scripts are banned in CI tooling"
+  - pattern: ".machine_readable/scripts/**/*.py"
+    reason: "Python scripts are banned in estate tooling"
+  - pattern: "tests/**/*.py"
+    reason: "Python scripts are banned in test tooling"
+  - pattern: "benches/**/*.py"
+    reason: "Python scripts are banned in benchmark tooling"
   - pattern: "Makefile"
     reason: "Use Justfile — Makefiles are forbidden estate-wide"
   - pattern: "STATE.a2ml"

@@ -32,7 +32,7 @@ against the live registry.
 | Generated `docs/catalogue.adoc` + `pons catalogue` / `man` / `doctor` / `trace` commands | ✅ | doc-drift gate (docs must match the live binary) |
 | Explicit ordered trace-protocol checker (`pons trace` + TOML protocols) | ✅ | e2e good/bad trace fixtures |
 | ADR-0005 exit-code matrix; broken-pipe tolerance; `--fail-on`, `--fail-on-skips` | ✅ | e2e suite |
-| Estate deed-era metadata: `pons-asinorum_chora.deed`, `0-AI-MANIFEST.deed`, `coordination.k9`; contractile tridents conformed to K9 contract v1.0.0 | ✅ | estate `deed-conformance` and `k9-conformance` CI lanes |
+| Estate deed-era metadata: `pons-asinorum_chora.deed`, `0-AI-MANIFEST.deed`, `coordination.k9`; contractile tridents validated against K9 contract v1.0.0 at L1 only | Metadata present; CI conformance pending | Local deed lint and K9 L1 structural validation recorded in the workflow files; L2/L3 not run; `deed-conformance` and `k9-conformance` are status-only stubs pending estate enablement |
 
 ## Remaining for v0.1.0
 
@@ -77,5 +77,7 @@ with Semgrep on its own ground.
 
 Tracked in `docs/OWNER-DECISIONS.adoc`. Ratified 2026-07-08: name `pons`;
 licences MPL-2.0-or-later (code) / CC-BY-SA-4.0 (docs); public; author Jonathan
-D.A. Jewell. D4 (adopt estate CI now or after v0.1.0) is overtaken by events:
-the deed-conformance and k9-conformance estate lanes are wired and required.
+D.A. Jewell. D4 (adopt estate CI now or after v0.1.0): the deed-conformance
+and k9-conformance estate lanes remain pending estate enablement; their
+workflows currently report status only. Contract conformance is validated
+locally at L1 only; L2 and L3 have not been run.
