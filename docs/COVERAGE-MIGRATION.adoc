@@ -1,0 +1,82 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Coverage schema 0.4.0 migration
+
+This changes scan semantics deliberately. A zero-file scan now exits 2, even
+without `--fail-on-skips`. This is an absence of applicable analysis, never a
+clean result. `--fail-on-skips` now includes unsupported recognised source and
+configuration files, as well as read, parse and enumeration failures.
+
+`scanned.inventory` records paths, language, outcome, reason, native parser
+versions and whether decoding transcoded bytes. Outcomes are `analysed`,
+`unsupported`, `excluded-by-policy`, `parse-error`, `timeout`, `unreadable`.
+`analysed` means applicable registered rules ran; it does not mean all language
+semantics or all security properties were checked. Findings remain independently
+tiered. Original `scanned.files`, `languages`, `skipped`, and `transcoded` remain.
+
+`scanned.coverage_status` is `no-applicable-input`, `partial`, or
+`complete-within-policy`. The last describes execution coverage, not correctness.
+`--require-language NAME` is repeatable; absent, unsupported, malformed or
+policy-excluded files of that language fail the gate and are recorded in
+`coverage_failures`. Language names are lowercase. Unknown names fail closed.
+Coverage failures take precedence over severity exit 1. JSON remains parseable
+on coverage exit 2; fatal invocation/configuration errors go to stderr.
+SARIF invocation properties carry the same inventory and status. A scan with
+zero applicable files has `executionSuccessful: false`.
+
+Scope policy v1 recognises extensions in `coverage::language`, and records
+other files as out-of-scope. `.gitignore`, `.ponsignore`, hidden and symlink
+policy exclusions are visible. `.git`, `target`, and `node_modules` are opaque
+build/VCS boundaries: their contents are not enumerated. File totals cannot
+claim the unknown population of an unreadable or opaque directory. A forced
+`--lang` invocation records the selected grammar.
+
+Files are read with a 4 MiB bound. Parsing has a 250 ms cooperative cancellation
+budget; AST consumers reject more than 100000 named nodes or depth over 256.
+These are safety limits, not measured throughput guarantees. The per-file budget
+does not yet impose a hard whole-process CPU/RSS limit: run untrusted corpora in
+an externally time/memory-bounded worker. Latin-1 fallback is a byte transcoder,
+not a language adapter; byte offsets remain decoded-string offsets and SARIF
+omits artifact byte offsets.
+
+Consumers should first require schema 0.4.0, inspect execution/coverage outcomes,
+and only then apply finding severity policy. Do not translate an empty findings
+array into a pass. Haskell and Elixir remain unsupported. Configuration files
+are inventory only; JSON/TOML syntax recognition is not security analysis.
+
+Estate migration formats `.deed`, `.k9`, `.kyaml`, `.json` and `.jsonl` are
+recognised configuration inputs and reported unsupported until an actual
+adapter exists. K9 components and `coordination.k9` have distinct contracts;
+filename recognition does not validate either. Legacy `.a2ml` remains visible.
+This expands strict skip accounting and can increase exit-2 runs. The repository
+format/toolchain handoffs are in `docs/handoffs/format-toolchain/README.md`.
+The existing JSON report format is not yet a JCS byte contract; historical raw
+reports remain unchanged. Strict raw-byte I-JSON/JCS adoption and a consumer-
+tested DEED metadata migration remain explicit follow-ups in those handoffs.
+
+== Reproduction and correction
+
+At c4394f8, a fresh build returned exit 0, files=0, skipped=[] for php-aegis at
+4d15c59. The existing workspace tests passed. Praxis validation.rs line 136
+produced an unreachable finding whose byte range actually covered the trailing
+comment after `return true`. The exact nested conditional is retained as a
+negative fixture. The fix rejects comment-only successors, checks direct block
+siblings, and still detects executable statements after intervening comments.
+
+The final 0.4.0 inventory also exposes `kind` (file or opaque directory), original
+byte `artifact_digest`, `analysis_complete` and `analysis_notes`. Opaque function
+models are visible even when AST parsing and other rules succeeded. Required
+language gates reject these incomplete analyses. This is independent of policy
+exclusions and finding suppression.
+
+== Review hardening before merge
+
+`validate-report` validates the bundled closed JSON schema before semantic
+consistency checks. Unknown properties, invalid producer identity and missing
+required finding fields are rejected. No remote schema retrieval is enabled.
+Unreadable subtree boundaries use `kind=directory`; inaccessible metadata uses
+`kind=unknown`, never a guessed file. Neither claims descendant enumeration.
+Forced-parser reports retain the actual parser, byte digest and transcode flag
+when no selected rule applies. SARIF reports a completed partial scan as
+`executionSuccessful=true` while preserving strict policy exit 2 in
+`invocations[].properties.exitCode`, coverage status and warnings. A no-applicable-
+input invocation remains unsuccessful. Do not gate on invocation status alone.

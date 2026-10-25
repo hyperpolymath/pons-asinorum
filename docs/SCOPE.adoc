@@ -4,9 +4,9 @@
 
 [NOTE]
 ====
-Status updated 2026-10-23. The current binary implements the ten registered
+Status updated 2026-10-25 (PR #58). The current binary implements the thirteen registered
 rules in `docs/catalogue.adoc`, explicit trace checking, scoped suppression,
-JSON/SARIF accounting, catalogue/man/doctor commands, and the CLI flags in
+JSON/SARIF coverage accounting, catalogue/man/doctor/validate-report commands, and the CLI flags in
 `docs/USAGE.adoc`. Repository/prose/asset/pattern/budget/localisation checks
 from the 2026-09-09 fork are design material, not shipped rules.
 ====
@@ -28,18 +28,24 @@ a diagnosis. No philosophy qualification is expected.
   forward may-unbound for `read-before-init`, over a CFG with explicit opaque
   functions, exceptional edges, `finally` copies and bounded path-correlation
   pruning. See ADR-0002's 2026-10-23 amendment for measured limits.
+* Native PHP parsing and three rules: two T0 checks for empty security-named
+  functions/literal unresolved includes, and one bounded context-specific T1
+  may-flow check. Unknown scopes remain opaque. See `docs/PHP-ADAPTER.adoc`.
 * Explicit TOML finite-state protocol checking over an operator-supplied ordered
-  JSON trace. This is groundwork for T2, not source-derived typestate.
+  JSON trace, plus Wharf transfer, framing and prepared-statement reference
+  models. These check supplied premises/events, not source-derived typestate.
 * Scoped configuration and suppression: `pons.toml`, `--config`, rule/path
   allowances, inline comment allowances, and suppression accounting.
-* Human, JSON 0.3.0 and SARIF 2.1.0 output. SARIF carries invocation
+* Human, JSON 0.4.0 and SARIF 2.1.0 output. SARIF carries invocation
   notifications for skipped paths; JSON carries skip, transcode and suppression
   accounting; a transcoded file omits misleading artifact byte offsets.
 * Generated help/man/catalogue, `doctor`, and a CLI/rule/doc drift test.
 
 Consult the generated catalogue for exact evidence classes and exceptions.
 The presence of a grammar does not mean every rule applies to every construct
-or language. No precision/recall or industrial readiness claim is established.
+or language. Reduced regression-corpus precision/recall is recorded; production accuracy
+and industrial readiness are not established. See
+link:PURPOSE-AND-PROOF.adoc[purpose, solver/proof status and opportunities].
 
 == Next: finish the ratified core before a v0.1 release
 
@@ -54,7 +60,7 @@ or language. No precision/recall or industrial readiness claim is established.
   portability and release gates. Record exact corpus revisions and denominator.
 . Version the language plug-in interface, capabilities and finding schema;
   provide conformance tests before enabling independently distributed plug-ins.
-. Add reviewed rule packs, stable finding fingerprints and scoped dismissals
+. Extend reviewed rule packs, stable finding fingerprints and scoped dismissals
   suitable for editor/word-processor-style review. Intentional uses remain visible
   in an auditable allowance record.
 
@@ -126,8 +132,9 @@ Primary references:
 
 == Boundaries
 
-Security scanning stays with panic-attack and other dedicated scanners;
-compiler diagnostics remain useful upstream. Pons may explain overlaps but
-does not replace those tools. Authority Watch contributes reviewed source
+Pons can identify security-relevant flows and ordering contradictions within
+its declared models. Broad security/resilience scanning, dependency/secret
+checks and runtime patch evidence remain complementary work for panic-attack
+and dedicated tools; compiler diagnostics remain useful upstream. Authority Watch contributes reviewed source
 changes; Invariant Path can deepen a challenge. Neither dependency should
 turn a plain-language prompt into an unearned proof or automatic legal rule.

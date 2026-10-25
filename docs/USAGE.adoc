@@ -87,13 +87,15 @@ name = "pons-asinorum"
 aliases = ["Pons"]
 
 [suppress]
-rules = []                    # suppress one rule everywhere
-paths = ["fixtures/**"]       # suppress every rule on matching paths
+rules = []                    # non-empty broad suppression lists are rejected
+paths = []
 
 [[suppress.allow]]
 rule = "while-true-no-break"
 path = "examples/service.rs"
 reason = "Intentional service loop; termination is external"
+owner = "service-maintainer"
+expires = 1798761600           # 2027-01-01 UTC; renew explicitly when reviewed
 ----
 
 `identity` is reserved for future document-identity checks; it is parsed and
@@ -106,14 +108,14 @@ or the immediately preceding line, can contain:
 
 [source,python]
 ----
-# pons:allow self-assignment -- deliberate binding example
+# pons:allow self-assignment -- deliberate binding example | owner=maintainer | expires=1798761600
 x = x
 ----
 
 Only comment nodes count. A string containing `pons:allow` cannot suppress a
 finding. Suppressed findings are counted in `scanned.suppressed_findings`, not
-silently erased. Baseline fingerprints and editor/word-processor-style review
-remain planned.
+silently erased. Reason, owner and future expiry are mandatory. Fingerprints
+are emitted in evidence contract 1.0.0; editor-style review remains planned.
 
 == Planned commands (not in this binary)
 
@@ -131,3 +133,17 @@ they are not accepted by `--help`:
 
 Optional adapters must remain explicit, locally invoked, time/output bounded,
 and never run scanned project code by default.
+
+== PHP portfolio upgrade
+
+Native PHP parsing and three bounded rules are available. See
+link:PHP-ADAPTER.adoc[PHP model boundary],
+link:COVERAGE-MIGRATION.adoc[coverage/exit migration],
+link:EVIDENCE-CONTRACT.adoc[evidence exchange and suppression migration], and
+link:PROTOCOL-MODELS.adoc[explicit model premises].
+
+`--require-language php` requires applicable PHP analysis without opaque scopes.
+Haskell and Elixir remain unsupported. A zero-file scan always exits 2.
+`--fail-on-skips` now includes unsupported source/configuration files.
+`pons validate-report FILE` validates the machine envelope, not target safety.
+`pons wharf-trace FILE` checks supplied events against the bounded Wharf model.

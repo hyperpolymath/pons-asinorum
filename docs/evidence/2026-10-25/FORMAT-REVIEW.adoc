@@ -1,0 +1,138 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Format inventory and final review validation — 2026-10-25
+
+Tested clean source: `78316083d9e760f7247dd5fdc494bd1f0728a82e`.
+This is a new observation; earlier portfolio evidence is retained unchanged.
+The raw archive retains exact JSON stdout strings, their SHA-256, target commits,
+commands, outcomes, validation results and per-language counts. Reports are
+current schema 0.4.0 output, not a claim of JCS canonical bytes.
+
+216 Rust tests and 46 end-to-end checks passed after the five review fixes.
+Clippy with warnings denied, formatting and documentation drift checks passed.
+The subsequent man-output whitespace normalization passed the documentation gate.
+Workflow field checks passed for the repository and for block-YAML/flow-KYAML
+controls, rejecting malformed/missing/empty/non-string names and missing tooling.
+yq v4.53.3 binary SHA-256:
+`fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4`.
+
+== Portfolio rerun
+
+Each command is `pons scan TARGET --format json --fail-on-skips`.
+All eleven reports pass schema and cross-record semantic validation. Every
+strict scan exits 2. There is no clean-assurance claim. Single-process wall
+times and peak RSS (wait4 rusage) come from a shared host and are not benchmark
+guarantees. An initial attempt using /usr/bin/time failed before any scan
+because that executable was absent; no measurements came from that attempt.
+
+[cols="2,1,1,1,1,1",options="header"]
+|===
+|Target |Analysed |Findings |Skipped |Wall seconds |Peak RSS KiB
+|php-aegis |34 |0 |14 |0.244169 |15000
+|sanctify-php |11 |4 |37 |0.154213 |15000
+|http-capability-gateway |0 |0 |84 |0.147149 |13828
+|wordpress-tools |197 |4 |262 |0.532353 |15124
+|project-wharf |27 |0 |43 |0.26912 |17016
+|wordpress-secured |26 |0 |21 |0.2122 |17364
+|wordpress-resurrect |6 |0 |23 |0.192792 |17364
+|wordpress-praxis |28 |1 |92 |0.251197 |17364
+|wordpress-plugin-conflict-mapper |37 |1 |17 |0.189216 |17364
+|wordpress-sinople-theme |33 |2 |25 |0.184063 |17472
+|wordpress-journal-theme |40 |0 |27 |0.22119 |17984
+|===
+
+== Per-language outcomes
+
+Incomplete-model is a subset of analysed, not an additional file count.
+Excluded-by-policy includes visible opaque boundaries; unreadable descendant
+populations are not invented.
+
+[cols="2,2,4",options="header"]
+|===
+|Target |Language |Outcomes
+|php-aegis |configuration |excluded-by-policy=45, unsupported=8
+|php-aegis |out-of-scope |excluded-by-policy=74
+|php-aegis |php |analysed=34, excluded-by-policy=1, incomplete-model=34
+|php-aegis |shell |excluded-by-policy=2, unsupported=6
+|sanctify-php |configuration |excluded-by-policy=53, unsupported=5
+|sanctify-php |haskell |unsupported=30
+|sanctify-php |out-of-scope |excluded-by-policy=79
+|sanctify-php |php |analysed=11, incomplete-model=10
+|sanctify-php |scheme |unsupported=1
+|sanctify-php |shell |excluded-by-policy=2, unsupported=1
+|http-capability-gateway |configuration |excluded-by-policy=46, unsupported=17
+|http-capability-gateway |elixir |excluded-by-policy=1, unsupported=57
+|http-capability-gateway |idris |unsupported=4
+|http-capability-gateway |out-of-scope |excluded-by-policy=73
+|http-capability-gateway |shell |unsupported=2
+|http-capability-gateway |zig |unsupported=4
+|wordpress-tools |configuration |excluded-by-policy=209, unsupported=159
+|wordpress-tools |elixir |excluded-by-policy=2, unsupported=34
+|wordpress-tools |javascript |analysed=10
+|wordpress-tools |out-of-scope |excluded-by-policy=497
+|wordpress-tools |php |analysed=136, excluded-by-policy=1, incomplete-model=136, parse-error=1
+|wordpress-tools |rust |analysed=51
+|wordpress-tools |scheme |unsupported=7
+|wordpress-tools |shell |excluded-by-policy=3, unsupported=27
+|wordpress-tools |stylesheet |unsupported=13
+|wordpress-tools |template |unsupported=6
+|wordpress-tools |zig |unsupported=15
+|project-wharf |configuration |excluded-by-policy=39, unsupported=32
+|project-wharf |out-of-scope |excluded-by-policy=257
+|project-wharf |php |analysed=1, incomplete-model=1
+|project-wharf |rust |analysed=26
+|project-wharf |shell |excluded-by-policy=1, unsupported=11
+|wordpress-secured |configuration |excluded-by-policy=30, unsupported=12
+|wordpress-secured |out-of-scope |excluded-by-policy=64
+|wordpress-secured |php |analysed=26, excluded-by-policy=1, incomplete-model=26
+|wordpress-secured |scheme |unsupported=1
+|wordpress-secured |shell |unsupported=5
+|wordpress-secured |zig |unsupported=3
+|wordpress-resurrect |configuration |excluded-by-policy=13, unsupported=19
+|wordpress-resurrect |out-of-scope |excluded-by-policy=37
+|wordpress-resurrect |rust |analysed=6
+|wordpress-resurrect |scheme |unsupported=1
+|wordpress-resurrect |zig |unsupported=3
+|wordpress-praxis |configuration |excluded-by-policy=15, unsupported=47
+|wordpress-praxis |elixir |excluded-by-policy=2, unsupported=33
+|wordpress-praxis |javascript |analysed=1
+|wordpress-praxis |out-of-scope |excluded-by-policy=145
+|wordpress-praxis |php |analysed=11, incomplete-model=11
+|wordpress-praxis |rust |analysed=16
+|wordpress-praxis |scheme |unsupported=1
+|wordpress-praxis |shell |unsupported=2
+|wordpress-praxis |stylesheet |unsupported=3
+|wordpress-praxis |template |unsupported=3
+|wordpress-praxis |zig |unsupported=3
+|wordpress-plugin-conflict-mapper |configuration |excluded-by-policy=22, unsupported=9
+|wordpress-plugin-conflict-mapper |javascript |analysed=1
+|wordpress-plugin-conflict-mapper |out-of-scope |excluded-by-policy=38
+|wordpress-plugin-conflict-mapper |php |analysed=36, incomplete-model=36
+|wordpress-plugin-conflict-mapper |scheme |unsupported=1
+|wordpress-plugin-conflict-mapper |shell |unsupported=3
+|wordpress-plugin-conflict-mapper |stylesheet |unsupported=1
+|wordpress-plugin-conflict-mapper |zig |unsupported=3
+|wordpress-sinople-theme |configuration |excluded-by-policy=24, unsupported=11
+|wordpress-sinople-theme |javascript |analysed=3
+|wordpress-sinople-theme |out-of-scope |excluded-by-policy=53
+|wordpress-sinople-theme |php |analysed=28, incomplete-model=28
+|wordpress-sinople-theme |rust |analysed=2
+|wordpress-sinople-theme |scheme |unsupported=1
+|wordpress-sinople-theme |shell |excluded-by-policy=1, unsupported=5
+|wordpress-sinople-theme |stylesheet |unsupported=5
+|wordpress-sinople-theme |zig |unsupported=3
+|wordpress-journal-theme |configuration |excluded-by-policy=31, unsupported=17
+|wordpress-journal-theme |elixir |unsupported=1
+|wordpress-journal-theme |javascript |analysed=5
+|wordpress-journal-theme |out-of-scope |excluded-by-policy=63
+|wordpress-journal-theme |php |analysed=33, incomplete-model=33, parse-error=1
+|wordpress-journal-theme |rust |analysed=2
+|wordpress-journal-theme |scheme |unsupported=1
+|wordpress-journal-theme |shell |excluded-by-policy=1
+|wordpress-journal-theme |stylesheet |unsupported=4
+|wordpress-journal-theme |template |unsupported=3
+|===
+
+The added estate extensions are inventory only. DEED/K9 parsing, a complete
+repository metadata migration and strict raw-byte I-JSON/JCS report adoption
+remain follow-up work, with separate repository prompts under
+`docs/handoffs/format-toolchain/`.

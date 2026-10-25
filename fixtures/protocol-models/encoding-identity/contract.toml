@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: MPL-2.0
+schema_version = "0.2.0"
+strict_transitions = true
+id = "encoding-identity"
+description = "Reduced explicit-event model; not source-derived evidence"
+channel = "fixture-instance"
+states = ["start", "json", "capnp", "labelled"]
+initial = "start"
+
+[[transition]]
+on = "encode_json"
+from = "start"
+to = "json"
+
+[[transition]]
+on = "encode_capnp"
+from = "start"
+to = "capnp"
+
+[[transition]]
+on = "label_json"
+from = "json"
+to = "labelled"
+
+[[transition]]
+on = "label_capnp"
+from = "capnp"
+to = "labelled"

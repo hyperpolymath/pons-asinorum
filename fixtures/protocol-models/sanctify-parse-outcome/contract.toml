@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: MPL-2.0
+schema_version = "0.2.0"
+strict_transitions = true
+id = "sanctify-parse-outcome"
+description = "Reduced explicit-event model; not source-derived evidence"
+channel = "fixture-instance"
+states = ["start", "parsed", "failed", "reported"]
+initial = "start"
+
+[[transition]]
+on = "parse_ok"
+from = "start"
+to = "parsed"
+
+[[transition]]
+on = "parse_error"
+from = "start"
+to = "failed"
+
+[[transition]]
+on = "report_results"
+from = "parsed"
+to = "reported"
+
+[[transition]]
+on = "report_failure"
+from = "failed"
+to = "reported"

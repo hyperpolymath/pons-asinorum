@@ -1,0 +1,12 @@
+[
+  {
+    "instance": "case",
+    "call": "encode_json",
+    "line": 1
+  },
+  {
+    "instance": "case",
+    "call": "label_json",
+    "line": 2
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "instance": "case",
+    "call": "load_dependency",
+    "line": 1
+  },
+  {
+    "instance": "case",
+    "call": "initialize",
+    "line": 2
+  },
+  {
+    "instance": "case",
+    "call": "callback",
+    "line": 3
+  }
+]

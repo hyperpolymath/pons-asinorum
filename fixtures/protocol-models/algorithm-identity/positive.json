@@ -1,0 +1,12 @@
+[
+  {
+    "instance": "case",
+    "call": "hash_blake2b",
+    "line": 1
+  },
+  {
+    "instance": "case",
+    "call": "label_blake3",
+    "line": 2
+  }
+]

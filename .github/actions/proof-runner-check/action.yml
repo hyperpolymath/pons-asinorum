@@ -1,21 +1,10 @@
-name: 'Proof Runner Gate'
-description: 'Detects formally verified proofs and runs them to ensure correctness.'
+# SPDX-License-Identifier: MPL-2.0
+name: 'Proof Runner Status (unconfigured)'
+description: 'Reports that this local placeholder performs no formal verification.'
 runs:
   using: 'composite'
   steps:
-    - name: Run Formal Proofs
+    - name: Report proof runner coverage
       shell: bash
       run: |
-        echo "Executing Formal Proofs..."
-        
-        # Check for Idris2 proofs
-        if ls *.ipkg 1>/dev/null 2>&1 || [ -d "src" ]; then
-           # Heuristic for Idris2
-           echo "Running Idris2 proofs (typechecking)..."
-           # idris2 --typecheck *.ipkg || exit 1
-        fi
-        
-        # Check for Lean/Coq/Agda, etc. (Stubs for future implementation)
-        # e.g., if [ -f "lakefile.lean" ]; then lake build; fi
-        
-        echo "All detected proofs executed successfully."
+        echo "::notice title=Formal verification unconfigured::This placeholder runs no proof checker. No formal proofs were checked; exit 0 records status reporting only. See PROOF-PROGRESS.adoc."

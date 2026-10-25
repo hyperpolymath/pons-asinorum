@@ -1,0 +1,718 @@
+[
+  {
+    "target": "php-aegis",
+    "target_commit": "4d15c5941ee4189a8dd7d16819bb72ad7ab34338",
+    "command": [
+      "/workspace/scratch/57eb642527ea/pons-asinorum/target/release/pons",
+      "scan",
+      "/workspace/scratch/57eb642527ea/targets/php-aegis",
+      "--format",
+      "json",
+      "--fail-on-skips"
+    ],
+    "exit": 2,
+    "wall_seconds": 0.206997,
+    "peak_rss_kib": 14948,
+    "report_sha256": "d6010bb4ff2487835a8ceccea18148416678ea749f417489fbf8e0895982f8d2",
+    "tool": {
+      "name": "pons",
+      "version": "0.1.0",
+      "source_commit": "4f962ce11114228f6c6575aca7627d452e68e712",
+      "source_dirty": "false"
+    },
+    "scanned": {
+      "files": 34,
+      "coverage_status": "partial",
+      "coverage_failures": [],
+      "skipped_count": 14
+    },
+    "counts": {
+      "by_evidence": {
+        "HEURISTIC": 0,
+        "DATAFLOW": 0,
+        "PROTOCOL": 0,
+        "SPECULATIVE": 0
+      },
+      "total": 0
+    },
+    "by_language": {
+      "out-of-scope": {
+        "excluded-by-policy": 75
+      },
+      "configuration": {
+        "excluded-by-policy": 44,
+        "unsupported": 8
+      },
+      "shell": {
+        "excluded-by-policy": 2,
+        "unsupported": 6
+      },
+      "php": {
+        "excluded-by-policy": 1,
+        "analysed": 34,
+        "incomplete-model": 34
+      }
+    },
+    "validation_exit": 0
+  },
+  {
+    "target": "sanctify-php",
+    "target_commit": "e6ddfbcd54d2d12c1608bcf426b9158a908f2d19",
+    "command": [
+      "/workspace/scratch/57eb642527ea/pons-asinorum/target/release/pons",
+      "scan",
+      "/workspace/scratch/57eb642527ea/targets/sanctify-php",
+      "--format",
+      "json",
+      "--fail-on-skips"
+    ],
+    "exit": 2,
+    "wall_seconds": 0.167316,
+    "peak_rss_kib": 14944,
+    "report_sha256": "7dbfaa4c96c6e3b1a56b2cac9b052ceaf13cc0e82a55af7103a1d25c304e123b",
+    "tool": {
+      "name": "pons",
+      "version": "0.1.0",
+      "source_commit": "4f962ce11114228f6c6575aca7627d452e68e712",
+      "source_dirty": "false"
+    },
+    "scanned": {
+      "files": 11,
+      "coverage_status": "partial",
+      "coverage_failures": [],
+      "skipped_count": 37
+    },
+    "counts": {
+      "by_evidence": {
+        "HEURISTIC": 0,
+        "DATAFLOW": 4,
+        "PROTOCOL": 0,
+        "SPECULATIVE": 0
+      },
+      "total": 4
+    },
+    "by_language": {
+      "out-of-scope": {
+        "excluded-by-policy": 80
+      },
+      "configuration": {
+        "excluded-by-policy": 52,
+        "unsupported": 5
+      },
+      "shell": {
+        "excluded-by-policy": 2,
+        "unsupported": 1
+      },
+      "haskell": {
+        "unsupported": 30
+      },
+      "scheme": {
+        "unsupported": 1
+      },
+      "php": {
+        "analysed": 11,
+        "incomplete-model": 10
+      }
+    },
+    "validation_exit": 0
+  },
+  {
+    "target": "http-capability-gateway",
+    "target_commit": "0e75341ed3d3d9ce0abcc093111a76288aca73ee",
+    "command": [
+      "/workspace/scratch/57eb642527ea/pons-asinorum/target/release/pons",
+      "scan",
+      "/workspace/scratch/57eb642527ea/targets/http-capability-gateway",
+      "--format",
+      "json",
+      "--fail-on-skips"
+    ],
+    "exit": 2,
+    "wall_seconds": 0.163084,
+    "peak_rss_kib": 13932,
+    "report_sha256": "df7d1c08663e62722f5061b5dcc4a0485d9a836f7327080c67cee0db6e32ee17",
+    "tool": {
+      "name": "pons",
+      "version": "0.1.0",
+      "source_commit": "4f962ce11114228f6c6575aca7627d452e68e712",
+      "source_dirty": "false"
+    },
+    "scanned": {
+      "files": 0,
+      "coverage_status": "no-applicable-input",
+      "coverage_failures": [],
+      "skipped_count": 84
+    },
+    "counts": {
+      "by_evidence": {
+        "HEURISTIC": 0,
+        "DATAFLOW": 0,
+        "PROTOCOL": 0,
+        "SPECULATIVE": 0
+      },
+      "total": 0
+    },
+    "by_language": {
+      "out-of-scope": {
+        "excluded-by-policy": 74
+      },
+      "configuration": {
+        "excluded-by-policy": 45,
+        "unsupported": 17
+      },
+      "elixir": {
+        "excluded-by-policy": 1,
+        "unsupported": 57
+      },
+      "zig": {
+        "unsupported": 4
+      },
+      "shell": {
+        "unsupported": 2
+      },
+      "idris": {
+        "unsupported": 4
+      }
+    },
+    "validation_exit": 0
+  },
+  {
+    "target": "wordpress-tools",
+    "target_commit": "80f4007334168e31a838a9671c30b3ba5d1de8f1",
+    "command": [
+      "/workspace/scratch/57eb642527ea/pons-asinorum/target/release/pons",
+      "scan",
+      "/workspace/scratch/57eb642527ea/targets/wordpress-tools",
+      "--format",
+      "json",
+      "--fail-on-skips"
+    ],
+    "exit": 2,
+    "wall_seconds": 0.618097,
+    "peak_rss_kib": 15072,
+    "report_sha256": "6d2b377d4c9d46c25b63881d07083dd073658f332b941f89839cca9c4db12762",
+    "tool": {
+      "name": "pons",
+      "version": "0.1.0",
+      "source_commit": "4f962ce11114228f6c6575aca7627d452e68e712",
+      "source_dirty": "false"
+    },
+    "scanned": {
+      "files": 197,
+      "coverage_status": "partial",
+      "coverage_failures": [],
+      "skipped_count": 262
+    },
+    "counts": {
+      "by_evidence": {
+        "HEURISTIC": 4,
+        "DATAFLOW": 0,
+        "PROTOCOL": 0,
+        "SPECULATIVE": 0
+      },
+      "total": 4
+    },
+    "by_language": {
+      "out-of-scope": {
+        "excluded-by-policy": 498
+      },
+      "configuration": {
+        "excluded-by-policy": 208,
+        "unsupported": 159
+      },
+      "shell": {
+        "excluded-by-policy": 3,
+        "unsupported": 27
+      },
+      "stylesheet": {
+        "unsupported": 13
+      },
+      "rust": {
+        "analysed": 51
+      },
+      "elixir": {
+        "unsupported": 34,
+        "excluded-by-policy": 2
+      },
+      "php": {
+        "analysed": 136,
+        "incomplete-model": 136,
+        "parse-error": 1,
+        "excluded-by-policy": 1
+      },
+      "scheme": {
+        "unsupported": 7
+      },
+      "javascript": {
+        "analysed": 10
+      },
+      "template": {
+        "unsupported": 6
+      },
+      "zig": {
+        "unsupported": 15
+      }
+    },
+    "validation_exit": 0
+  },
+  {
+    "target": "project-wharf",
+    "target_commit": "5f113112c338d5a5c883faddfad414baf30f2834",
+    "command": [
+      "/workspace/scratch/57eb642527ea/pons-asinorum/target/release/pons",
+      "scan",
+      "/workspace/scratch/57eb642527ea/targets/project-wharf",
+      "--format",
+      "json",
+      "--fail-on-skips"
+    ],
+    "exit": 2,
+    "wall_seconds": 0.278394,
+    "peak_rss_kib": 16668,
+    "report_sha256": "23cce5ce8c3b11934a36260ed4d09fb4f23ccdc40a2c1f037eab964b4b2847f8",
+    "tool": {
+      "name": "pons",
+      "version": "0.1.0",
+      "source_commit": "4f962ce11114228f6c6575aca7627d452e68e712",
+      "source_dirty": "false"
+    },
+    "scanned": {
+      "files": 27,
+      "coverage_status": "partial",
+      "coverage_failures": [],
+      "skipped_count": 43
+    },
+    "counts": {
+      "by_evidence": {
+        "HEURISTIC": 0,
+        "DATAFLOW": 0,
+        "PROTOCOL": 0,
+        "SPECULATIVE": 0
+      },
+      "total": 0
+    },
+    "by_language": {
+      "configuration": {
+        "excluded-by-policy": 39,
+        "unsupported": 32
+      },
+      "out-of-scope": {
+        "excluded-by-policy": 257
+      },
+      "shell": {
+        "excluded-by-policy": 1,
+        "unsupported": 11
+      },
+      "php": {
+        "analysed": 1,
+        "incomplete-model": 1
+      },
+      "rust": {
+        "analysed": 26
+      }
+    },
+    "validation_exit": 0
+  },
+  {
+    "target": "wordpress-secured",
+    "target_commit": "80f4007334168e31a838a9671c30b3ba5d1de8f1",
+    "command": [
+      "/workspace/scratch/57eb642527ea/pons-asinorum/target/release/pons",
+      "scan",
+      "/workspace/scratch/57eb642527ea/targets/wordpress-tools/secured",
+      "--format",
+      "json",
+      "--fail-on-skips"
+    ],
+    "exit": 2,
+    "wall_seconds": 0.204253,
+    "peak_rss_kib": 16668,
+    "report_sha256": "8cf842207af3129fc4399716908ed3ce01f84b4b1474c60c748f9b8eb80affe3",
+    "tool": {
+      "name": "pons",
+      "version": "0.1.0",
+      "source_commit": "4f962ce11114228f6c6575aca7627d452e68e712",
+      "source_dirty": "false"
+    },
+    "scanned": {
+      "files": 26,
+      "coverage_status": "partial",
+      "coverage_failures": [],
+      "skipped_count": 21
+    },
+    "counts": {
+      "by_evidence": {
+        "HEURISTIC": 0,
+        "DATAFLOW": 0,
+        "PROTOCOL": 0,
+        "SPECULATIVE": 0
+      },
+      "total": 0
+    },
+    "by_language": {
+      "configuration": {
+        "excluded-by-policy": 30,
+        "unsupported": 12
+      },
+      "out-of-scope": {
+        "excluded-by-policy": 64
+      },
+      "zig": {
+        "unsupported": 3
+      },
+      "php": {
+        "analysed": 26,
+        "incomplete-model": 26,
+        "excluded-by-policy": 1
+      },
+      "shell": {
+        "unsupported": 5
+      },
+      "scheme": {
+        "unsupported": 1
+      }
+    },
+    "validation_exit": 0
+  },
+  {
+    "target": "wordpress-resurrect",
+    "target_commit": "80f4007334168e31a838a9671c30b3ba5d1de8f1",
+    "command": [
+      "/workspace/scratch/57eb642527ea/pons-asinorum/target/release/pons",
+      "scan",
+      "/workspace/scratch/57eb642527ea/targets/wordpress-tools/resurrect",
+      "--format",
+      "json",
+      "--fail-on-skips"
+    ],
+    "exit": 2,
+    "wall_seconds": 0.218483,
+    "peak_rss_kib": 16668,
+    "report_sha256": "990052c6587a428c0fbb707e8f7faa818387752a48957ed07d831cfc5f0a1d5b",
+    "tool": {
+      "name": "pons",
+      "version": "0.1.0",
+      "source_commit": "4f962ce11114228f6c6575aca7627d452e68e712",
+      "source_dirty": "false"
+    },
+    "scanned": {
+      "files": 6,
+      "coverage_status": "partial",
+      "coverage_failures": [],
+      "skipped_count": 23
+    },
+    "counts": {
+      "by_evidence": {
+        "HEURISTIC": 0,
+        "DATAFLOW": 0,
+        "PROTOCOL": 0,
+        "SPECULATIVE": 0
+      },
+      "total": 0
+    },
+    "by_language": {
+      "out-of-scope": {
+        "excluded-by-policy": 37
+      },
+      "configuration": {
+        "excluded-by-policy": 13,
+        "unsupported": 19
+      },
+      "zig": {
+        "unsupported": 3
+      },
+      "rust": {
+        "analysed": 6
+      },
+      "scheme": {
+        "unsupported": 1
+      }
+    },
+    "validation_exit": 0
+  },
+  {
+    "target": "wordpress-praxis",
+    "target_commit": "80f4007334168e31a838a9671c30b3ba5d1de8f1",
+    "command": [
+      "/workspace/scratch/57eb642527ea/pons-asinorum/target/release/pons",
+      "scan",
+      "/workspace/scratch/57eb642527ea/targets/wordpress-tools/praxis",
+      "--format",
+      "json",
+      "--fail-on-skips"
+    ],
+    "exit": 2,
+    "wall_seconds": 0.257688,
+    "peak_rss_kib": 16668,
+    "report_sha256": "f91d2baeaeda3c36e887658f9dcddd9b7b7989852ca67f16a7c45ac11e3526a8",
+    "tool": {
+      "name": "pons",
+      "version": "0.1.0",
+      "source_commit": "4f962ce11114228f6c6575aca7627d452e68e712",
+      "source_dirty": "false"
+    },
+    "scanned": {
+      "files": 28,
+      "coverage_status": "partial",
+      "coverage_failures": [],
+      "skipped_count": 92
+    },
+    "counts": {
+      "by_evidence": {
+        "HEURISTIC": 1,
+        "DATAFLOW": 0,
+        "PROTOCOL": 0,
+        "SPECULATIVE": 0
+      },
+      "total": 1
+    },
+    "by_language": {
+      "out-of-scope": {
+        "excluded-by-policy": 145
+      },
+      "configuration": {
+        "excluded-by-policy": 15,
+        "unsupported": 47
+      },
+      "elixir": {
+        "unsupported": 33,
+        "excluded-by-policy": 2
+      },
+      "shell": {
+        "unsupported": 2
+      },
+      "stylesheet": {
+        "unsupported": 3
+      },
+      "template": {
+        "unsupported": 3
+      },
+      "php": {
+        "analysed": 11,
+        "incomplete-model": 11
+      },
+      "zig": {
+        "unsupported": 3
+      },
+      "scheme": {
+        "unsupported": 1
+      },
+      "javascript": {
+        "analysed": 1
+      },
+      "rust": {
+        "analysed": 16
+      }
+    },
+    "validation_exit": 0
+  },
+  {
+    "target": "wordpress-plugin-conflict-mapper",
+    "target_commit": "80f4007334168e31a838a9671c30b3ba5d1de8f1",
+    "command": [
+      "/workspace/scratch/57eb642527ea/pons-asinorum/target/release/pons",
+      "scan",
+      "/workspace/scratch/57eb642527ea/targets/wordpress-tools/plugin-conflict-mapper",
+      "--format",
+      "json",
+      "--fail-on-skips"
+    ],
+    "exit": 2,
+    "wall_seconds": 0.194312,
+    "peak_rss_kib": 16668,
+    "report_sha256": "0da443feec83b77e9c5540e96471803d12e25b857a4dad2d04fc393d501f3e8f",
+    "tool": {
+      "name": "pons",
+      "version": "0.1.0",
+      "source_commit": "4f962ce11114228f6c6575aca7627d452e68e712",
+      "source_dirty": "false"
+    },
+    "scanned": {
+      "files": 37,
+      "coverage_status": "partial",
+      "coverage_failures": [],
+      "skipped_count": 17
+    },
+    "counts": {
+      "by_evidence": {
+        "HEURISTIC": 1,
+        "DATAFLOW": 0,
+        "PROTOCOL": 0,
+        "SPECULATIVE": 0
+      },
+      "total": 1
+    },
+    "by_language": {
+      "out-of-scope": {
+        "excluded-by-policy": 38
+      },
+      "configuration": {
+        "excluded-by-policy": 22,
+        "unsupported": 9
+      },
+      "php": {
+        "analysed": 36,
+        "incomplete-model": 36
+      },
+      "stylesheet": {
+        "unsupported": 1
+      },
+      "javascript": {
+        "analysed": 1
+      },
+      "shell": {
+        "unsupported": 3
+      },
+      "zig": {
+        "unsupported": 3
+      },
+      "scheme": {
+        "unsupported": 1
+      }
+    },
+    "validation_exit": 0
+  },
+  {
+    "target": "wordpress-sinople-theme",
+    "target_commit": "80f4007334168e31a838a9671c30b3ba5d1de8f1",
+    "command": [
+      "/workspace/scratch/57eb642527ea/pons-asinorum/target/release/pons",
+      "scan",
+      "/workspace/scratch/57eb642527ea/targets/wordpress-tools/sinople-theme",
+      "--format",
+      "json",
+      "--fail-on-skips"
+    ],
+    "exit": 2,
+    "wall_seconds": 0.175043,
+    "peak_rss_kib": 16668,
+    "report_sha256": "9d080a5a3b7dd94e454d9425cbfe4e4d57e1daca2b1738396c9154248ddb64d8",
+    "tool": {
+      "name": "pons",
+      "version": "0.1.0",
+      "source_commit": "4f962ce11114228f6c6575aca7627d452e68e712",
+      "source_dirty": "false"
+    },
+    "scanned": {
+      "files": 33,
+      "coverage_status": "partial",
+      "coverage_failures": [],
+      "skipped_count": 25
+    },
+    "counts": {
+      "by_evidence": {
+        "HEURISTIC": 2,
+        "DATAFLOW": 0,
+        "PROTOCOL": 0,
+        "SPECULATIVE": 0
+      },
+      "total": 2
+    },
+    "by_language": {
+      "out-of-scope": {
+        "excluded-by-policy": 53
+      },
+      "configuration": {
+        "excluded-by-policy": 24,
+        "unsupported": 11
+      },
+      "shell": {
+        "excluded-by-policy": 1,
+        "unsupported": 5
+      },
+      "javascript": {
+        "analysed": 3
+      },
+      "zig": {
+        "unsupported": 3
+      },
+      "rust": {
+        "analysed": 2
+      },
+      "scheme": {
+        "unsupported": 1
+      },
+      "php": {
+        "analysed": 28,
+        "incomplete-model": 28
+      },
+      "stylesheet": {
+        "unsupported": 5
+      }
+    },
+    "validation_exit": 0
+  },
+  {
+    "target": "wordpress-journal-theme",
+    "target_commit": "80f4007334168e31a838a9671c30b3ba5d1de8f1",
+    "command": [
+      "/workspace/scratch/57eb642527ea/pons-asinorum/target/release/pons",
+      "scan",
+      "/workspace/scratch/57eb642527ea/targets/wordpress-tools/journal-theme",
+      "--format",
+      "json",
+      "--fail-on-skips"
+    ],
+    "exit": 2,
+    "wall_seconds": 0.200513,
+    "peak_rss_kib": 16788,
+    "report_sha256": "4561369619dc003f91958ba88b092a0f4155f37b74e1d32e92def5a4f784f97d",
+    "tool": {
+      "name": "pons",
+      "version": "0.1.0",
+      "source_commit": "4f962ce11114228f6c6575aca7627d452e68e712",
+      "source_dirty": "false"
+    },
+    "scanned": {
+      "files": 40,
+      "coverage_status": "partial",
+      "coverage_failures": [],
+      "skipped_count": 27
+    },
+    "counts": {
+      "by_evidence": {
+        "HEURISTIC": 0,
+        "DATAFLOW": 0,
+        "PROTOCOL": 0,
+        "SPECULATIVE": 0
+      },
+      "total": 0
+    },
+    "by_language": {
+      "out-of-scope": {
+        "excluded-by-policy": 63
+      },
+      "configuration": {
+        "excluded-by-policy": 31,
+        "unsupported": 17
+      },
+      "shell": {
+        "excluded-by-policy": 1
+      },
+      "stylesheet": {
+        "unsupported": 4
+      },
+      "rust": {
+        "analysed": 2
+      },
+      "elixir": {
+        "unsupported": 1
+      },
+      "php": {
+        "analysed": 33,
+        "incomplete-model": 33,
+        "parse-error": 1
+      },
+      "scheme": {
+        "unsupported": 1
+      },
+      "javascript": {
+        "analysed": 5
+      },
+      "template": {
+        "unsupported": 3
+      }
+    },
+    "validation_exit": 0
+  }
+]

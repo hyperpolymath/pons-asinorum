@@ -1,11 +1,20 @@
 {
-  "schema_version": "0.3.0",
+  "schema_version": "0.4.0",
   "tool": {
     "name": "pons",
-    "version": "0.1.0"
+    "version": "0.1.0",
+    "source_commit": "TEST-COMMIT",
+    "source_dirty": "TEST-DIRTY"
+  },
+  "execution": {
+    "status": "completed",
+    "exit_code": null
   },
   "scanned": {
     "root": ".",
+    "coverage_status": "partial",
+    "inventory": [],
+    "coverage_failures": [],
     "files": 7,
     "suppressed_findings": 0,
     "languages": [
@@ -102,5 +111,88 @@
       "evidence_note": "two loops over collections derived from the same source",
       "counter_condition": null
     }
-  ]
+  ],
+  "evidence_contract": {
+    "schema_version": "1.0.0",
+    "target": {
+      "commit": null,
+      "dirty": null
+    },
+    "execution_outcome": "partial",
+    "parser_inventory": [],
+    "records": [
+      {
+        "fingerprint": "074af7e827a6865eb8319f120dccf1308227aa3be85895acc899e883969f0e16",
+        "producer": "pons",
+        "correlation_group": "pons:T1",
+        "rule": "dead-store",
+        "tier": "T1",
+        "evidence": "DATAFLOW",
+        "confidence": "model-dependent",
+        "path": "app/svc.py",
+        "line": 41,
+        "trace": "live-variable analysis: `total` not in LiveOut after this store",
+        "assumptions": [
+          "Only registered rule semantics and declared parser/model coverage; no runtime safety certification"
+        ],
+        "unknown_edges": [],
+        "counterconditions": []
+      },
+      {
+        "fingerprint": "1b592d3e020037ca9be8ed8f95b4dd78679e41f67d858ba2e6dbe08b749efa38",
+        "producer": "pons",
+        "correlation_group": "pons:T0",
+        "rule": "div-by-literal-zero",
+        "tier": "T0",
+        "evidence": "HEURISTIC",
+        "confidence": "heuristic",
+        "path": "app/svc.py",
+        "line": 47,
+        "trace": "constant zero on the right-hand side",
+        "assumptions": [
+          "Only registered rule semantics and declared parser/model coverage; no runtime safety certification"
+        ],
+        "unknown_edges": [],
+        "counterconditions": [
+          "the surrounding branch is provably dead"
+        ]
+      },
+      {
+        "fingerprint": "d84849476219f034f56f7324f010a1ac40f17df3f9442e8b9ecdf7f83b4a4bf4",
+        "producer": "pons",
+        "correlation_group": "pons:T2",
+        "rule": "suppress-then-emit",
+        "tier": "T2",
+        "evidence": "PROTOCOL",
+        "confidence": "premise-dependent",
+        "path": "lib/util.ts",
+        "line": 9,
+        "trace": "enters `suppressed` at line 4; reaches `prompt` at line 9",
+        "assumptions": [
+          "Only registered rule semantics and declared parser/model coverage; no runtime safety certification"
+        ],
+        "unknown_edges": [],
+        "counterconditions": [
+          "a different channel instance reaches the prompt"
+        ]
+      },
+      {
+        "fingerprint": "03c613c8d0a7ea9849732b22ee2756c5b0cb6f75cdf7e519dea94fdf7abb265c",
+        "producer": "pons",
+        "correlation_group": "pons:T3",
+        "rule": "possible-superlinear",
+        "tier": "T3",
+        "evidence": "SPECULATIVE",
+        "confidence": "speculative",
+        "path": "lib/util.ts",
+        "line": 22,
+        "trace": "two loops over collections derived from the same source",
+        "assumptions": [
+          "Only registered rule semantics and declared parser/model coverage; no runtime safety certification"
+        ],
+        "unknown_edges": [],
+        "counterconditions": []
+      }
+    ]
+  }
 }

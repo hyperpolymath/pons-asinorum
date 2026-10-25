@@ -1,0 +1,12 @@
+[
+  {
+    "instance": "case",
+    "call": "check_shake_available",
+    "line": 1
+  },
+  {
+    "instance": "case",
+    "call": "use_shake",
+    "line": 2
+  }
+]

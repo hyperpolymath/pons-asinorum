@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: MPL-2.0
+schema_version = "0.2.0"
+strict_transitions = true
+id = "request-lifetime-research"
+description = "Reduced explicit-event model; not source-derived evidence"
+channel = "fixture-instance"
+states = ["initial", "published", "reset", "freed", "consumed"]
+initial = "initial"
+
+[[transition]]
+on = "initialize"
+from = "initial"
+to = "reset"
+
+[[transition]]
+on = "publish_request_state"
+from = "reset"
+to = "published"
+
+[[transition]]
+on = "clear_state"
+from = "published"
+to = "reset"
+
+[[transition]]
+on = "release_request"
+from = "reset"
+to = "freed"
+
+[[transition]]
+on = "start_next_request"
+from = "freed"
+to = "initial"
+
+[[transition]]
+on = "consume"
+from = "reset"
+to = "consumed"

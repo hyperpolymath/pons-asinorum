@@ -49,6 +49,8 @@ pub struct Allowance {
     pub rule: String,
     pub path: String,
     pub reason: String,
+    pub owner: String,
+    pub expires: u64,
 }
 
 #[derive(Debug, Default)]
@@ -76,6 +78,12 @@ impl Config {
     /// unknown suppressed rule, an invalid glob or an allowance whose reason
     /// is empty after trimming whitespace.
     pub fn compile(self, known_rules: &[&str]) -> Result<CompiledConfig> {
+        if !self.suppress.rules.is_empty() || !self.suppress.paths.is_empty() {
+            bail!("broad rule/path suppressions are no longer accepted; use suppress.allow with rule, path, reason, owner and expires (Unix seconds)");
+        }
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_secs();
         let known: BTreeSet<&str> = known_rules.iter().copied().collect();
         for id in &self.suppress.rules {
             if !known.contains(id.as_str()) {
@@ -90,8 +98,15 @@ impl Config {
             .collect::<Result<Vec<_>>>()?;
         let mut allowances = Vec::new();
         for a in &self.suppress.allow {
-            if a.reason.trim().is_empty() {
-                bail!("suppression for {} needs a reason", a.rule);
+            if a.reason.trim().is_empty()
+                || a.owner.trim().is_empty()
+                || a.path.trim().is_empty()
+                || a.expires <= now
+            {
+                bail!(
+                    "suppression for {} needs a reason, owner, scoped path and future expiry",
+                    a.rule
+                );
             }
             if !known.contains(a.rule.as_str()) {
                 bail!("unknown suppressed rule: {}", a.rule);
@@ -169,8 +184,12 @@ mod tests {
     #[test]
     fn a_relative_suppression_path_matches_a_root_relative_finding() {
         let cfg: Config = toml::from_str(
-            r#"[suppress]
-paths = ["fixtures/**"]
+            r#"[[suppress.allow]]
+rule = "div-by-literal-zero"
+path = "fixtures/**"
+reason = "labelled fixtures"
+owner = "test"
+expires = 4102444800
 "#,
         )
         .unwrap();

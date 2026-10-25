@@ -1,0 +1,300 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "target",
+    "execution_outcome",
+    "parser_inventory",
+    "records"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commit",
+        "dirty"
+      ],
+      "properties": {
+        "commit": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dirty": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "execution_outcome": {
+      "enum": [
+        "complete-within-policy",
+        "partial",
+        "no-applicable-input"
+      ]
+    },
+    "parser_inventory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "kind",
+          "language",
+          "outcome",
+          "reason",
+          "parser",
+          "artifact_digest",
+          "transcoded",
+          "analysis_notes",
+          "analysis_complete"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "file",
+              "directory",
+              "unknown"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1
+          },
+          "outcome": {
+            "enum": [
+              "analysed",
+              "unsupported",
+              "excluded-by-policy",
+              "parse-error",
+              "timeout",
+              "unreadable"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parser": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "artifact_digest": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^blake3:[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "transcoded": {
+            "type": "boolean"
+          },
+          "analysis_notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "analysis_complete": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fingerprint",
+          "producer",
+          "correlation_group",
+          "rule",
+          "tier",
+          "evidence",
+          "confidence",
+          "path",
+          "line",
+          "trace",
+          "assumptions",
+          "unknown_edges",
+          "counterconditions"
+        ],
+        "properties": {
+          "fingerprint": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "producer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "correlation_group": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rule": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tier": {
+            "enum": [
+              "T0",
+              "T1",
+              "T2",
+              "T3"
+            ]
+          },
+          "evidence": {
+            "enum": [
+              "HEURISTIC",
+              "DATAFLOW",
+              "PROTOCOL",
+              "SPECULATIVE"
+            ]
+          },
+          "confidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "trace": {
+            "type": "string",
+            "minLength": 1
+          },
+          "assumptions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "unknown_edges": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "counterconditions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "tier": {
+                  "const": "T0"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "evidence": {
+                  "const": "HEURISTIC"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "tier": {
+                  "const": "T1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "evidence": {
+                  "const": "DATAFLOW"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "tier": {
+                  "const": "T2"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "evidence": {
+                  "const": "PROTOCOL"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "tier": {
+                  "const": "T3"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "evidence": {
+                  "const": "SPECULATIVE"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pons evidence exchange 1.0.0",
+  "$comment": "SPDX-License-Identifier: MPL-2.0; shape validation must be followed by pons validate-report semantic checks."
+}

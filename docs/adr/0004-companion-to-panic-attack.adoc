@@ -6,6 +6,22 @@
 *Status:* ACCEPTED. Records why pons is a *separate* tool from panic-attack, and
 the one interop point they share.
 
+== Implementation amendment — 25 October 2026
+
+The separation decision still holds. The comparison below records the original
+July design rationale, not audited current capability counts or a claim that
+Pons has source-derived typestate. Current Pons has 13 source rules, bounded
+Python/PHP dataflow and explicit-event protocol checking; source-derived
+protocol extraction, SMT integration and machine-checked proofs remain open.
+See link:../PURPOSE-AND-PROOF.adoc[purpose and proof status].
+
+The report boundary now includes JSON 0.4.0 and evidence contract 1.0.0 as well
+as SARIF 2.1.0. See link:../EVIDENCE-CONTRACT.adoc[the implemented contract].
+Cross-repository consumers remain unfinished. This adds no shared scanner
+engine or build dependency. Preserve each producer's identity, premises,
+coverage and correlation group; agreement is not independent proof by default.
+Security-relevant dataflow is legitimate Pons scope when supported by its model.
+
 == Context
 
 panic-attack (this estate) is a mature static analyser: 49 languages, 25

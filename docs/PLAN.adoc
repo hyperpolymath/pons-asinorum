@@ -451,3 +451,14 @@ very bump was nearly missed: re-blessing the golden file with `PONS_BLESS=1`
 absorbs a new key silently and turns every other test in the module green again.
 Measured — with the guard removed, a mutant adding a field and a re-bless leaves
 the whole suite passing at an unchanged `schema_version`.
+
+== 2026-10-25 portfolio amendment
+
+The PHP/WordPress upgrade authorises the implementation and explicit limits in
+COVERAGE-MIGRATION.adoc, PHP-ADAPTER.adoc, PROTOCOL-MODELS.adoc and
+EVIDENCE-CONTRACT.adoc. These supersede older envelope/exit/suppression wording:
+scan schema is 0.4.0; no-applicable-input exits 2; native PHP is a bounded adapter;
+unsupported languages are accounted for; source-derived universal protocol
+verification remains unimplemented. Measured evidence is kept separately from
+these design commitments. No release tag or claim of completion of the entire
+original M0–M8 programme follows merely from these changes.

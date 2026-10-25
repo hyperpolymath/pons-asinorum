@@ -11,6 +11,7 @@ const LANGUAGES: &[Lang] = &[Lang::Python, Lang::JavaScript, Lang::TypeScript, L
 
 fn query_source(lang: Lang) -> &'static str {
     match lang {
+        Lang::Php => unreachable!("PHP uses its native adapter rules"),
         Lang::Python => include_str!("../../rules/swallowed-error/python.scm"),
         Lang::JavaScript => include_str!("../../rules/swallowed-error/javascript.scm"),
         Lang::TypeScript => include_str!("../../rules/swallowed-error/typescript.scm"),
@@ -132,6 +133,7 @@ fn is_swallowed(body: &tree_sitter::Node, lang: Lang) -> bool {
     }
 
     match lang {
+        Lang::Php => unreachable!("PHP uses its native adapter rules"),
         Lang::Python => statements == 1 && only_pass,
         _ => statements == 0,
     }
