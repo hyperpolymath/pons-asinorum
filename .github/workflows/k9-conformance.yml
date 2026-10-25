@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: MPL-2.0
+# K9 contract conformance lane.
+#
+# Calls the estate's shared K9 validator over every committed K9 file (here:
+# the six verb contracts under .machine_readable/contractiles/*/). The
+# reusable installs a pinned Nickel, so CI gets the L2 semantic typecheck
+# against the normative contract, not just the L1 structural screen; the
+# Ed25519 signature verdicts are honestly reported as Present_Unverified
+# until a verifier is configured (a skip is never reported as a pass).
+#
+# ⚠ THE OWNER SPELLING IS LOAD-BEARING: `metadatastician/standards` — the
+# Actions resolver does not follow the estate rename (measured, PR #64).
+#
+# THE PIN: 8e48b1caade08a552646adeab66558ac43b4360d, metadatastician/standards
+# master as of 2026-10-25. The caller gets the validator, the normative
+# contract and the grid renderer at this commit.
+
+name: k9-conformance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  k9:
+    uses: metadatastician/standards/.github/workflows/k9-conformance.yml@8e48b1caade08a552646adeab66558ac43b4360d
+    with:
+      require-files: true

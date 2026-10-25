@@ -20,17 +20,23 @@ and reports each finding **with an honest label for how strong the evidence is**
 
 > **Important**
 >
-> **Status: implementation in progress toward v0.1.0.** Milestones M0–M2 are
-> built and merged — the engine, the finding model with its evidence classes,
-> the human reporter, eight T0 rules across Python/JavaScript/TypeScript/TSX/Rust,
-> and the falsifier gate that holds them honest. M3–M8 remain: JSON and SARIF
-> output, Python CFG and dataflow (T1), typestate (T2), the speculative tier
-> (T3), and suppression. See [[Roadmap]] for what ships when.
+> **Status: implemented and gated; not yet released.** Shipped and verified by
+> CI: the engine, the finding model with its evidence classes, human/JSON/SARIF
+> reporters, **13 registered rules** — 8 T0 (syntactic) across
+> Python/JavaScript/TypeScript/TSX/Rust, 2 T1 (Python CFG + dataflow:
+> `dead-store`, `read-before-init`) and 3 PHP rules on a 6th grammar — plus the
+> falsifier gate, inline and project suppression, the
+> `catalogue`/`man`/`doctor`/`trace` commands, and a doc-drift gate that holds
+> the docs to the live binary. Remaining: T2 typestate rules (protocol-checker
+> groundwork only), the T3 speculative tier, and the measured-precision
+> campaign (issue #47). See [[Roadmap]].
 >
 > The design is fixed and ratified (see the repository's `docs/` — kickoff,
 > ADRs 0001–0005, and PLAN). Where this wiki says "will", the behaviour is
 > specified and gated but not yet built; every such claim maps to an acceptance
-> criterion in the plan, not to aspiration.
+> criterion in the plan, not to aspiration. Repository facts for agents live in
+> the deed era: `pons-asinorum_chora.deed`, `0-AI-MANIFEST.deed` and
+> `coordination.k9`.
 
 ## The one idea
 

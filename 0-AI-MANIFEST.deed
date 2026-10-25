@@ -1,0 +1,43 @@
+;; SPDX-FileCopyrightText: © 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
+;; SPDX-License-Identifier: CC-BY-SA-4.0
+(repo-deed
+  :schema-version "1.0.0"
+  :canonical-name "pons-asinorum"
+  :repo-uuid #u8"gv-clade-index:github.com/hyperpolymath/pons-asinorum"
+  :beholding-chora #u5"estate/chora"
+
+  (purpose
+    :text "A falsifier-first static scanner: pons flags the small set of mistakes that experts spot on sight (wasted work, self-contradiction, missing escape hatches) and labels every finding with an honest evidence tier, so that heuristics are never mistaken for proofs and the tool can be trusted precisely as far as its evidence reaches.")
+
+  (front-doors
+    :machine "pons-asinorum_chora.deed"
+    :human "README.adoc")
+
+  (routing
+    (scanner :paths ("crates/" "tests/" "benches/"))
+    (rules-and-evidence :paths ("crates/pons-rules/" "fixtures/"))
+    (protocols :paths ("protocols/" "crates/pons-protocols/"))
+    (contractiles :paths (".machine_readable/contractiles/"))
+    (enforcement-ci :paths (".github/workflows/"))
+    (evidence-discipline :paths ("docs/PLAN.adoc" "docs/AUDIT.adoc" "PROOF-PROGRESS.adoc" "docs/EXNOVATION-ROADMAP.adoc"))
+    (current-project-state :paths ("pons-asinorum_chora.deed")))
+
+  (invariants
+    (rule :priority 10 :text "Never dress a heuristic up as a proof. Every finding carries its evidence tier (PROTOCOL, DATAFLOW, HEURISTIC, SPECULATIVE); exits, reporters and claims are gated on the tier, and a fix is not 'verified' until the relevant compile, test, e2e and CI evidence exists.")
+    (rule :priority 20 :text "The falsifier gate holds every rule honest: a rule that fires anywhere in its own negative corpus is falsified, and every registered rule must ship a negative corpus.")
+    (rule :priority 30 :text "No scan claims coverage it does not have: skipped files, transcoded inputs and speculative findings are reported as such (including SARIF tool execution notifications), never silently dropped.")
+    (rule :priority 40 :text "Author attribution — Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>"))
+
+  (startup-checklist
+    :steps ("Read THIS file, then README.adoc."
+    "Read pons-asinorum_chora.deed for repository metadata and state-source routing."
+    "Read the legacy .machine_readable/descriptiles/AGENTIC.a2ml for interaction patterns; do not extend it."
+    "Read docs/USAGE.adoc for what the tool actually does today, and docs/EXNOVATION-ROADMAP.adoc for what it may become."))
+
+  (attestation
+    :text "I have read the pons manifest. I will not present a heuristic as a proof, a scaffold as a capability, or an intended feature as a shipped one; I will label skipped, transcoded and speculative results; and I will not claim a repair is verified without the evidence to show. Licence/SPDX changes to existing files are Manual-Only and restricted to registered codeowner-admins — I will flag, never edit.")
+
+  (meta
+    :maintained-by "Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>"
+    :protocol "https://github.com/hyperpolymath/0-ai-gatekeeper-protocol")
+)

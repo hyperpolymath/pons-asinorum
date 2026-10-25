@@ -10,39 +10,49 @@ archived: false
 
 # Roadmap
 
-pons is **in implementation**: M0–M2 are merged, M3–M8 remain. The full milestone
-plan with exit gates lives in `docs/PLAN.adoc`; this is the summary.
+pons is **in implementation and daily verification**: the engine, the T0 and T1
+catalogues, the reporters, suppression and the CLI surface are shipped and
+gated; the T2 typestate rules and the T3 speculative tier are not. The full
+milestone plan with exit gates lives in `docs/PLAN.adoc`; the strategic
+exnovation roadmap (proof obligations, statistics, legacy-language scanning)
+lives in `docs/EXNOVATION-ROADMAP.adoc`. This page is the summary, reconciled
+against the live registry.
 
-## v0.1.0 milestones
+## Shipped (verified by CI, not asserted)
 
-Each milestone has an **exit gate**; N+1 does not start until N is green.
+| Area | State | Evidence |
+|---|---|---|
+| M0 — Cargo workspace (4 crates) + grammar pins | ✅ | `cargo build --workspace` green in CI |
+| M1 — `Finding` model + engine + human reporter with evidence-tier demotion | ✅ | unit tests |
+| M3 — JSON + SARIF reporters (schema-versioned; SARIF invocation notifications for skips) | ✅ | golden-file tests; e2e |
+| M4 — Python CFG + dataflow + T1 rules `dead-store`, `read-before-init` | ✅ | CFG snapshot tests; falsifier gate |
+| 8 T0 rules across Python, JavaScript, TypeScript, TSX, Rust | ✅ | falsifier gate over positive+negative corpora |
+| PHP family — 6th grammar; `php-context-flow` (T1), `php-empty-security-function` (T0), `php-unresolved-include` (T0) | ✅ | same gate |
+| M7 — Suppression (inline `pons:allow` comments + `pons.toml` project allowances) | ✅ | unit + e2e tests |
+| Generated `docs/catalogue.adoc` + `pons catalogue` / `man` / `doctor` / `trace` commands | ✅ | doc-drift gate (docs must match the live binary) |
+| Explicit ordered trace-protocol checker (`pons trace` + TOML protocols) | ✅ | e2e good/bad trace fixtures |
+| ADR-0005 exit-code matrix; broken-pipe tolerance; `--fail-on`, `--fail-on-skips` | ✅ | e2e suite |
+| Estate deed-era metadata: `pons-asinorum_chora.deed`, `0-AI-MANIFEST.deed`, `coordination.k9`; contractile tridents conformed to K9 contract v1.0.0 | ✅ | estate `deed-conformance` and `k9-conformance` CI lanes |
+
+## Remaining for v0.1.0
 
 | M | Deliverable | Exit gate |
 |---|---|---|
-| M0 ✅ | Cargo workspace (4 crates) + grammar pins + substrate smoke test | build green + all four grammars parse & query |
-| M1 ✅ | `Finding` model + engine skeleton + human reporter (with demotion) | `pons scan` prints an empty report; `SPECULATIVE` demoted in a unit test | M2 |
-| **T0 catalogue** (rules 1–8) across Python/JS/TS/Rust + **the falsifier gate** | every T0 rule fires on all positives, zero on negatives (CI) | M3 | JSON + SARIF reporters |
-| golden-file + SARIF-schema validation; demotion survives all three formats | M4 | Python CFG + dataflow + **T1 rules** 9–10 |
-| corpora pass; CFG snapshots green; `exec(`-containing function → zero T1 findings (OPAQUE) | M5 | T2 typestate + **flagship** `suppress-then-emit` + toy protocol |
-| fires on suppress-then-emit, silent on suppress→unsuppress→emit; two-line witness | M6 | **T3 rules** 13–15 + `SPECULATIVE` plumbing + `--no-speculative` | `--no-speculative` removes exactly the T3 findings; demoted everywhere |
-| M7 | Suppression (inline + `pons.toml`) + CLI polish + generated `docs/catalogue.adoc` | suppression works both ways; catalogue drift test green | M8 |
-| Acceptance sweep on a mixed corpus | every kickoff acceptance box ticked ⇒ **tag v0.1.0** |  |
+| M5 | T2 typestate rules (`suppress-then-emit` flagship) against a supplied protocol | fires on the violation, silent on the compliant sequence; two-line witness |
+| M6 | T3 speculative rules + `SPECULATIVE` plumbing end-to-end | `--no-speculative` removes exactly the T3 findings; demoted everywhere |
+| M8 | Acceptance sweep on a mixed corpus | every kickoff acceptance box ticked ⇒ tag `v0.1.0` |
 
-## The v0.1.0 acceptance gate (definition of done)
+Groundwork exists for M5: `pons-protocols` parses TOML protocol contracts and
+`pons trace` checks ordered event traces against them — but **no source-derived
+typestate rule is registered**, and none is claimed.
 
-Tag `v0.1.0` only when **all** hold:
+## The precision debt (open, measured, not hidden)
 
-- Scans a mixed directory (Python + JS/TS + Rust) → human, JSON, and SARIF.
-- Every T0 rule fires on all its positives and none of its negatives (CI gate).
-- ≥2 T1 rules working on one language with a real CFG + dataflow.
-- One T2 protocol demo (`suppress-then-emit`) end-to-end against the toy
-  protocol.
-- Every finding carries `rule_id`, `tier`, `evidence`, a `location` span, a
-  one-line `message`, and a non-empty `evidence_note`.
-- All T3 findings visibly non-authoritative in every format.
-- Suppression via inline comment **and** `pons.toml`.
-- `docs/adr/0001-substrate.adoc` records the substrate decision; `catalogue.adoc`
-  generated from the registry.
+Issue #47 measured the flatbuffers run: **3 of 78 findings true positives**
+(Wilson 95% CI ≈ [1.3%, 10.7%]). Nothing in this roadmap changes that number,
+and no release may be called production-ready until the statistical evaluation
+campaign in `docs/EXNOVATION-ROADMAP.adoc` (§ "Statistical plan") has run with
+pre-registered corpus sizes (n ≥ 385 for ±5pp at 95%).
 
 ## Explicitly out of scope for v0.1.0
 
@@ -55,13 +65,17 @@ with Semgrep on its own ground.
 - More T1 languages — Rust as an **analysed** target once a `Drop`-awareness story
   exists (needs some type resolution).
 - More shipped protocols and an `args` predicate in the protocol matcher.
+- Supervised scanning of COBOL / FORTRAN / BASIC / C / C++ legacy estates —
+  staged in `docs/EXNOVATION-ROADMAP.adoc`, Phase 3+.
+- Incorrectness-logic counterexamples, CEGAR-style refinement, typestate with
+  aliasing — proof obligations in `docs/EXNOVATION-ROADMAP.adoc`.
 - An optional `--backend codeql` deep mode that could upgrade selected T3 rules
   to `DATAFLOW` — noted in ADR-0001, not planned.
 - Estate records-sink integration via SARIF (ADR-0004).
 
-## Open owner decisions
+## Owner decisions
 
 Tracked in `docs/OWNER-DECISIONS.adoc`. Ratified 2026-07-08: name `pons`;
-licences MPL-2.0 (code) / CC-BY-SA-4.0 (docs); public; author Jonathan D.A.
-Jewell. Still open: D4 — whether to adopt the full estate RSR CI template now or
-after v0.1.0.
+licences MPL-2.0-or-later (code) / CC-BY-SA-4.0 (docs); public; author Jonathan
+D.A. Jewell. D4 (adopt estate CI now or after v0.1.0) is overtaken by events:
+the deed-conformance and k9-conformance estate lanes are wired and required.

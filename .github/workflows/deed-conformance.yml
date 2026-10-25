@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: MPL-2.0
+# DEED conformance lane.
+#
+# Calls the estate's shared DEED linter (grammar v1.2.0, normative) over every
+# committed *.deed file. `require-files: true` fails the job if the repository
+# somehow loses its deeds entirely — a zero-file run is otherwise a pass, which
+# is exactly the "gate that could never fire" defect the estate has paid for
+# before.
+#
+# ⚠ THE OWNER SPELLING IS LOAD-BEARING: `metadatastician/standards`. The
+# repository was transferred to the `metadatastician` organisation; GitHub's
+# REST API follows the old name but the Actions resolver does NOT (measured
+# here on the secret-scanner lane, PR #64). `uses:` MUST use the new spelling.
+#
+# THE PIN IS EQUALLY LOAD-BEARING: the caller gets the linter at THIS
+# workflow's own commit, so pinning the reusable pins the grammar it
+# enforces. 8e48b1caade08a552646adeab66558ac43b4360d is metadatastician/
+# standards master as of 2026-10-25.
+
+name: deed-conformance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deed:
+    uses: metadatastician/standards/.github/workflows/deed-conformance.yml@8e48b1caade08a552646adeab66558ac43b4360d
+    with:
+      require-files: true
