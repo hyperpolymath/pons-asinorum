@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
 = Exchange contract 1.0.0 / scan envelope 0.4.0
 
-`evidence_contract` carries target Git commit/dirty state (null outside Git),
+`evidence_contract` carries the observed target Git commit (null outside Git),
 execution outcome, native parser inventory and independently identifiable
-records. Every analysed file includes a BLAKE3 digest of its original bytes.
+records. Target `dirty` is always null (unknown): Pons avoids running target
+Git status/diff operations that could execute configured filters or monitors.
+Every analysed file includes a BLAKE3 digest of its original bytes.
 Excluded/unsupported/unreadable contents are not hashed; these digests are not
 represented as a digest of the entire repository. Dirty input can differ from
 the named commit. Tool metadata contains its build-time source commit and dirty
@@ -66,7 +68,8 @@ durability assertions. No source-to-event extraction is provided yet.
 |===
 |Rule |Tier |Adapter |Scope / main limit
 |div-by-literal-zero, self-assignment, constant-condition |T0 |Python, JS, TS/TSX, Rust |AST candidate; no runtime proof
-|while-true-no-break, empty-effect-loop, unreachable-after-jump |T0 |Python, JS, TS/TSX, Rust |Local syntax; await is not proof of progress
+|while-true-no-break, empty-effect-loop |T0 |Python, JS, TS/TSX, Rust |Local syntax; await is not proof of progress
+|unreachable-after-jump |T0 |Python, JS, TS/TSX, Rust, PHP |Same-block adjacency; branch siblings and PHP labels are excluded
 |swallowed-error, string-concat-in-loop |T0 |Python, JS, TS/TSX |Local syntax only
 |dead-store, read-before-init |T1 |Python |Existing CFG may-analysis; opaque functions and infeasible paths disclosed
 |php-empty-security-function |T0 |PHP |Name heuristic plus empty AST body
@@ -86,5 +89,8 @@ behavior; it is not a representative real-world precision/recall estimate.
 `execution.exit_code` records the actual CLI outcome separately from coverage.
 Library-only rendering uses null until a caller chooses a gate policy. This
 prevents a findings-threshold exit or failed coverage gate being confused with a
-successful assurance result. Protocol input is capped at 1 MiB; trace/report JSON
-input is capped at 16 MiB, in addition to the event-count/model bounds.
+successful assurance result. Protocol input is capped at 1 MiB; trace JSON
+input is capped at 16 MiB, in addition to event-count/model bounds.
+`validate-report` reads through a buffered reader with no fixed byte ceiling,
+but still materializes the JSON value in memory. Use external CPU/RSS limits
+for untrusted reports; buffered input is not bounded-memory validation.
