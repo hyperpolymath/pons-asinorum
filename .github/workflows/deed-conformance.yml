@@ -1,41 +1,51 @@
 # SPDX-License-Identifier: MPL-2.0
-# DEED conformance lane.
+# DEED conformance lane — STATUS: NOT WIRABLE FROM THIS REPO (measured 2026-10-25).
 #
-# Calls the estate's shared DEED linter (grammar v1.2.0, normative) over every
-# committed *.deed file. `require-files: true` fails the job if the repository
-# somehow loses its deeds entirely — a zero-file run is otherwise a pass, which
-# is exactly the "gate that could never fire" defect the estate has paid for
-# before.
+# The intended lane calls the estate's shared DEED linter (grammar v1.2.0,
+# normative) over every committed *.deed file, with `require-files: true` so
+# an empty corpus fails the gate rather than passing vacuously.
 #
-# ⚠ THE OWNER SPELLING IS LOAD-BEARING: `metadatastician/standards`. The
-# repository was transferred to the `metadatastician` organisation; GitHub's
-# REST API follows the old name but the Actions resolver does NOT (measured
-# here on the secret-scanner lane, PR #64). `uses:` MUST use the new spelling.
+# MEASURED, twice, on PR #65:
+#   * pinned to master (metadatastician/standards@8e48b1c): `startup_failure`
+#     — no job, no log;
+#   * pinned to cf8f9121 (the commit whose actions.lock GitHub accepts, and
+#     where deed-conformance.yml exists; the same pin the secret-scanner lane
+#     runs successfully): `startup_failure` again.
+# The pin is therefore not the variable. The variable is the org Actions
+# allowlist: under the estate's `selected` actions posture, GitHub kills at
+# startup any `uses:` of a reusable workflow that is not on the org's live
+# `patterns_allowed` — zero jobs, no log (rhodium-standard-repositories/
+# actions-allowlist/README.adoc documents the mechanism and its history).
+# The secret-scanner reusable is on the org's live list; deed-conformance
+# is not. That is an estate-admin change, not a repository change.
 #
-# ⚠ THE PIN IS EQUALLY LOAD-BEARING, and it is not "latest master": a call
-# pinned to master (`8e48b1c`) was refused at job setup (`startup_failure`,
-# no job, no log — the failure mode documented in secret-scanner.yml), while
-# the call pinned to `cf8f9121` — the same commit the secret-scanner lane
-# already runs, whose own actions.lock GitHub accepts — starts and runs, and
-# `deed-conformance.yml` exists at that commit. When the estate publishes a
-# newer accepted pin carrying newer linter behaviour, re-pin deliberately and
-# watch the first run.
-
-name: deed-conformance
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-jobs:
-  deed:
-    permissions:
-      contents: read
-    uses: metadatastician/standards/.github/workflows/deed-conformance.yml@cf8f91219d80da55cf8cbbfcd587d00c2d8798ed
-    with:
-      require-files: true
+# The conformance evidence of record meanwhile:
+#   * both deeds pass the estate's normative deed_lint.js (grammar v1.2.0)
+#     — run under node, the same linter CI would run;
+#   * `estate / manifests` (the estate CI/CD audit) passes on this tree;
+#   * the doc-drift and e2e gates keep the surrounding docs honest.
+#
+# TO WIRE once the estate adds
+# `metadatastician/standards/.github/workflows/deed-conformance.yml@<pinned-sha>`
+# to the org's allowed patterns — restore the call (the owner spelling is
+# load-bearing: the Actions resolver does not follow the estate rename,
+# measured in #64):
+#
+# name: deed-conformance
+#
+# on:
+#   push:
+#     branches: [main]
+#   pull_request:
+#   workflow_dispatch:
+#
+# permissions:
+#   contents: read
+#
+# jobs:
+#   deed:
+#     permissions:
+#       contents: read
+#     uses: metadatastician/standards/.github/workflows/deed-conformance.yml@<accepted-pin>
+#     with:
+#       require-files: true

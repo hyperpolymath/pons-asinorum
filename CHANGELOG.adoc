@@ -125,18 +125,20 @@
   Both deeds pass the estate's normative DEED linter (grammar v1.2.0); the
   legacy `.machine_readable/` descriptiles remain as frozen source pointers
   and are not extended.
-* The DEED conformance CI lane, calling the estate's shared reusable at the
-  pin GitHub accepts (`metadatastician/standards@cf8f9121`, the same pin the
-  secret-scanner lane runs) with the `metadatastician` owner spelling
-  measured in #64; `require-files` is set, so losing the deed corpus fails
-  the gate rather than passing vacuously. A call pinned to master was
-  refused at job setup (`startup_failure`, no job, no log) and is recorded
-  in the workflow file. The K9 lane is NOT wired: `k9-conformance.yml` does
-  not exist at the accepted pin, so the lane would be permanently red for
-  an estate reason, not a repository one; the measurement and the wiring
-  instructions live in `.github/workflows/k9-conformance.yml`, and the
-  six verb contracts themselves are adopted canon and conform under
-  `k9-validate.sh` (layer 1; layers 2-3 skipped honestly, not run).
+* DEED and K9 conformance lanes are PREPARED but not wirable from this
+  repository — measured, twice, on the first runs of this change: called at
+  the accepted pin (`cf8f9121`, the one the secret-scanner lane runs) and
+  at master, both calls die at job setup with `startup_failure`, no job and
+  no log. The variable is not the pin: it is the org Actions allowlist.
+  Under the estate's `selected` actions posture GitHub kills at startup any
+  `uses:` of a reusable workflow the org's live `patterns_allowed` does not
+  list; the secret-scanner reusable is listed, `deed-conformance.yml` and
+  `k9-conformance.yml` are not, and both workflow files here document the
+  measurement and the exact calls to restore once the estate lists them.
+  The conformance evidence of record meanwhile: both deeds pass the estate's
+  normative `deed_lint.js` (grammar v1.2.0); the six verb contracts are
+  adopted canon and conform under `k9-validate.sh` (layer 1; layers 2-3
+  skipped honestly, not run); `estate / manifests` passes on this tree.
 * `wiki/` reconciliation: Home, Roadmap and Rule-Catalogue now state the
   live registry (13 rules over six grammars including PHP), what is
   verified, and the open precision debt (issue #47) with its Wilson
