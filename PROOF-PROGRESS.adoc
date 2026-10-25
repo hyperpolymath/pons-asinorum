@@ -5,11 +5,15 @@
 :toc:
 :icons: font
 
-A snapshot of which guarantees Pons actually delivers on branch
-`arena/4457fb85-pons-asinorum` at 2026-10-23. This file is written against the
-code, the issue measurements and the executable contract. It deliberately
-replaces two older false narratives: "only M0–M2 landed" (understates M3/M4)
-and "27 registered checks exist" (describes the deferred PR #39 fork).
+Status: 25 October 2026, the implementation reviewed in PR #58, based on
+`c4394f8eea10abbb6b2440139a291fd6370eb03d`. This updates the 23 October ledger
+against the current source. Unmerged forks and planned work are not capabilities.
+
+*Working dataflow solvers exist; an integrated SMT solver and machine-checked
+soundness proofs do not.* Explicit trace checking is executable model
+conformance, not source-derived typestate or a proof of all executions. See
+link:docs/PURPOSE-AND-PROOF.adoc[purpose, comparison, proof status and opportunities]
+for the operator-facing distinction and bounded next steps.
 
 == Headline
 
@@ -17,18 +21,18 @@ and "27 registered checks exist" (describes the deferred PR #39 fork).
 |===
 | Milestone (PLAN.adoc) | Status | Evidence
 
-| M0 — workspace + substrate smoke test | ✅ landed | Five tree-sitter languages parse; 4-crate workspace.
+| M0 — workspace + substrate smoke test | ✅ landed | Six native tree-sitter grammars parse (PHP added); 4-crate workspace.
 | M1 — finding model, engine, human reporter | ✅ landed | Evidence class derived from tier; deterministic ordering; exit contract.
-| M2 — T0 rules 1–8 + falsifier gate | ✅ landed | Eight rules, positive/negative corpora and non-vacuity CI.
-| M3 — JSON + SARIF reporters | ✅ landed, extended | JSON schema 0.3.0; SARIF 2.1.0 with `invocations`.
-| M4 — Python CFG + dataflow, T1 rules 9–10 | ✅ landed, measured FP repairs | CFG, liveness, may-unbound; ADR-0002 amended 2026-10-23.
-| M5 — T2 typestate, rule 11 | 🚧 partial | Explicit trace protocol checker lands; source-derived typestate remains unimplemented.
+| M2 — T0 rules 1–8 + falsifier gate | ✅ landed | Eight original rules plus two PHP heuristics; positive/corrected/safe corpora and non-vacuity CI.
+| M3 — JSON + SARIF reporters | ✅ landed, extended | JSON schema 0.4.0 and evidence contract 1.0.0; SARIF 2.1.0 with coverage and invocation status.
+| M4 — Python CFG + dataflow, T1 rules 9–10 | ✅ landed, measured FP repairs | Python CFG, liveness, may-unbound; additional bounded PHP context-flow CFG with opaque scopes.
+| M5 — T2 typestate, rule 11 | 🚧 partial | Explicit trace and Wharf/reference models tested; source-derived typestate remains unimplemented.
 | M6 — T3 rules 13–15, SPECULATIVE plumbing | 🚧 plumbing only | Demotion tested in all reporters; no T3 rule registered.
 | M7 — suppression, CLI polish, catalogue generator | ✅ mostly landed | Config + inline suppression, selectors, catalogue, man, doctor, doc drift gate.
 | M8 — acceptance sweep, tag `v0.1.0` | ⏳ not complete | External corpus, statistical precision, portability and release gates remain.
 |===
 
-Current registered rule count: **10** (8 T0, 2 T1 Python). The 27-check
+Current registered source rule count: **13** (10 T0, 2 T1 Python, 1 T1 PHP). The 27-check
 "rookie scanner" lives in the deferred `172f455` fork; its documentation is
 historical evidence, not a capability claim.
 
@@ -57,13 +61,15 @@ not a coincidence.
 |===
 | Tier | Rests on | Evidence class | Registered rules
 
-| T0 | Concrete syntax: tree-sitter nodes plus local predicates | `HEURISTIC` | 8
-| T1 | Intraprocedural Python CFG + liveness/may-unbound worklists | `DATAFLOW` | 2
+| T0 | Concrete syntax: tree-sitter nodes plus local predicates | `HEURISTIC` | 10
+| T1 | Intraprocedural Python liveness/may-unbound and bounded PHP context-flow worklists | `DATAFLOW` | 3
 | T2 | A supplied protocol walked over explicit ordered events | `PROTOCOL` | 0 source rules; trace mode exists
 | T3 | Pattern catalogue for undecidable/weak signals | `SPECULATIVE` | 0
 |===
 
-T0 covers Python, JavaScript, TypeScript, TSX and Rust. T1 is Python-only.
+T0 covers Python, JavaScript, TypeScript, TSX and Rust plus two PHP checks.
+T1 covers Python and the documented PHP subset; parser support is not full
+semantic coverage.
 `pons trace` emits protocol violations from supplied events; it does not infer
 source events, so it is not counted as the M5 flagship rule.
 
@@ -132,6 +138,11 @@ the abstraction, corpus revision and denominator.
 [cols="2,4",options="header"]
 |===
 | Gap | Detail
+
+| SMT and machine-checked proofs
+| No backend integration, proof artefact or proof-checking CI gate exists in
+this workspace. Finite-domain convergence arguments and tested transfer
+functions are not a proof of source-to-model correspondence or soundness.
 
 | Source-derived T2 typestate
 | ADR-0003 is ratified but no rule walks the CFG with extracted protocol

@@ -57,3 +57,16 @@ byte `artifact_digest`, `analysis_complete` and `analysis_notes`. Opaque functio
 models are visible even when AST parsing and other rules succeeded. Required
 language gates reject these incomplete analyses. This is independent of policy
 exclusions and finding suppression.
+
+== Review hardening before merge
+
+`validate-report` validates the bundled closed JSON schema before semantic
+consistency checks. Unknown properties, invalid producer identity and missing
+required finding fields are rejected. No remote schema retrieval is enabled.
+Unreadable subtree boundaries use `kind=directory`; inaccessible metadata uses
+`kind=unknown`, never a guessed file. Neither claims descendant enumeration.
+Forced-parser reports retain the actual parser, byte digest and transcode flag
+when no selected rule applies. SARIF reports a completed partial scan as
+`executionSuccessful=true` while preserving strict policy exit 2 in
+`invocations[].properties.exitCode`, coverage status and warnings. A no-applicable-
+input invocation remains unsuccessful. Do not gate on invocation status alone.

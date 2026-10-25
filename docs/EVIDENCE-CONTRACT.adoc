@@ -41,10 +41,13 @@ hide findings. Coverage accounting never consults suppression.
 [source,sh]
 ----
 # Preserve the scanner status even when collecting output on an incomplete run.
+# Use an absolute temporary directory OUTSIDE the target checkout. Shell
+# redirection creates the report before discovery; never scan your own output.
+report_dir=$(mktemp -d /tmp/pons-evidence.XXXXXX) || exit 2
 rc=0
-pons scan . --format json --fail-on-skips --require-language php > pons.json || rc=$?
-pons validate-report pons.json || exit 2
-# Upload pons.json as evidence even when rc is nonzero; do not relabel it clean.
+pons scan . --format json --fail-on-skips --require-language php > "$report_dir/pons.json" || rc=$?
+pons validate-report "$report_dir/pons.json" || exit 2
+# Upload "$report_dir/pons.json" even when rc is nonzero; do not relabel it clean.
 exit "$rc"
 ----
 

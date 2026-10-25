@@ -12,6 +12,18 @@ fn required<'a>(v: &'a Value, key: &str) -> Result<&'a Value> {
 }
 pub fn validate(text: &str) -> Result<String> {
     let v: Value = serde_json::from_str(text)?;
+    // Structural validation precedes semantic checks: hand-picked fields cannot
+    // enforce required properties, enums or the closed envelope.
+    static SCHEMA: std::sync::OnceLock<jsonschema::Validator> = std::sync::OnceLock::new();
+    let validator = SCHEMA.get_or_init(|| {
+        let schema: Value =
+            serde_json::from_str(include_str!("../../../../schemas/scan-0.4.0.json"))
+                .expect("bundled scan schema must be JSON");
+        jsonschema::validator_for(&schema).expect("bundled scan schema must compile")
+    });
+    validator
+        .validate(&v)
+        .map_err(|e| anyhow::anyhow!("report schema: {e} at {}", e.instance_path()))?;
     ensure!(
         v["schema_version"] == super::json::SCHEMA_VERSION,
         "unsupported report schema"

@@ -105,6 +105,8 @@ fn generated_report_validates_and_malformed_claims_fail_closed() {
         ("/findings/0/evidence", serde_json::json!("PROTOCOL")),
         ("/counts/total", serde_json::json!(999)),
         ("/schema_version", serde_json::json!("0.3.0")),
+        ("/tool/name", serde_json::json!("another-tool")),
+        ("/tool/source_dirty", serde_json::json!("maybe")),
         (
             "/evidence_contract/records/0/fingerprint",
             serde_json::json!("fake"),
@@ -117,8 +119,77 @@ fn generated_report_validates_and_malformed_claims_fail_closed() {
             "accepted {path}"
         );
     }
+    for field in ["severity", "message", "counter_condition"] {
+        let mut m = v.clone();
+        m["findings"][0].as_object_mut().unwrap().remove(field);
+        assert!(
+            pons_core::report::validate::validate(&m.to_string()).is_err(),
+            "accepted missing {field}"
+        );
+    }
+    for path in ["", "/tool", "/findings/0", "/scanned"] {
+        let mut m = v.clone();
+        m.pointer_mut(path)
+            .unwrap()
+            .as_object_mut()
+            .unwrap()
+            .insert("unknown_property".into(), serde_json::json!(true));
+        assert!(
+            pons_core::report::validate::validate(&m.to_string()).is_err(),
+            "accepted extra property at {path}"
+        );
+    }
     assert!(pons_core::report::validate::validate("{}").is_err());
     assert!(pons_core::report::validate::validate("not json").is_err());
+}
+
+#[test]
+fn forced_parser_without_applicable_rule_keeps_actual_provenance() {
+    let t = Temp::new();
+    let file = t.0.join("script.py");
+    // Non-UTF-8 source exercises the transcode provenance as well.
+    fs::write(&file, b"<?php // caf\xe9\nfunction f() { return 1; }").unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_pons"))
+        .arg("scan")
+        .arg(&file)
+        .args([
+            "--lang",
+            "php",
+            "--rule",
+            "self-assignment",
+            "--format",
+            "json",
+            "--require-language",
+            "php",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    let entry = &v["scanned"]["inventory"][0];
+    assert_eq!(entry["language"], "php");
+    assert_eq!(entry["outcome"], "unsupported");
+    assert!(entry["parser"].as_str().unwrap().contains("php 0.25.1"));
+    assert!(entry["artifact_digest"]
+        .as_str()
+        .unwrap()
+        .starts_with("blake3:"));
+    assert_eq!(entry["transcoded"], true);
+    assert!(pons_core::report::validate::validate(&String::from_utf8(out.stdout).unwrap()).is_ok());
+}
+
+#[test]
+fn imported_sanitizer_alias_is_partial_and_fails_required_php_coverage() {
+    let t = Temp::new();
+    fs::write(t.0.join("alias.php"), "<?php use function App\\identity as htmlspecialchars; function f() { echo htmlspecialchars($_GET['x']); }").unwrap();
+    let out = t.scan(&["--format", "json", "--require-language", "php"]);
+    assert_eq!(out.status.code(), Some(2));
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["scanned"]["coverage_status"], "partial");
+    assert_eq!(v["scanned"]["inventory"][0]["analysis_complete"], false);
+    assert!(v["scanned"]["inventory"][0]["analysis_notes"]
+        .to_string()
+        .contains("import"));
 }
 #[test]
 fn fingerprints_survive_checkout_move_and_blank_line_insertion() {

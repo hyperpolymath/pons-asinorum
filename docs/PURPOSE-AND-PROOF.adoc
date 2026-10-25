@@ -1,0 +1,134 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= What Pons establishes, and what remains to prove
+:toc:
+
+Status: 25 October 2026, the implementation reviewed in PR #58. This describes
+the checked-in engine and contracts; plans and unmerged forks are not capabilities.
+
+== Purpose
+
+Pons is an evidence-conscious structural, dataflow and protocol analyser. Its
+question is: *where does the program's structure, flow of values, or sequence of
+operations contradict the intended behaviour?* Examples include an overwritten
+value, a possibly uninitialised local, HTML escaping used at a SQL sink, or a
+commit event preceding verification. Findings are reviewable claims with an
+abstraction, assumptions, counterconditions and visible coverage limits.
+
+Pons is useful after compilation succeeds and alongside other analysis. Its
+distinctive product is the connection between a narrow claim and the evidence
+that supports it. More languages and more matches are not substitutes for that
+connection. Security consequences belong in findings when the supported model
+justifies them; they do not turn a structural observation into a proven exploit.
+
+== Relationship to other tools
+
+[cols="2,3,3",options="header"]
+|===
+|Tool or approach |Useful question |Pons's complementary contribution
+|Compiler / type checker |Does the program satisfy this language's static rules?
+|Value-flow and ordering mistakes that can survive those rules.
+|Linter / pattern scanner |Does this syntax resemble a known problematic pattern?
+|T0 overlaps deliberately; T1 adds explicitly modelled flow. A pattern match
+stays a heuristic regardless of the sophistication of the surrounding engine.
+|Security SAST / panic-attack |Where are security or resilience weaknesses?
+|Narrow structural and contract evidence, with independent producer identity.
+panic-attack's documented scope also includes stress testing and relational
+reasoning; Pons does not inherit those capabilities by sharing reports.
+|Dependency, secret and runtime scanners |Is a dependency vulnerable, a secret
+exposed, or a deployed runtime/configuration affected?
+|No replacement. Keep patch, configuration and runtime evidence separate.
+|Formal verifier / SMT solver / proof assistant |Does a stated property follow
+from a formal model and its premises?
+|Pons supplies candidates and small models for future verification. There is
+currently no integrated SMT backend or machine-checked soundness proof.
+|===
+
+This compares roles, not rankings: other tools can also implement CFGs, taint
+analysis, contracts and strong evidence. panic-attack's own
+https://github.com/hyperpolymath/panic-attack/blob/main/README.adoc[README]
+describes its scope; this repository does not audit its advertised guarantees.
+The interface is link:EVIDENCE-CONTRACT.adoc[versioned evidence], not a shared
+scanner engine. Preserve producer, rule, parser and target versions, premises,
+correlation group and execution outcome. Agreement between correlated analyses
+is corroboration, not independent proof. Consumer integrations remain unfinished.
+
+== How far the solver and proof work has got
+
+[cols="2,3,3",options="header"]
+|Component |Implemented evidence |Limit
+|T0 structural rules |Ten registered syntax/local-observation rules, with
+positive, corrected and similar safe controls.
+|No semantic soundness or intent proof; includes two PHP heuristics.
+|Python T1 solver |`pons-core/src/dataflow.rs`: finite-set forward may-unbound
+and backward liveness worklists over per-function CFGs; explicit exception/
+finally modelling and narrow correlated-guard repairs.
+|A fixed point is a result in the CFG abstraction. Dynamic effects, opaque
+functions and infeasible paths prevent a general source-level guarantee.
+|PHP T1 solver |`pons-core/src/php.rs`: context-specific taint facts, branch
+joins, while-loop backedges and early exits; independent function locals.
+|1024 blocks, 512 locals, 50000 transfers per scope. Unsupported effects or
+exhaustion yield unknown, not safe. Imports, aliases, callbacks, templates,
+exceptions/finally and cross-file semantics need further resolution.
+|T2 protocol models |`pons-protocols`: explicit-event finite-state checking,
+Wharf session/transfer guards, framing and prepared-statement reference models.
+|Checks the supplied events and premises. No automatic source-to-event
+extraction, exhaustive source model checking, cryptographic verification or
+durability verification. A passing trace says nothing about unobserved runs.
+|T3 speculative tier |Demotion and reporting plumbing is tested.
+|No registered T3 source rule. Tiers classify evidence, not a ladder of proof.
+|SMT / proof assistant |No backend dependency, proof artefact or proof-checking
+CI gate in the inspected workspace. The roadmap states proof obligations.
+|SMT discharge, CEGAR, mechanised transfer soundness, termination and
+source-to-model correspondence proofs remain future work.
+|===
+
+There are *13 registered source rules*: ten T0 and three T1 (two Python, one
+PHP). Trace commands are separate from source-rule coverage. A worklist solver
+is an implemented analysis algorithm; the word "solver" does not imply an SMT
+engine or theorem prover. Finite monotone domains explain convergence without
+widening. That argument does not prove the parser, CFG construction, language
+semantics, transfer functions or implementation correct.
+
+Tests, parser mutation smoke runs, killed rule mutants and reduced-model
+conformance are engineering evidence. The measured perfect score on the small
+labelled regression corpus is not a production precision/recall estimate.
+See link:PORTFOLIO-UPGRADE-REPORT.adoc[exact corpus, seeds, measurements and gaps]
+and link:../PROOF-PROGRESS.adoc[the milestone ledger].
+
+== What an operator can conclude
+
+* A T0 finding identifies a local candidate. A T1 finding identifies a possible
+  flow in the supported abstraction; its path may be infeasible concretely.
+* A T2 violation identifies a supplied event sequence inconsistent with the
+  stated model. Premises such as signature validity or durable application
+  require independent evidence. Passing examples are not universal proofs.
+* No findings means no findings from the selected rules on the analysed input.
+  Even complete-within-policy coverage does not certify correctness or safety.
+  Unsupported, opaque, timed-out or unreadable input remains visible; zero
+  applicable input and required-language failures cannot pass the CLI gate.
+* PHP syntax support does not imply full WordPress or Composer semantics.
+  Haskell and Elixir remain unsupported. Application analysis cannot certify
+  the PHP interpreter or establish when hooks run relative to request parsing.
+
+== Opportunities with concrete acceptance gates
+
+. Strengthen the PHP slice first: resolve imported names, Composer/include
+  boundaries and callbacks; extend exceptional control flow. Require fixtures
+  that distinguish vulnerable, corrected, similar safe and unknown cases.
+. Connect source and protocol models narrowly: extract events for one reviewed
+  API, declare receiver/alias identity and validate against instrumented traces.
+  Retain unknown commands, missing instrumentation and alternate paths.
+. Add optional bounded SMT path feasibility for one supported subset. Preserve
+  solver/version, model, query, bounds, timeout and counterexample artefacts.
+  SAT needs a concrete witness check; UNSAT applies only to the encoded bounded
+  query; UNKNOWN or timeout must stay unknown. Do not silently upgrade T0/T1.
+. Mechanise a small abstraction: define concrete/abstract semantics, prove
+  transfer soundness and worklist convergence, then establish parser/CFG
+  correspondence or translation validation. State the trusted computing base.
+. Expand independent labelled corpora and adversarial tests. Publish coverage,
+  precision/recall and resource limits separately; validate cross-tool report
+  consumers without merging their identities or overstating independence.
+
+These are bounded research and engineering opportunities, not a promise of a
+universal verifier. A verified model still needs evidence that the application
+and deployed environment satisfy its premises.

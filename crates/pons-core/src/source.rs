@@ -278,6 +278,14 @@ pub fn discover(root: &Path) -> anyhow::Result<Discovery> {
         entry.kind = "directory".into();
         inventory.push(entry);
     }
+    for skip in &skipped {
+        if !inventory.iter().any(|e| e.path == skip.path) {
+            inventory.push(InventoryEntry::unreadable_path(
+                Path::new(&skip.path),
+                &skip.reason,
+            ));
+        }
+    }
     Ok(Discovery {
         files,
         skipped,
@@ -453,6 +461,14 @@ mod tests {
             "the skip did not name the directory: {:?}",
             found.skipped[0]
         );
+        let boundary = found
+            .inventory
+            .iter()
+            .find(|e| e.path.ends_with("locked"))
+            .unwrap();
+        assert_eq!(boundary.kind, "directory");
+        assert_eq!(boundary.outcome, Outcome::Unreadable);
+        assert!(boundary.parser.is_none());
         assert!(
             found.skipped[0].reason.starts_with("could not enumerate"),
             "the skip did not say why: {:?}",

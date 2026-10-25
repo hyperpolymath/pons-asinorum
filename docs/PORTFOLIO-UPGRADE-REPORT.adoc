@@ -54,6 +54,26 @@ link:PHP-RUNTIME-BOUNDARY.adoc[official runtime-advisory boundary].
   rejects the flow-style `probe-kyaml-arm.yml`. This pre-existing check was not
   weakened. Its log also records 20 warnings. This is separate from Rust CI.
 
+== PR #58 review hardening
+
+A subsequent review fixed six issues: runtime validation now enforces the
+bundled JSON schema; partial SARIF invocations retain successful execution and
+separate policy exit status; forced parsers retain provenance when rules do not
+apply; PHP imported sanitizer aliases become unknown; unreadable directories
+retain their boundary kind; and the CI example writes reports outside its scan.
+
+The review follow-up passed 213 Rust tests, 46 e2e checks, formatting, clippy,
+documentation drift and repository-aspect checks. All eleven archived upgraded
+reports pass the stronger runtime validator. These checks ran on the working
+tree based on `5e0585c0917cdf7262e5d1b25c803248e644ca02`; the earlier measurements
+below remain attributed to their original tested commit, not retroactively to
+the follow-up. See link:evidence/2026-10-25/review-hardening.json[review test log].
+
+The purpose, relationship to other tools, actual solver/proof status and bounded
+research opportunities are now explicit in link:PURPOSE-AND-PROOF.adoc[the purpose
+and proof guide], README, scope and the proof-progress ledger. No SMT backend
+or machine-checked proof implementation is claimed.
+
 == Labelled corpus accuracy
 
 File-level, rule-scoped regression labels: 60 TP, 76 TN, 0 FP, 0 FN across 13

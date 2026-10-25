@@ -35,7 +35,8 @@ command calls, header and wp_redirect. HTML escaping only clears HTML text.
 `json_encode` are not universal sanitizers. A shell argument is not a whole shell
 command contract. JavaScript safety is a separate domain without a registered
 sink in this slice. Echo in mixed markup is withheld because attribute/script
-context is unresolved. Namespaces or locally shadowed HTML sanitizers also
+context is unresolved. Namespaces, imports (including function aliases and grouped uses), or locally
+shadowed HTML sanitizers also
 withhold flow analysis. Standard unshadowed builtin/WordPress semantics and
 unrebound superglobals are explicit premises, not established facts.
 

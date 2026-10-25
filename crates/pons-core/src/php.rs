@@ -374,7 +374,13 @@ pub fn analyse(tree: &Tree, src: &str) -> Analysis {
     // beyond this slice. Parsing them is supported; flow evidence is withheld.
     let mut ambiguous = false;
     while let Some(n) = pending.pop() {
-        if n.kind() == "namespace_definition" {
+        // Imports can replace a sanitizer binding even in the global namespace.
+        // Treat all use declarations (including grouped/mixed imports) as opaque
+        // until name resolution exists; do not guess from the call spelling.
+        if matches!(
+            n.kind(),
+            "namespace_definition" | "namespace_use_declaration"
+        ) {
             ambiguous = true;
         }
         if n.kind() == "text" && !text(n, src).trim().is_empty() {
@@ -402,7 +408,8 @@ pub fn analyse(tree: &Tree, src: &str) -> Analysis {
     }
     if ambiguous {
         result.unknowns.push(
-            "namespace/shadowing or template output context unresolved; PHP flow withheld".into(),
+            "namespace/import/shadowing or template output context unresolved; PHP flow withheld"
+                .into(),
         );
         return result;
     }
@@ -504,6 +511,26 @@ mod tests {
             let a = analyse_text(text);
             assert!(!a.unknowns.is_empty());
         }
+    }
+    #[test]
+    fn imported_sanitizer_names_are_unknown_not_safe() {
+        for import in [
+            "use function App\\identity as htmlspecialchars;",
+            "use function App\\identity as HTMLSPECIALCHARS;",
+            "use function App\\{identity as htmlspecialchars, other};",
+            "use App\\{Thing, function identity as htmlspecialchars};",
+        ] {
+            let a = analyse_text(&format!(
+                "<?php {import} function f() {{ echo htmlspecialchars($_GET['x']); }}"
+            ));
+            assert!(a.flows.is_empty());
+            assert!(a.unknowns.iter().any(|s| s.contains("import")), "{import}");
+        }
+        let builtin = analyse_text("<?php function f() { echo htmlspecialchars($_GET['x']); }");
+        assert!(builtin.flows.is_empty() && builtin.unknowns.is_empty());
+        let vulnerable = analyse_text("<?php function f() { echo $_GET['x']; }");
+        assert_eq!(vulnerable.flows.len(), 1);
+        assert!(vulnerable.unknowns.is_empty());
     }
     #[test]
     fn bounded_cfg_records_exhaustion() {

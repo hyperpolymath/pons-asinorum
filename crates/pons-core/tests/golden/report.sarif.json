@@ -203,6 +203,7 @@
           "properties": {
             "coverageFailures": [],
             "coverageStatus": "partial",
+            "exitCode": null,
             "inventory": []
           },
           "toolExecutionNotifications": [

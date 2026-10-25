@@ -194,9 +194,8 @@ impl Engine {
         report.inventory.extend(discovery.inventory);
         for skip in &discovery.skipped {
             if !report.inventory.iter().any(|e| e.path == skip.path) {
-                report.inventory.push(InventoryEntry::new(
+                report.inventory.push(InventoryEntry::unreadable_path(
                     Path::new(&skip.path),
-                    Outcome::Unreadable,
                     &skip.reason,
                 ));
             }
@@ -280,11 +279,11 @@ impl Engine {
                 && !self.rules.iter().any(|r| r.languages().contains(&src.lang))
             {
                 let reason = "no selected rule applies to this grammar";
-                inventory.push(InventoryEntry::new(
-                    &file.path,
-                    Outcome::Unsupported,
-                    reason,
-                ));
+                let mut item = InventoryEntry::new(&file.path, Outcome::Unsupported, reason)
+                    .with_language(src.lang);
+                item.artifact_digest = Some(digest);
+                item.transcoded = src.transcoded;
+                inventory.push(item);
                 skipped.push(SkippedFile {
                     path: file.path.display().to_string(),
                     reason: reason.into(),

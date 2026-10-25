@@ -122,7 +122,8 @@
               "kind": {
                 "enum": [
                   "file",
-                  "directory"
+                  "directory",
+                  "unknown"
                 ]
               },
               "language": {
@@ -524,7 +525,8 @@
               "kind": {
                 "enum": [
                   "file",
-                  "directory"
+                  "directory",
+                  "unknown"
                 ]
               },
               "language": {

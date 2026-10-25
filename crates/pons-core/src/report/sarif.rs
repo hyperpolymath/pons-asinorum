@@ -453,8 +453,9 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
                 // The scan itself completed: per ADR-0005 a skipped subtree is
                 // a partial result, not an operational failure. Consumers can
                 // opt into `--fail-on-skips` at the CLI for a hard gate.
-                execution_successful: report.files_scanned > 0 && report.exit_code != Some(2),
+                execution_successful: report.files_scanned > 0,
                 properties: serde_json::json!({"coverageStatus":report.coverage_status(),
+                    "exitCode": report.exit_code,
                     "inventory":report.inventory, "coverageFailures":report.coverage_failures}),
                 tool_execution_notifications: report
                     .skipped
@@ -723,6 +724,23 @@ mod tests {
         assert!(validator().validate(&v).is_ok());
     }
 
+    #[test]
+    fn strict_policy_failure_does_not_claim_the_completed_scan_failed_to_execute() {
+        let mut report = fixture::report();
+        report.exit_code = Some(2);
+        let v: serde_json::Value = serde_json::from_str(&render(&report).unwrap()).unwrap();
+        let inv = &v["runs"][0]["invocations"][0];
+        assert_eq!(inv["executionSuccessful"], true);
+        assert_eq!(inv["properties"]["coverageStatus"], "partial");
+        assert_eq!(inv["properties"]["exitCode"], 2);
+        assert!(!inv["toolExecutionNotifications"]
+            .as_array()
+            .unwrap()
+            .is_empty());
+        report.files_scanned = 0;
+        let v: serde_json::Value = serde_json::from_str(&render(&report).unwrap()).unwrap();
+        assert_eq!(v["runs"][0]["invocations"][0]["executionSuccessful"], false);
+    }
     #[test]
     fn invocations_remains_present_when_nothing_was_skipped() {
         let mut report = fixture::report();

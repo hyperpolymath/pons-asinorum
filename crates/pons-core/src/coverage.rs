@@ -29,6 +29,24 @@ pub struct InventoryEntry {
     pub analysis_complete: bool,
 }
 impl InventoryEntry {
+    /// Enumeration failures may name a whole subtree, not a source file.
+    /// If metadata is inaccessible too, preserve that uncertainty explicitly.
+    pub fn unreadable_path(path: &Path, reason: impl Into<String>) -> Self {
+        let mut item = Self::new(path, Outcome::Unreadable, reason);
+        item.kind = match std::fs::symlink_metadata(path) {
+            Ok(m) if m.is_dir() => "directory",
+            Ok(m) if m.is_file() => "file",
+            _ => "unknown",
+        }
+        .into();
+        if item.kind != "file" {
+            item.language = "unknown".into();
+            item.parser = None;
+            item.analysis_notes
+                .push("contents/descendants not enumerated".into());
+        }
+        item
+    }
     pub fn with_language(mut self, lang: crate::lang::Lang) -> Self {
         self.language = lang.name().into();
         self.parser = Some(format!(
