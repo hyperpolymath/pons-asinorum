@@ -60,3 +60,20 @@ attested repository facts, coordination protocol and validated canonical bytes.
 kyq's intended estate scope is KYAML, I-JSON/JCS, DEED and K9; parser capability
 must be demonstrated separately for each format and each K9 form. The upstream
 ijson-jcs reference/corpus pin must be updated with tested standards changes.
+
+== Validation record
+
+`cargo test --workspace --offline`: 220 tests passed. `cargo fmt --all -- --check`
+and clippy across workspace/all targets with warnings denied passed.
+`PONS_BIN=target/debug/pons bash tests/e2e.sh`: 46 pass, zero fail/skip.
+Mutation smoke ran in detached disposable worktree, with a 90-second limit per
+mutant: six killed by failing assertions (exit 101), including the new PHP label
+control. No timeout was counted as a killed mutant.
+
+The first workspace build exhausted temporary disk space; a retry used
+`TMPDIR=/dev/shm/pons-57eb-tmp`, debug symbols disabled, incremental compilation
+disabled and two build jobs. The first label mutant survived because the
+fixture was top-level, outside the queried compound block. Moving it inside a
+function made both the real-code control pass and the mutant fail. This records
+the observed test correction rather than hiding the surviving initial mutant.
+No new portfolio performance, parser-fuzz or mathematical proof claim is made.
