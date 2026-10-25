@@ -80,3 +80,18 @@ when no selected rule applies. SARIF reports a completed partial scan as
 `executionSuccessful=true` while preserving strict policy exit 2 in
 `invocations[].properties.exitCode`, coverage status and warnings. A no-applicable-
 input invocation remains unsuccessful. Do not gate on invocation status alone.
+
+== Target provenance and large reports
+
+Target provenance reads the commit identifier without `git status` or `git diff`:
+those operations can execute repository-configured monitors or filters. Target
+`dirty` is therefore `null` (unknown), not a claim that the tree is clean. The
+per-file digests identify the bytes actually analysed. Build-time producer dirty
+status is separate and watches embedded schemas and workspace inputs as well as
+crate sources.
+
+`validate-report` reads JSON through a buffered reader without the former 16 MiB
+ceiling, so native reports with large inventories are not rejected solely for
+their size. Schema and semantic checks still materialise the JSON value in
+memory. Run untrusted reports under external CPU/RSS limits; this is not a
+bounded-memory streaming validator. Trace inputs retain their separate bounds.
