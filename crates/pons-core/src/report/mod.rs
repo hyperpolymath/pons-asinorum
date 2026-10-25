@@ -79,11 +79,24 @@ pub(crate) mod fixture {
             ]
             .iter()
             .map(|path| {
-                crate::coverage::InputCoverage::new(
+                let (language, rules) = if path.ends_with(".ts") {
+                    (
+                        Lang::TypeScript,
+                        ["suppress-then-emit", "possible-superlinear"],
+                    )
+                } else {
+                    (Lang::Python, ["dead-store", "div-by-literal-zero"])
+                };
+                let mut entry = crate::coverage::InputCoverage::new(
                     std::path::Path::new(path),
                     crate::coverage::InputStatus::Analyzed,
                     "",
-                )
+                );
+                entry.language = Some(language.name().to_string());
+                entry.analyzer =
+                    Some("tree-sitter syntax; enabled rule IDs define analysis depth".to_string());
+                entry.rules = rules.iter().map(|rule| rule.to_string()).collect();
+                entry
             })
             .chain(std::iter::once(crate::coverage::InputCoverage::new(
                 std::path::Path::new("app/broken.py"),

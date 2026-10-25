@@ -26,7 +26,10 @@ impl Rule for EmptyPhpFunction {
         let mut findings = Vec::new();
         let mut pending = vec![ctx.tree.root_node()];
         while let Some(node) = pending.pop() {
-            if matches!(node.kind(), "function_definition" | "method_declaration") {
+            if matches!(
+                node.kind(),
+                "function_definition" | "method_declaration" | "anonymous_function"
+            ) {
                 if let Some(body) = node.child_by_field_name("body") {
                     let mut cursor = body.walk();
                     if body

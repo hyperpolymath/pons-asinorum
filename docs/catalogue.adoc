@@ -67,7 +67,7 @@ itself invoke effects through an iterator or generator.
 
 a statement immediately after return, throw, raise, break or continue.
 
-Languages: python, javascript, typescript, tsx, rust.
+Languages: python, javascript, typescript, tsx, rust, php.
 
 Tier/evidence: T0 / HEURISTIC. Severity: WARN. Counter-condition:
 language-specific hoisting, macros or conditional compilation may make the

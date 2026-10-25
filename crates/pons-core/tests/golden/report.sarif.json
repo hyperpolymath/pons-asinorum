@@ -9,59 +9,80 @@
           "candidate_files": 8,
           "inputs": [
             {
-              "analyzer": null,
-              "language": null,
+              "analyzer": "tree-sitter syntax; enabled rule IDs define analysis depth",
+              "language": "python",
               "path": "app/svc.py",
               "reason": null,
-              "rules": [],
+              "rules": [
+                "dead-store",
+                "div-by-literal-zero"
+              ],
               "status": "analyzed"
             },
             {
-              "analyzer": null,
-              "language": null,
+              "analyzer": "tree-sitter syntax; enabled rule IDs define analysis depth",
+              "language": "typescript",
               "path": "app/math.ts",
               "reason": null,
-              "rules": [],
+              "rules": [
+                "suppress-then-emit",
+                "possible-superlinear"
+              ],
               "status": "analyzed"
             },
             {
-              "analyzer": null,
-              "language": null,
+              "analyzer": "tree-sitter syntax; enabled rule IDs define analysis depth",
+              "language": "python",
               "path": "app/quiet.py",
               "reason": null,
-              "rules": [],
+              "rules": [
+                "dead-store",
+                "div-by-literal-zero"
+              ],
               "status": "analyzed"
             },
             {
-              "analyzer": null,
-              "language": null,
+              "analyzer": "tree-sitter syntax; enabled rule IDs define analysis depth",
+              "language": "python",
               "path": "app/algo.py",
               "reason": null,
-              "rules": [],
+              "rules": [
+                "dead-store",
+                "div-by-literal-zero"
+              ],
               "status": "analyzed"
             },
             {
-              "analyzer": null,
-              "language": null,
+              "analyzer": "tree-sitter syntax; enabled rule IDs define analysis depth",
+              "language": "python",
               "path": "app/clean1.py",
               "reason": null,
-              "rules": [],
+              "rules": [
+                "dead-store",
+                "div-by-literal-zero"
+              ],
               "status": "analyzed"
             },
             {
-              "analyzer": null,
-              "language": null,
+              "analyzer": "tree-sitter syntax; enabled rule IDs define analysis depth",
+              "language": "python",
               "path": "app/clean2.py",
               "reason": null,
-              "rules": [],
+              "rules": [
+                "dead-store",
+                "div-by-literal-zero"
+              ],
               "status": "analyzed"
             },
             {
-              "analyzer": null,
-              "language": null,
+              "analyzer": "tree-sitter syntax; enabled rule IDs define analysis depth",
+              "language": "python",
               "path": "app/clean3.py",
               "reason": null,
-              "rules": [],
+              "rules": [
+                "dead-store",
+                "div-by-literal-zero"
+              ],
               "status": "analyzed"
             },
             {
