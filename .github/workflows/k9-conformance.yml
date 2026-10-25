@@ -1,34 +1,52 @@
 # SPDX-License-Identifier: MPL-2.0
-# K9 contract conformance lane.
+# K9 contract conformance lane — STATUS: NOT WIRABLE YET (measured 2026-10-25).
 #
-# Calls the estate's shared K9 validator over every committed K9 file (here:
-# the six verb contracts under .machine_readable/contractiles/*/). The
-# reusable installs a pinned Nickel, so CI gets the L2 semantic typecheck
-# against the normative contract, not just the L1 structural screen; the
-# Ed25519 signature verdicts are honestly reported as Present_Unverified
-# until a verifier is configured (a skip is never reported as a pass).
+# The intended lane calls the estate's shared K9 validator over every
+# committed K9 file (here: the six verb contracts under
+# .machine_readable/contractiles/*/), typechecking them under a pinned
+# Nickel (layer 2), not just the structural screen.
 #
-# ⚠ THE OWNER SPELLING IS LOAD-BEARING: `metadatastician/standards` — the
-# Actions resolver does not follow the estate rename (measured, PR #64).
+# MEASURED, not guessed: called on a pull request pinned to master
+# (metadatastician/standards@8e48b1c, where k9-conformance.yml exists), the
+# call was refused at job setup with `startup_failure` — no job, no log, the
+# exact silent failure mode documented in secret-scanner.yml. The only pin
+# GitHub has accepted in this repository so far is `cf8f9121` (the
+# secret-scanner lane runs it), and k9-conformance.yml does not exist at
+# that commit, so no re-pin can start this lane today. This file therefore
+# declares no job: a lane that always reports startup_failure on every pull
+# request is the failure mode that got a validator deleted instead of the
+# files fixed (standards .machine_readable/k9-contract-debt.txt, preamble).
 #
-# THE PIN: 8e48b1caade08a552646adeab66558ac43b4360d, metadatastician/standards
-# master as of 2026-10-25. The caller gets the validator, the normative
-# contract and the grid renderer at this commit.
-
-name: k9-conformance
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pull-requests: read
-
-jobs:
-  k9:
-    uses: metadatastician/standards/.github/workflows/k9-conformance.yml@8e48b1caade08a552646adeab66558ac43b4360d
-    with:
-      require-files: true
+# The conformance evidence of record meanwhile:
+#   * all six verb contracts under .machine_readable/contractiles/*/ are the
+#     estate canon at 8e48b1c and conform under k9-validate.sh (contract
+#     v1.0.0, layer 1 structural);
+#   * layer 2 (Nickel typecheck) and layer 3 (Ed25519) were NOT run locally —
+#     skipped, never passed;
+#   * the contractile set itself is gated by tests/e2e.sh structure checks.
+#
+# TO WIRE when the estate publishes an accepted pin carrying
+# k9-conformance.yml — restore the call (owner spelling is load-bearing:
+# metadatastician/standards; the Actions resolver does not follow the estate
+# rename, measured in #64):
+#
+# name: k9-conformance
+#
+# on:
+#   push:
+#     branches: [main]
+#   pull_request:
+#   workflow_dispatch:
+#
+# permissions:
+#   contents: read
+#   pull-requests: read
+#
+# jobs:
+#   k9:
+#     permissions:
+#       contents: read
+#       pull-requests: read
+#     uses: metadatastician/standards/.github/workflows/k9-conformance.yml@<accepted-pin>
+#     with:
+#       require-files: true

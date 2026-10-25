@@ -12,10 +12,14 @@
 # REST API follows the old name but the Actions resolver does NOT (measured
 # here on the secret-scanner lane, PR #64). `uses:` MUST use the new spelling.
 #
-# THE PIN IS EQUALLY LOAD-BEARING: the caller gets the linter at THIS
-# workflow's own commit, so pinning the reusable pins the grammar it
-# enforces. 8e48b1caade08a552646adeab66558ac43b4360d is metadatastician/
-# standards master as of 2026-10-25.
+# ⚠ THE PIN IS EQUALLY LOAD-BEARING, and it is not "latest master": a call
+# pinned to master (`8e48b1c`) was refused at job setup (`startup_failure`,
+# no job, no log — the failure mode documented in secret-scanner.yml), while
+# the call pinned to `cf8f9121` — the same commit the secret-scanner lane
+# already runs, whose own actions.lock GitHub accepts — starts and runs, and
+# `deed-conformance.yml` exists at that commit. When the estate publishes a
+# newer accepted pin carrying newer linter behaviour, re-pin deliberately and
+# watch the first run.
 
 name: deed-conformance
 
@@ -30,6 +34,8 @@ permissions:
 
 jobs:
   deed:
-    uses: metadatastician/standards/.github/workflows/deed-conformance.yml@8e48b1caade08a552646adeab66558ac43b4360d
+    permissions:
+      contents: read
+    uses: metadatastician/standards/.github/workflows/deed-conformance.yml@cf8f91219d80da55cf8cbbfcd587d00c2d8798ed
     with:
       require-files: true

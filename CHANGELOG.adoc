@@ -125,11 +125,18 @@
   Both deeds pass the estate's normative DEED linter (grammar v1.2.0); the
   legacy `.machine_readable/` descriptiles remain as frozen source pointers
   and are not extended.
-* DEED and K9 conformance CI lanes, calling the estate's shared reusables at
-  a pinned SHA with the `metadatastician` owner spelling measured in #64;
-  `require-files` is set, so losing the corpus fails the gate rather than
-  passing vacuously. The K9 lane typechecks the contracts under a pinned
-  Nickel (layer 2), not just the structural screen.
+* The DEED conformance CI lane, calling the estate's shared reusable at the
+  pin GitHub accepts (`metadatastician/standards@cf8f9121`, the same pin the
+  secret-scanner lane runs) with the `metadatastician` owner spelling
+  measured in #64; `require-files` is set, so losing the deed corpus fails
+  the gate rather than passing vacuously. A call pinned to master was
+  refused at job setup (`startup_failure`, no job, no log) and is recorded
+  in the workflow file. The K9 lane is NOT wired: `k9-conformance.yml` does
+  not exist at the accepted pin, so the lane would be permanently red for
+  an estate reason, not a repository one; the measurement and the wiring
+  instructions live in `.github/workflows/k9-conformance.yml`, and the
+  six verb contracts themselves are adopted canon and conform under
+  `k9-validate.sh` (layer 1; layers 2-3 skipped honestly, not run).
 * `wiki/` reconciliation: Home, Roadmap and Rule-Catalogue now state the
   live registry (13 rules over six grammars including PHP), what is
   verified, and the open precision debt (issue #47) with its Wilson
