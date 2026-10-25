@@ -139,7 +139,10 @@ fn skip_for(err: &ignore::Error) -> SkippedFile {
 /// Recursively discover source files under `root`, honouring `.gitignore`
 /// and a custom `.ponsignore` file, and skipping [`SKIP_DIRS`].
 ///
-/// Returns paths and languages only — see [`read`] for the contents.
+/// Returns supported paths and languages without reading file contents.
+/// Enumerated regular files without a supported extension receive coverage
+/// entries: recognised source/config inputs are also skips; others are excluded.
+/// Pruned directories and their contents are not listed in coverage.
 ///
 /// **A walk error below the root is a skip, not a failure** (#29). One
 /// unreadable subdirectory used to abort the entire scan, discarding every
@@ -239,7 +242,9 @@ pub fn discover(root: &Path) -> anyhow::Result<Discovery> {
 ///
 /// Non-UTF-8 input is decoded as Latin-1 and marked `transcoded`; offsets
 /// into the resulting text then differ from offsets into the original file.
-/// File read errors propagate; the engine records them as per-file skips.
+/// Inputs larger than 16 MiB (16 * 1024 * 1024 bytes), measured before decoding,
+/// return an error; exactly 16 MiB is allowed. File open and read errors also
+/// propagate. The engine records these errors as per-file skips.
 pub fn read(file: &DiscoveredFile) -> anyhow::Result<SourceFile> {
     use std::io::Read as _;
     const MAX_BYTES: u64 = 16 * 1024 * 1024;

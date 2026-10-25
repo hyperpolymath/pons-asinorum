@@ -7,15 +7,21 @@ use pons_core::lang::Lang;
 pub struct EmptyPhpFunction;
 
 impl Rule for EmptyPhpFunction {
+    /// Stable ID for rule selection and finding attribution.
     fn id(&self) -> &'static str {
         "empty-php-function"
     }
+    /// Catalogue and SARIF description of the empty-body heuristic.
     fn description(&self) -> &'static str {
         "a concrete PHP function or method has no executable body"
     }
+    /// Declare PHP as the only language the engine should pass to this rule.
     fn languages(&self) -> &'static [Lang] {
         &[Lang::Php]
     }
+    /// Return T0 warnings located at function and method bodies that are
+    /// empty or contain only comments. Declarations without bodies and
+    /// anonymous functions are ignored; intentional no-ops may still be flagged.
     fn check(&self, ctx: &RuleCtx) -> Vec<RawFinding> {
         let mut findings = Vec::new();
         let mut pending = vec![ctx.tree.root_node()];

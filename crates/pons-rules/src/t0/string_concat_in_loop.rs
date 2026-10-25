@@ -12,6 +12,10 @@ use tree_sitter::{Node, Query, QueryCursor, StreamingIterator};
 /// not apply.
 const LANGUAGES: &[Lang] = &[Lang::Python, Lang::JavaScript, Lang::TypeScript, Lang::Tsx];
 
+/// Return this rule's query for a supported grammar.
+///
+/// # Panics
+/// Panics for Rust or PHP, which this rule does not support.
 fn query_source(lang: Lang) -> &'static str {
     match lang {
         Lang::Php => unreachable!("this rule does not declare PHP support"),
@@ -23,6 +27,10 @@ fn query_source(lang: Lang) -> &'static str {
     }
 }
 
+/// Return enclosing-loop node kinds, or an empty slice for Rust.
+///
+/// # Panics
+/// Panics for PHP, which this rule does not support.
 fn loop_kinds(lang: Lang) -> &'static [&'static str] {
     match lang {
         Lang::Php => unreachable!("this rule does not declare PHP support"),
@@ -41,6 +49,9 @@ fn loop_kinds(lang: Lang) -> &'static [&'static str] {
 /// assignment to a loop means the assignment executes once per *call*, not
 /// once per loop iteration — that's not the quadratic-rebuild pattern this
 /// rule targets, so the walk stops there rather than crediting the loop.
+///
+/// # Panics
+/// Panics for PHP, which this rule does not support.
 fn boundary_kinds(lang: Lang) -> &'static [&'static str] {
     match lang {
         Lang::Php => unreachable!("this rule does not declare PHP support"),
@@ -60,6 +71,9 @@ fn boundary_kinds(lang: Lang) -> &'static [&'static str] {
 /// String-literal node kinds a syntactic (T0) check can recognise directly.
 /// This is the "string-typed-RHS narrowing" needed so `count += 1` never
 /// matches: without it, any augmented assignment would qualify.
+///
+/// # Panics
+/// Panics for PHP, which this rule does not support.
 fn string_literal_kinds(lang: Lang) -> &'static [&'static str] {
     match lang {
         Lang::Php => unreachable!("this rule does not declare PHP support"),
@@ -101,6 +115,9 @@ fn enclosed_by_loop(node: Node, loops: &[&str], boundaries: &[&str]) -> bool {
 /// subtree contains a string literal — i.e. it looks like the accumulator's
 /// own string-typed initialisation (`s = ''`, `let s = "";`), not the loop
 /// body's `+=`.
+///
+/// # Panics
+/// Panics for PHP, which this rule does not support.
 fn declares_target_as_string(
     node: Node,
     target_name: &str,

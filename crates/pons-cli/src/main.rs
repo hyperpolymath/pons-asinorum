@@ -264,8 +264,9 @@ fn doctor() -> String {
 /// `no_speculative` removes speculative findings and counts them as suppressed;
 /// `explain` adds evidence and tier annotations only in human output.
 ///
-/// Returns 2 if `fail_on_skips` is set and any input was skipped, otherwise 1
-/// if a remaining non-speculative finding meets `fail_on`, or 0.
+/// Returns 2 if `fail_on_skips` is set and any input was skipped or no files
+/// were analysed, otherwise 1 if a remaining non-speculative finding meets
+/// `fail_on`, or 0.
 ///
 /// Missing paths, a forced grammar for a directory, unknown selected rules,
 /// configuration and discovery errors, and rendering or stdout errors propagate.

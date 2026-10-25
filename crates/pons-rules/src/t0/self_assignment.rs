@@ -15,6 +15,10 @@ const LANGUAGES: &[Lang] = &[
     Lang::Rust,
 ];
 
+/// Return this rule's query for a supported grammar.
+///
+/// # Panics
+/// Panics for PHP, which this rule does not support.
 fn query_source(lang: Lang) -> &'static str {
     match lang {
         Lang::Php => unreachable!("this rule does not declare PHP support"),

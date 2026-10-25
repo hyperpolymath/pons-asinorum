@@ -24,6 +24,8 @@ pub struct InputCoverage {
 }
 
 impl InputCoverage {
+    /// Create an entry with no language, analyser or rule metadata.
+    /// An empty `reason` is stored as `None`; `path` uses its display spelling.
     pub fn new(path: &std::path::Path, status: InputStatus, reason: &str) -> Self {
         Self {
             path: path.display().to_string(),
@@ -36,8 +38,9 @@ impl InputCoverage {
     }
 }
 
-/// Recognised source/config inputs without a native grammar are explicit gaps.
-/// Other extensions are listed as outside this declared scope, not analyzed.
+/// Whether the path's extension or special filename is in the declared
+/// source/config scope, regardless of native grammar support or file existence.
+/// Extensions are ASCII case-insensitive; special filenames are case-sensitive.
 pub fn is_candidate(path: &std::path::Path) -> bool {
     let ext = path
         .extension()

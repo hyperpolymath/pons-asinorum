@@ -15,6 +15,10 @@ const LANGUAGES: &[Lang] = &[
     Lang::Rust,
 ];
 
+/// Return this rule's query for a supported grammar.
+///
+/// # Panics
+/// Panics for PHP, which this rule does not support.
 fn query_source(lang: Lang) -> &'static str {
     match lang {
         Lang::Php => unreachable!("this rule does not declare PHP support"),
@@ -29,6 +33,9 @@ fn query_source(lang: Lang) -> &'static str {
 /// Node kinds that count as a no-op statement — a block containing only
 /// these (or nothing at all) has no effect. Rust has no bare no-op statement
 /// kind, so only a literally empty block counts there.
+///
+/// # Panics
+/// Panics for PHP, which this rule does not support.
 fn noop_kinds(lang: Lang) -> &'static [&'static str] {
     match lang {
         Lang::Php => unreachable!("this rule does not declare PHP support"),

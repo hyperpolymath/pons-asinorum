@@ -13,6 +13,9 @@ pub enum Lang {
 }
 
 impl Lang {
+    /// Return the language for a case-sensitive extension without a leading
+    /// dot, or `None` if unsupported.
+    ///
     /// Per `docs/PLAN.adoc` Appendix F: `.jsx` maps to `JavaScript` — the
     /// `tree-sitter-javascript` grammar parses JSX natively, and TSX is
     /// reserved for files with actual TypeScript type annotations.
@@ -43,6 +46,8 @@ impl Lang {
         }
     }
 
+    /// Return the native grammar, including JSX for JavaScript and mixed
+    /// PHP/template content for PHP.
     pub fn tree_sitter_language(&self) -> Language {
         match self {
             Lang::Python => tree_sitter_python::LANGUAGE.into(),

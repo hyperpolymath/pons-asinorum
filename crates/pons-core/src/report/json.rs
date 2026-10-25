@@ -109,6 +109,8 @@ impl ByEvidence {
 
 /// Render a [`ScanReport`] as the Appendix G envelope, with a trailing
 /// newline so the output is a well-formed text stream.
+/// Includes coverage with paths as recorded in the report.
+/// JSON serialisation errors propagate to the caller.
 pub fn render(report: &ScanReport) -> anyhow::Result<String> {
     let envelope = Envelope {
         schema_version: SCHEMA_VERSION,

@@ -15,6 +15,10 @@ const LANGUAGES: &[Lang] = &[
     Lang::Rust,
 ];
 
+/// Return this rule's query for a supported grammar.
+///
+/// # Panics
+/// Panics for PHP, which this rule does not support.
 fn query_source(lang: Lang) -> &'static str {
     match lang {
         Lang::Php => unreachable!("this rule does not declare PHP support"),
@@ -32,6 +36,9 @@ fn query_source(lang: Lang) -> &'static str {
 /// outer loop) is deliberately treated as "has an exit" — this rule would
 /// rather under-flag a loop that turns out to still be infinite than
 /// false-positive on one that isn't; see the module doc comment.
+///
+/// # Panics
+/// Panics for PHP, which this rule does not support.
 fn exit_kinds(lang: Lang) -> &'static [&'static str] {
     match lang {
         Lang::Php => unreachable!("this rule does not declare PHP support"),
@@ -46,6 +53,9 @@ fn exit_kinds(lang: Lang) -> &'static [&'static str] {
 /// Node kinds that introduce a new function scope — the walker stops
 /// descending here, since a `break`/`return`/`throw` inside a nested
 /// function or closure exits *that* function, not the loop being checked.
+///
+/// # Panics
+/// Panics for PHP, which this rule does not support.
 fn boundary_kinds(lang: Lang) -> &'static [&'static str] {
     match lang {
         Lang::Php => unreachable!("this rule does not declare PHP support"),

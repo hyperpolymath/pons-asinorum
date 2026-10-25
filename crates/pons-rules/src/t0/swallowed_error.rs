@@ -9,6 +9,10 @@ use tree_sitter::{Query, QueryCursor, StreamingIterator};
 
 const LANGUAGES: &[Lang] = &[Lang::Python, Lang::JavaScript, Lang::TypeScript, Lang::Tsx];
 
+/// Return this rule's query for a supported grammar.
+///
+/// # Panics
+/// Panics for Rust or PHP, which this rule does not support.
 fn query_source(lang: Lang) -> &'static str {
     match lang {
         Lang::Php => unreachable!("this rule does not declare PHP support"),
@@ -108,6 +112,9 @@ impl Rule for SwallowedError {
 /// content — ignoring a Python `pass` (the only way to write an empty
 /// Python block) — and carries no comment documenting the swallow as
 /// intentional.
+///
+/// # Panics
+/// Panics for PHP when the body has no direct comment child.
 fn is_swallowed(body: &tree_sitter::Node, lang: Lang) -> bool {
     let mut has_comment = false;
     let mut statements = 0usize;

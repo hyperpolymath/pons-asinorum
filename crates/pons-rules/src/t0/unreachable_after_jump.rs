@@ -16,6 +16,7 @@ const LANGUAGES: &[Lang] = &[
     Lang::Php,
 ];
 
+/// Return this rule's query for the selected grammar, including PHP.
 fn query_source(lang: Lang) -> &'static str {
     match lang {
         Lang::Python => include_str!("../../rules/unreachable-after-jump/python.scm"),
@@ -86,6 +87,9 @@ impl Rule for UnreachableAfterJump {
         LANGUAGES
     }
 
+    /// Return T0 warnings at the first non-comment named sibling after each
+    /// matched unconditional jump in the same block. Trailing comments alone
+    /// produce no finding; languages without a stored query yield no findings.
     fn check(&self, ctx: &RuleCtx) -> Vec<RawFinding> {
         let Some(query) = self.queries.get(&ctx.lang) else {
             return Vec::new();

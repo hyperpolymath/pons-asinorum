@@ -118,6 +118,12 @@ pub struct ScanReport {
 }
 
 impl ScanReport {
+    /// Summarise input coverage independently of findings and suppressions.
+    ///
+    /// With no analysed files, the status is `failed` if there are skips and
+    /// `no_applicable_input` otherwise. With analysed files, it is `partial`
+    /// if there are skips and `complete` otherwise. Candidate counts exclude
+    /// only `Excluded` entries; the returned ledger borrows this report.
     pub fn coverage(&self) -> Coverage<'_> {
         Coverage {
             status: if self.files_scanned == 0 && !self.skipped.is_empty() {
@@ -139,6 +145,8 @@ impl ScanReport {
             inputs: &self.input_coverage,
         }
     }
+    /// Whether no files were analysed or any file or subtree was skipped,
+    /// regardless of the findings or their suppression.
     pub fn incomplete(&self) -> bool {
         self.files_scanned == 0 || !self.skipped.is_empty()
     }
@@ -182,11 +190,14 @@ impl Engine {
     /// Fails only if `root` itself cannot be opened (see [`source::discover`]),
     /// which ADR-0005 makes exit 2. Everything below the root degrades to a
     /// skip: a subdirectory that cannot be enumerated, a file that cannot be
-    /// read, a file that cannot be parsed. All three land in
+    /// read, a file that cannot be parsed, an unsupported source/config input,
+    /// or a parsed file with no applicable enabled rules. These land in
     /// [`ScanReport::skipped`] together, because to a reader of the report they
     /// are the same fact — "this part of your tree was not analysed" — and
     /// splitting them by which layer noticed would only invite a consumer to
     /// handle one and miss the others.
+    /// Coverage entries are merged and sorted by path. Panics from rule
+    /// checks propagate to the caller.
     pub fn scan(&self, root: &Path) -> anyhow::Result<ScanReport> {
         let discovery = source::discover(root)?;
         let mut report = self.scan_files(root, &discovery.files);
@@ -200,15 +211,17 @@ impl Engine {
         Ok(report)
     }
 
-    /// Scan an explicit file list. Every file read or parse error becomes
-    /// a skip. Public so the tolerance contract is testable without having to
+    /// Scan an explicit file list. Read and parse errors, and parsed files with
+    /// no applicable enabled rules, become skips with coverage entries.
+    /// Public so the tolerance contract is testable without having to
     /// manufacture an unreadable file on disk — a fixture that behaves
     /// differently for root and non-root, and so proves nothing in CI.
     ///
     /// `root` labels the report and anchors configuration path matching; it
     /// does not restrict the supplied file list. Suppressed findings are
-    /// counted and omitted. Successfully parsed files count as scanned even
-    /// when all their findings are suppressed; transcoded files are recorded.
+    /// counted and omitted. Successfully parsed files with applicable enabled
+    /// rules count as scanned even when all their findings are suppressed;
+    /// transcoded files among those scanned are recorded.
     /// Panics from rule checks propagate to the caller.
     pub fn scan_files(&self, root: &Path, files: &[DiscoveredFile]) -> ScanReport {
         let mut findings = Vec::new();
