@@ -1,0 +1,45 @@
+{
+  policy: "standards 3-practice/YAML-POLICY.adoc: D280 (KYAML is the authoring dialect for every estate-owned YAML file, workflows included) and D307 (estate-owned configuration carries the .kyaml extension). This file is the closed-world inventory of this repository's YAML: every .yml and .yaml file is either in `converted` (and therefore KYAML, checked by standards' scripts/kyaml-format.sh) or in `excluded` with a stated reason.",
+  converted: [
+    "ci/json-ratchet.kyaml",
+    "ci/sonar-fixture-diagnostics.kyaml",
+    "ci/yaml-ratchet.kyaml",
+    "tests/proven/ledger.kyaml",
+  ],
+  excluded: [
+    {
+      paths: [
+        ".github/FUNDING.yml",
+      ],
+      reason: "GitHub reads this file by name and by schema. YAML-POLICY §3.4 keeps a tool-found file's name; its content is the platform's format, not ours to reformat.",
+    },
+    {
+      paths: [
+        ".github/dependabot.yml",
+      ],
+      reason: "Dependabot rewrites this file in block YAML on every version bump. A KYAML rendering here would be rewritten back to block YAML by the bot that owns it.",
+    },
+    {
+      paths: [
+        ".pre-commit-config.yaml",
+      ],
+      reason: "`pre-commit autoupdate` rewrites `rev:` lines in block style, as standards records for the same file in rsr-template-repo.",
+    },
+    {
+      paths: [
+        ".github/workflows/codeql.yml",
+        ".github/workflows/format-policy.yml",
+        ".github/workflows/label-triage.yml",
+        ".github/workflows/labels.yml",
+        ".github/workflows/main-estate-audit.yml",
+        ".github/workflows/pages.yml",
+        ".github/workflows/rust-ci.yml",
+        ".github/workflows/scorecard.yml",
+        ".github/workflows/secret-scanner.yml",
+        ".github/workflows/squabble.yml",
+        ".github/workflows/track-estate-audit.yml",
+      ],
+      reason: "Workflow. Step 6 of YAML-POLICY §5 (standards#1025) has not started anywhere in the estate: Dependabot rewrites `uses:` lines in block YAML, and standards' own ratchet lists workflows as not-yet-converted. Converting one repository's workflows ahead of the estate step would break the bot that updates them.",
+    },
+  ],
+}

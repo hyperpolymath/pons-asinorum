@@ -1,0 +1,65 @@
+{
+  policy: "standards 3-practice/JSON-POLICY.adoc (owner ruling D306): every .json and .jsonl is I-JSON (RFC 7493) and JCS (RFC 8785) canonical. The enforced part of that policy here is I-JSON VALIDITY for every JSON file in this repository, plus JCS CANONICALITY for the files in `canonical`. The rest are declared non-canonical with a stated reason, and are reported rather than silently tolerated.",
+  canonical: [
+    "deferred/rookie-fixtures/localisation-key-drift/positive/case/fra.json",
+    "deferred/rookie-fixtures/localisation-placeholder-drift/negative/case/eng.json",
+    "deferred/rookie-fixtures/localisation-placeholder-drift/negative/case/fra.json",
+    "deferred/rookie-fixtures/localisation-placeholder-drift/positive/case/eng.json",
+    "deferred/rookie-fixtures/localisation-placeholder-drift/positive/case/fra.json",
+  ],
+  declared_non_canonical: [
+    {
+      paths: [
+        ".github/label-classifier.json",
+        ".github/labels.json",
+        ".github/rulesets/Immutable-Tags.json",
+        ".github/rulesets/Optimus-Branch.json",
+      ],
+      reason: "Estate label and ruleset data. These are read as whole documents by GitHub and by the estate's label tooling, and are reviewed as readable diffs by a human; canonicalising them would make every label edit an unreadable one-line diff.",
+    },
+    {
+      paths: [
+        "benches/baseline.json",
+      ],
+      reason: "The benchmark baseline, written by the framework's own compute-bench-baseline.sh, whose output is jq-formatted. It is read by jq, not hashed, and it is regenerated from a window of CI runs rather than edited; reformatting it would break the byte-for-byte comparison the framework's checker makes.",
+    },
+    {
+      paths: [
+        "crates/pons-core/tests/golden/report.json",
+        "crates/pons-core/tests/golden/report.sarif.json",
+      ],
+      reason: "Golden outputs of Pons's own reporters. The JSON envelope's field order is part of its published contract (docs/PLAN.adoc Appendix G), and it is deliberately NOT alphabetical, so these bytes are not RFC 8785 canonical. Changing them to canonical form would change the contract, not enforce it.",
+    },
+    {
+      paths: [
+        "crates/pons-core/tests/schemas/sarif-2.1.0.json",
+      ],
+      reason: "A vendored copy of the SARIF 2.1.0 schema, kept byte-identical to the specification's copy so that it can be diffed against upstream.",
+    },
+    {
+      paths: [
+        "deferred/rookie-fixtures/**/*.json",
+      ],
+      reason: "The deferred rookie-scanner fixture corpus. Only the five files listed in `canonical` are canonical; the rest are corpus inputs that are read as whole documents by the scanner under test.",
+    },
+    {
+      paths: [
+        "docs/evidence/**/*.json",
+      ],
+      reason: "Historical evidence, kept unchanged on purpose. Its integrity is established by a recorded digest, not by rewriting the bytes: rewriting an evidence artefact to satisfy a formatter would destroy the very thing the evidence is for.",
+    },
+    {
+      paths: [
+        "fixtures/**/*.json",
+      ],
+      reason: "Protocol-model fixtures, hand-authored and reviewed as readable diffs.",
+    },
+    {
+      paths: [
+        "schemas/evidence-1.0.0.json",
+        "schemas/scan-0.4.0.json",
+      ],
+      reason: "The published report schemas. They are the human-readable contract for Pons's machine-readable output and are reviewed line by line; a canonical rendering of a 755-line schema is not reviewable.",
+    },
+  ],
+}
