@@ -12,6 +12,17 @@ fn required<'a>(v: &'a Value, key: &str) -> Result<&'a Value> {
 }
 pub fn validate(text: &str) -> Result<String> {
     let v: Value = serde_json::from_str(text)?;
+    validate_value(v)
+}
+
+/// Consume the JSON byte stream without a fixed input-size ceiling or a second
+/// complete text buffer. Schema/semantic checks still materialise the JSON value;
+/// callers handling untrusted input must provide process memory/time limits.
+pub fn validate_reader(reader: impl std::io::Read) -> Result<String> {
+    validate_value(serde_json::from_reader(reader)?)
+}
+
+fn validate_value(v: Value) -> Result<String> {
     // Structural validation precedes semantic checks: hand-picked fields cannot
     // enforce required properties, enums or the closed envelope.
     static SCHEMA: std::sync::OnceLock<jsonschema::Validator> = std::sync::OnceLock::new();
