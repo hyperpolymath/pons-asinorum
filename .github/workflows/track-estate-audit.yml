@@ -45,11 +45,20 @@ concurrency:
 
 jobs:
   bump:
+    # The display name is spelled out rather than left to default to the
+    # job id, so the check is named deliberately: renaming a status check
+    # silently unbreaks every ruleset that requires it.
+    name: Track the estate pins
     runs-on: ubuntu-latest
     # A hung `gh` call must not hold a runner for the default six hours
     # (hypatia WF013 / WH006). The whole job is a clone, a sed and a PR.
     timeout-minutes: 20
     permissions:
+      # contents: write   - the bump commits under .github/workflows/ and
+      #                     pushes the bot branch.
+      # pull-requests: write - the bump opens or edits the pull request.
+      # Both are needed for exactly the two things this job does, and
+      # nothing else is granted.
       contents: write
       pull-requests: write
     env:

@@ -39,12 +39,14 @@ Work done on the CI/CD and format side of this prompt, and what remains.
   is recorded in `ci/yaml-ratchet.kyaml` with its reason.
 * *Obligation 4 (missing-tool failure).* Every gate added here exits `2`,
   never `0`, when a tool it needs is missing. `tests/format_ratchet.sh`
-  refuses to run at all if the `yq` on PATH cannot write KYAML, because a
+  refuses to run at all if the `yq` on PATH cannot write KYAML because a
   formatter that cannot write cannot report a file clean.
 * *Obligation 4 (comments, exact pins, lockfiles).* No workflow's comments
   were touched, no action pin was changed, and no lockfile was reformatted.
-  The only workflow edits were the `uses:` owner spelling (below) and the
-  addition of new workflows.
+  The workflow edits were the `uses:` owner spelling (below), the
+  re-pinning of the estate audit to cicd-suite's five-component audit, the
+  addition of the new workflows, and a new `proven-tests` job in
+  `.github/workflows/rust-ci.yml` that runs the provenance gate.
 * *Obligation 6 (canonical report bytes, honestly).* This is **not** done,
   and the honest position is now written down: the JSON report's field
   order is contractual (`docs/PLAN.adoc` Appendix G) and therefore not
@@ -106,9 +108,27 @@ in `standards` itself, `cicd-suite`, `rsr-template-repo` and
 * The benchmark *regression* comparison, which the estate's taxonomy
   requires to be cut from ten CI runs on main. The measurement is running;
   the comparison is recorded as an Unproven gap rather than as a passing
-  gate, because a baseline cut from fewer than ten runs would be
+  gate because a baseline cut from fewer than ten runs would be
   mathematically inert and the framework's own checker says so.
 * A machine-checked proof artefact. Pons has none, so the Actually-Proven
-  tier is unreachable and the provenance gate fails any claim of it. That
+  tier is unreachable, and the provenance gate fails any claim of it. That
   is the correct state, and the gate enforces it rather than accepting the
   claim.
+* The SonarCloud project's own configuration. SonarSource's documentation
+  says that automatic analysis — the analysis this repository's
+  "SonarCloud Code Analysis" check comes from — **ignores**
+  `sonar-project.properties`. The six fixture waivers therefore have to be
+  configured in the SonarCloud project's Analysis Configuration, and this
+  repository can neither read nor write that configuration from CI: it has
+  no SonarCloud token. `sonar-project.properties` is the declaration and
+  the input to `tests/sonar_fixture_gate_test.sh`, which fails if it and
+  `ci/sonar-fixture-diagnostics.kyaml` disagree in either direction; it is
+  not, on its own, what makes SonarCloud ignore a diagnostic. The gap is
+  named in `docs/CI-CD.adoc` rather than papered over.
+* Two defects in the vendored benchmark harness. `scripts/proven-bench/`
+  holds `check-bench-regression.sh` and `compute-bench-baseline.sh`
+  byte-for-byte from `hyperpolymath/proven-tests-and-benches`, and
+  `scripts/proven-bench/verify-upstream.sh` proves it by digest. Patching
+  them here would make the local copy stop being the upstream copy, so
+  they are asked about upstream in
+  `docs/handoffs/upstream-prompts.adoc`, prompt 8.

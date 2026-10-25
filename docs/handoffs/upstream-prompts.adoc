@@ -259,3 +259,55 @@ defect.*
 > structural gate passes" at all, or must say nothing. A vocabulary for
 > "structurally valid but not conformant" would stop the gap being closed
 > by silence.
+
+== 8. `hyperpolymath/proven-tests-and-benches` — two defects in the
+vendored benchmark scripts
+
+*Priority: medium. The scripts are vendored byte-for-byte here, so they
+cannot be fixed in this repository without breaking the digest check that
+proves the copy is the upstream copy.*
+
+> `scripts/proven-bench/` in pons-asinorum holds `check-bench-regression.sh`,
+> `compute-bench-baseline.sh` and `bench-stats.jq` byte-for-byte from this
+> repository, at the revision in `scripts/proven-bench/PIN`.
+> `scripts/proven-bench/verify-upstream.sh` fetches the same revision from
+> upstream and compares SHA-256 digests, so a local patch would make the
+> copy stop being the upstream copy — which is the whole point of
+> vendoring it. Both defects below were found by review in the consuming
+> repository and are therefore being reported here rather than patched
+> there.
+>
+> **1. `compute-bench-baseline.sh` counts file arguments, not validated
+> run documents.**
+>
+> `validate_run` runs
+> `jq -L "$SCRIPT_DIR" -r 'include "bench-stats"; bench_errors[]' "$f"`,
+> which processes each input document separately and produces *no output*
+> for an empty file. An empty file therefore passes validation, the later
+> `jq -s` collects nine documents instead of ten, and the baseline is
+> written with `window: 9` — while the script's own `MIN_RUNS=10` check
+> was satisfied by the number of *arguments*. The gate is then mathematically
+> inert, which is precisely what the script's "BASELINE BOOTSTRAPPING"
+> refusal exists to prevent.
+>
+> Please make the validation reject an empty file and a file containing
+> more than one document, and make the ten-run minimum count the *validated
+> run documents* rather than the supplied file names, so that the slurp
+> calculation cannot write a baseline from fewer than ten validated runs.
+>
+> **2. `check-bench-regression.sh` accepts a baseline file with more than
+> one JSON document.**
+>
+> The comparison uses `--slurpfile b "$BASELINE"` and then reads `$b[0]`.
+> If the baseline file contains two valid documents, both are slurped and
+> only the first is compared, so the gate can classify a regression
+> against the wrong thresholds — and it reports nothing about the extra
+> document. Please reject a baseline that does not contain exactly one
+> valid JSON document before comparing, and keep the existing validation
+> for a single document.
+>
+> Neither defect affects pons-asinorum today: its baseline does not exist
+> yet, and the corresponding ledger entry is an `Unproven` declared gap
+> rather than a passing gate. They will affect the first repository that
+> cuts a baseline from these scripts.
+

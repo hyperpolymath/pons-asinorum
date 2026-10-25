@@ -160,6 +160,28 @@ adding a class declaration to two fixtures and renaming a function in a
 third, and the corpus is worth more unchanged than the waiver list is
 short.
 
+*What the configuration does and does not do.* SonarSource's own
+documentation says that automatic analysis — the analysis behind this
+repository's "SonarCloud Code Analysis" check — **ignores**
+`sonar-project.properties`: "If you import a project that already contains
+a `sonar-project.properties` file, SonarQube Cloud will ignore the
+parameters in your `sonar-project.properties` file." So the criteria in
+that file are the *declaration* of what this repository asks SonarCloud to
+ignore, and the input to `tests/sonar_fixture_gate_test.sh`, which fails
+if the declaration and `ci/sonar-fixture-diagnostics.kyaml` disagree in
+either direction; they are not, on their own, what makes SonarCloud
+ignore a diagnostic today. The effective criteria have to be configured in
+the SonarCloud project's Analysis Configuration, which this repository
+can neither read nor write from CI — it has no SonarCloud token. That
+gap is named in `docs/CI-CD.adoc` rather than papered over: an unverified
+configuration is not an assurance.
+
+The criteria are also declared as ONE comma-separated value. A properties
+file keeps only the LAST assignment of a key, so the original file — which
+assigned `sonar.issue.ignore.multicriteria` once per criterion — had five
+of its six criteria silently dropped, and only the last was in force. The
+gate now refuses a file that assigns the property more than once.
+
 === Merge state
 
 PR #57 remains open and conflicted, and it should stay that way until its

@@ -202,6 +202,16 @@ if [ -n "$missing_in_decl" ]; then
 fi
 
 echo "  declared waivers: ${#DECLARED_RULE[@]}; Sonar criteria: ${#SONAR_RULE[@]}"
+# The summary names every waiver: the rule, the exact path, who owns it and
+# when it expires. A waiver nobody can read in the log is a waiver nobody
+# can review.
+while IFS= read -r key; do
+  [ -n "$key" ] || continue
+  printf '    %s | %s | owner: %s | expires: %s\n' \
+    "${DECLARED_RULE[$key]}" "${DECLARED_PATH[$key]}" \
+    "${DECLARED_OWNER[$key]}" "${DECLARED_EXPIRES[$key]}"
+  printf '      reason: %s\n' "${DECLARED_REASON[$key]}"
+done < <(printf '%s\n' "${!DECLARED_RULE[@]}" | sort -u)
 
 if [ "$fail" -ne 0 ]; then
   echo "sonar-fixture-gate: FAILED" >&2

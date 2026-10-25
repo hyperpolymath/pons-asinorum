@@ -44,6 +44,66 @@
   `probe-yaml-arm.yml` were deleted. Their own header said to remove them
   with the branch that introduced them, and that branch is merged.
 
+* The gates this pull request adds were reviewed, and each was checked
+  against the code as it stands. The findings that named a real defect are
+  fixed, and the ones that do not are recorded rather than argued away.
+
+  **The provenance gate was not a gate.** It reported a suite that ran and
+  failed, and then carried on without failing the build: the failure flag
+  was never set, so a build could be green over a red suite whenever
+  another suite happened to occupy the same cells. The flag is set now.
+  The case count was also taken from the LAST `test result: ok.` line, so
+  a suite of many test binaries reported the size of the last one; the
+  counts are summed. And the ledger's `command` was a shell string handed
+  to `bash -c`; it is an ARGV LIST now and is executed directly, so a
+  ledger entry can no longer become shell code.
+
+  **The format ratchet could not read a file.** `ijson-jcs check` was
+  invoked without `--`, so a path beginning with a hyphen was read as an
+  option; and only the exit status was consulted, so a usage error was
+  read as "valid but not canonical", which is a pass. The verdict the tool
+  PRINTS must now agree with the status it returns, and only the three
+  documented verdicts are accepted. A `.jsonl` file is a sequence of
+  records rather than one document, and the tool reads whole documents
+  only, so each record is now canonicalised on its own. The JSON inventory
+  no longer uses globs: a glob let a file that nobody decided anything
+  about pass without a decision, and all ninety are now named.
+
+  **The self-tests asserted the wrong thing.** Each mutation now asserts
+  the DIAGNOSTIC it should produce, not merely a non-zero exit: a gate that
+  goes red for the wrong reason is as useless as one that never goes red.
+  Both self-tests also restored the working tree from the INDEX, which
+  their own runs had staged, so a mutation survived into the next run and
+  masked it. A third self-test is new:
+  `tests/sonar_fixture_gate_mutation_test.sh` plants eleven defects one at
+  a time and requires the fixture-aware Sonar gate to go red and name each
+  one. That gate had never been deliberately tripped.
+
+  **The Sonar configuration had five of its six criteria dropped.**
+  `sonar.issue.ignore.multicriteria` was assigned once per criterion, and
+  a properties file keeps only the LAST assignment of a key, so only the
+  final criterion was in force. The list is now one comma-separated value,
+  and the gate refuses a file that assigns the property more than once. The
+  file also claimed that SonarCloud's automatic analysis reads it; the
+  SonarSource documentation says the opposite, so the claim is corrected
+  and the gap is named in `docs/CI-CD.adoc` instead of being papered over.
+  The gate now also rejects a wildcard rule key and requires an expiry to
+  be a real calendar date strictly in the future.
+
+  **The benchmark harness could measure nothing.** The workloads were
+  `eval`ed from the frozen table, and the scan predicates asked only
+  whether the output contained a `schema_version`, which an empty report
+  satisfies. Nothing is `eval`ed now — each workload names a runner and a
+  checker, dispatched through an explicit allowlist — and the predicates
+  require the finding the positive fixture must produce, so a scan that
+  reports nothing is a broken scan and the harness says so.
+
+  Two defects in the *vendored* benchmark scripts are not patched here:
+  `scripts/proven-bench/` holds them byte-for-byte from
+  `hyperpolymath/proven-tests-and-benches` and a digest check proves it,
+  so a local patch would make the copy stop being the upstream copy. They
+  are reported upstream in `docs/handoffs/upstream-prompts.adoc`, prompt 8.
+
 === Added
 
 * `docs/CI-CD.adoc`: the CI/CD contract — what runs, what is required, what

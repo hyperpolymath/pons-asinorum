@@ -22,7 +22,7 @@ check run.
   gate in this repository has a companion test that plants one defect at a
   time and asserts that the gate goes red and names it. Those tests are in
   `tests/format_ratchet_test.sh`, `tests/proven/provenance_gate_test.sh` and
-  `tests/sonar_fixture_gate_test.sh`.
+  `tests/sonar_fixture_gate_mutation_test.sh`.
 . *A shared gate is called, never copied.* This repository has no
   `.github/actions/` directory. It calls the estate's reusable workflows at
   pinned SHAs, so a fix made upstream arrives here without anyone
@@ -75,6 +75,15 @@ check run.
 | The estate's CI/CD fighter: the pinned, attested `squabble` release
   installs and runs, and the pull request's gate is fetched and diagnosed.
 | Not required. The installation blocks; the diagnostic reports.
+
+The diagnostic needs a token that can read branch rulesets and classic
+branch protection. A fresh GitHub App installation token is minted for
+each run when `SQUABBLE_APP_ID` and `SQUABBLE_APP_PRIVATE_KEY` are
+configured; a long-lived `SQUABBLE_TOKEN` and then `github.token` are the
+fallbacks, and which one was used is reported. A fork's pull request never
+runs this repository's code with a privileged token: the workflow checks
+out nothing from the pull request, and the manual trigger takes the pull
+request number as an input rather than a branch.
 
 | `codeql.yml`, `scorecard.yml`
 | The estate's CodeQL and OpenSSF Scorecard reusables.
@@ -151,6 +160,9 @@ This repository enforces both as *closed inventories* rather than as scans:
   Every one must be valid I-JSON. The files listed as `canonical` must also
   be byte-identical to their RFC 8785 form. The rest are declared
   non-canonical with a reason and are reported, not tolerated silently.
+  Every file is **named**: a glob would let a file that nobody decided
+  anything about pass without a decision, which is the failure this
+  inventory exists to prevent.
 
 The tools are the estate's own, fetched at a pinned commit and verified by
 sha256, so this repository carries no copy that can drift: `yq` 4.53.3 and
@@ -193,8 +205,28 @@ This repository implements it:
   it is declared or the fixture is corrected.
 * `tests/sonar_fixture_gate_test.sh` compares the two in both directions,
   refuses a criterion that names a pattern rather than a whole file,
-  refuses a waiver for a file outside the corpus, and fails a waiver whose
-  expiry has passed.
+  refuses a wildcard rule key, refuses a waiver for a file outside the
+  corpus, and fails a waiver whose expiry has passed. A criterion list
+  that is assigned more than once is refused too: a properties file keeps
+  only the LAST assignment of a key, so a file that assigns the property
+  once per criterion silently drops every criterion but the last.
+* `tests/sonar_fixture_gate_mutation_test.sh` plants eleven defects one
+  at a time and requires the gate to go red and name each one. A gate that
+  has never been tripped is not a gate.
+
+*What is not verified here, and why.* SonarSource's documentation says
+that automatic analysis — the analysis behind this repository's
+"SonarCloud Code Analysis" check — *ignores* `sonar-project.properties`:
+"If you import a project that already contains a `sonar-project.properties`
+file, SonarQube Cloud will ignore the parameters in your
+`sonar-project.properties` file." The six criteria therefore have to be
+configured in the SonarCloud project's own Analysis Configuration, and
+this repository can neither read nor write that configuration from CI: it
+has no SonarCloud token, and the API is not reachable from the gate. So
+`sonar-project.properties` is the *declaration* and the gate's input, not
+a mechanism that makes SonarCloud ignore anything today. The gap is named
+here rather than papered over: an unverified configuration is not an
+assurance.
 
 == The testing framework
 
@@ -231,6 +263,16 @@ format the framework's own `check-bench-regression.sh` reads. The workload
 set is frozen, every iteration is checked against a predicate, and the
 workload's checksum is true only when every iteration held.
 
+The predicates check the *finding*, not the envelope. A scan predicate that
+only asks whether the output contains a `schema_version` is satisfied by an
+empty report, so the scan workloads require the finding that the positive
+fixture must produce — `crates/pons-rules/tests/falsifier.rs` asserts that
+every positive fixture produces a finding from its own rule. A scan that
+reports nothing is a broken scan, and the harness says so rather than
+recording a green timing for it. Nothing in the harness is `eval`ed: each
+workload names a runner and a checker, dispatched through an explicit
+allowlist, so a string in the frozen table can never become shell code.
+
 The regression *comparison* is not yet in force: a baseline is cut from the
 mean of the last ten CI runs on main (TESTING-TAXONOMY Part IV), and this
 repository has not had ten. The framework's own checker refuses to compare
@@ -242,6 +284,12 @@ The framework's harness is vendored byte-for-byte at a pinned revision in
 `scripts/proven-bench/`, and `scripts/proven-bench/verify-upstream.sh`
 fetches the same revision from upstream and compares the digests, so a
 vendored copy that drifts is caught rather than trusted.
+
+That is also why two defects found in the vendored scripts by review are
+reported upstream rather than patched here: a local patch would make the
+copy stop being the upstream copy. They are in
+`docs/handoffs/upstream-prompts.adoc`, prompt 8. Neither affects this
+repository today, because its baseline does not exist yet.
 
 == Where the failures were
 

@@ -15,10 +15,19 @@ concurrency:
 
 jobs:
   check:
+    # The job's display name is the name of its status check. It is spelled
+    # out rather than left to default to the job id, so the check is named
+    # deliberately: renaming a status check silently unbreaks every
+    # ruleset that requires it.
+    name: check
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+        with:
+          # The job never pushes and never authenticates to a registry: the
+          # token is not left in .git/config for the next step to find.
+          persist-credentials: false
       # The toolchain comes from rust-toolchain.toml (channel + components) via the
       # runner's own rustup, not a third-party action: this repo's Actions policy
       # admits only GitHub-owned and verified actions, and dtolnay/rust-toolchain is
@@ -64,6 +73,10 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+        with:
+          # The job reads the tree and runs tests. It never pushes, so the
+          # token is not left in .git/config for the next step to find.
+          persist-credentials: false
       - name: toolchain
         run: |
           rustup toolchain install
