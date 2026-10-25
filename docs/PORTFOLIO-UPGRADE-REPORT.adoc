@@ -269,6 +269,18 @@ Its per-mutant timeout is 90 s. Parser size bounds are documented in the migrati
 * link:evidence/2026-10-25/raw-reports.jsonl.gz[Raw baseline/upgraded reports and stderr]
 * link:evidence/2026-10-25/test-logs.json.gz[Test, mutation, fuzz and workflow logs]
 
+== Subsequent checkpoint corrections
+
+PR #58 merged as `6a20ca79d13516a970505b45512083110d8f2394`, including
+field-based yq checks for block YAML and flow KYAML workflows. The workflow-style
+item below is a historical limitation at measurement time, subsequently fixed.
+PR #61 merged as `334d7b421dae2d07cae947eb63755841f7b16b8e`: target dirty state
+is now unknown to avoid target-configured Git execution, and report validation
+has no fixed byte ceiling (it still materializes JSON in memory).
+The PR #57 reconciliation adds PHP jump-adjacency controls; measurements above
+remain the original corpus/portfolio observations and are not rerun results for
+that extension. See link:PR57-RECONCILIATION.adoc[reconciliation and limits].
+
 == Remaining work and acceptance limits
 
 . Resolve Composer autoloading, includes, namespace names, traits, references,

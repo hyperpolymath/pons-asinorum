@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0-or-later
 // Machine-readable manifest for pons repository
-// See: https://github.com/hyperpolymath/standards/blob/main/docs/CONTRACTILES-SPEC.adoc
+// See: https://github.com/metadatastician/standards/blob/main/docs/CONTRACTILES-SPEC.adoc
 
 {
   "repository": {
@@ -11,8 +11,8 @@
       "code": "MPL-2.0-or-later",
       "docs": "CC-BY-SA-4.0"
     },
-    "primary_language": ["Rust", "Zig", "Idris"],
-    "status": "planning",
+    "primary_language": ["Rust"],
+    "status": "experimental-implementation",
     "rsr_compliance_target": "full"
   },
 

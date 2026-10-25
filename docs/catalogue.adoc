@@ -36,7 +36,9 @@ Languages: python, javascript, typescript, tsx, rust.
 == 7. `unreachable-after-jump`
 a statement immediately after return, throw, raise, break or continue.
 
-Languages: python, javascript, typescript, tsx, rust.
+Languages: python, javascript, typescript, tsx, rust, php.
+PHP candidates require direct same-block siblings; named labels are withheld
+because goto can enter them. This is a syntax heuristic, not a whole-CFG proof.
 
 == 8. `string-concat-in-loop`
 repeated string concatenation inside a loop, quadratic where a join is linear.

@@ -2,7 +2,7 @@
 [metadata]
 project = "pons-asinorum"
 version = "0.1.0-dev.1"
-last-updated = "2026-09-09"
+last-updated = "2026-10-25"
 status = "active"
 [project-context]
 name = "pons-asinorum"
@@ -11,11 +11,11 @@ purpose = "Review everyday coding, repository and communication oversights after
 phase = "implementation"
 maturity = "experimental"
 [implemented]
-capabilities = ["Rust CLI and libraries", "five grammar variants", "27 built-in checks", "human/JSON/SARIF", "scoped allowances", "explicit budgets and traces", "local optional tool adapters", "offline OCI image"]
+capabilities = ["Rust CLI and libraries", "six grammar variants across five language families", "13 registered source rules (10 T0, 3 T1)", "human/JSON/SARIF", "scoped allowances", "explicit budgets and traces", "local optional tool adapters", "offline OCI image"]
 [remaining]
-actions = ["Python CFG/dataflow", "source-derived typestate", "external corpus acceptance", "versioned language plugins", "image/provenance adapters", "reviewed Authority Watch import", "remote CI and release verification"]
+actions = ["PHP exception/finally and interprocedural flow", "machine-checked solver soundness", "DEED/K9 metadata migration", "source-derived typestate", "external corpus acceptance", "versioned language plugins", "image/provenance adapters", "reviewed Authority Watch import", "remote CI and release verification"]
 [verification]
-report = "docs/AUDIT.adoc"
+report = "docs/PORTFOLIO-UPGRADE-REPORT.adoc"
 production-release = false
 formal-proof = false
 host-firewall-deployment = false
