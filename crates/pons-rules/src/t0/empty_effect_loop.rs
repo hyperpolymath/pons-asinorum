@@ -17,6 +17,7 @@ const LANGUAGES: &[Lang] = &[
 
 fn query_source(lang: Lang) -> &'static str {
     match lang {
+        Lang::Php => unreachable!("PHP uses its native adapter rules"),
         Lang::Python => include_str!("../../rules/empty-effect-loop/python.scm"),
         Lang::JavaScript => include_str!("../../rules/empty-effect-loop/javascript.scm"),
         Lang::TypeScript => include_str!("../../rules/empty-effect-loop/typescript.scm"),
@@ -30,6 +31,7 @@ fn query_source(lang: Lang) -> &'static str {
 /// kind, so only a literally empty block counts there.
 fn noop_kinds(lang: Lang) -> &'static [&'static str] {
     match lang {
+        Lang::Php => unreachable!("PHP uses its native adapter rules"),
         Lang::Python => &["pass_statement"],
         Lang::JavaScript | Lang::TypeScript | Lang::Tsx => &["empty_statement"],
         Lang::Rust => &[],

@@ -1,0 +1,12 @@
+[
+  {
+    "instance": "case",
+    "call": "strip_untrusted",
+    "line": 1
+  },
+  {
+    "instance": "case",
+    "call": "enforce_limits",
+    "line": 2
+  }
+]

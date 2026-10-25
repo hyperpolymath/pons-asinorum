@@ -3,8 +3,10 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::coverage::{InventoryEntry, Outcome};
 use crate::engine::SkippedFile;
 use crate::lang::Lang;
+use std::collections::BTreeSet;
 
 /// Build and VCS directories skipped unconditionally.
 ///
@@ -49,6 +51,7 @@ pub struct SourceFile {
 /// contract [`SkippedFile`] already carries for reads and parses.
 #[derive(Debug, Default)]
 pub struct Discovery {
+    pub inventory: Vec<InventoryEntry>,
     pub files: Vec<DiscoveredFile>,
     pub skipped: Vec<SkippedFile>,
 }
@@ -170,6 +173,8 @@ pub fn discover(root: &Path) -> anyhow::Result<Discovery> {
 
     let mut files = Vec::new();
     let mut skipped = Vec::new();
+    let mut inventory = Vec::new();
+    let mut included = BTreeSet::new();
 
     let walker = ignore::WalkBuilder::new(root)
         .add_custom_ignore_filename(".ponsignore")
@@ -194,11 +199,24 @@ pub fn discover(root: &Path) -> anyhow::Result<Discovery> {
             continue;
         }
         let path = entry.path();
+        included.insert(path.to_path_buf());
         let Some(lang) = path
             .extension()
             .and_then(|ext| ext.to_str())
             .and_then(Lang::from_extension)
         else {
+            let mut item =
+                InventoryEntry::new(path, Outcome::Unsupported, "no native analysis adapter");
+            if item.language == "out-of-scope" && root.is_dir() {
+                item.outcome = Outcome::ExcludedByPolicy;
+                item.reason = "not a recognised source/config file (scope policy v1)".into();
+            } else {
+                skipped.push(SkippedFile {
+                    path: item.path.clone(),
+                    reason: item.reason.clone(),
+                });
+            }
+            inventory.push(item);
             continue;
         };
 
@@ -208,7 +226,63 @@ pub fn discover(root: &Path) -> anyhow::Result<Discovery> {
         });
     }
 
-    Ok(Discovery { files, skipped })
+    // A second metadata-only walk accounts for policy exclusions. Do not open
+    // excluded contents. Build/VCS trees are opaque policy boundaries, not a
+    // claim that every descendant was enumerated. Hidden files are inventoried.
+    let opaque = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let record_opaque = opaque.clone();
+    let walker = ignore::WalkBuilder::new(root)
+        .standard_filters(false)
+        .filter_entry(move |e| {
+            let skip = e.depth() > 0
+                && e.file_type().is_some_and(|t| t.is_dir())
+                && e.file_name()
+                    .to_str()
+                    .is_some_and(|n| SKIP_DIRS.contains(&n));
+            if skip {
+                record_opaque
+                    .lock()
+                    .expect("inventory mutex")
+                    .push(e.path().to_path_buf());
+            }
+            !skip
+        })
+        .build();
+    for entry in walker {
+        match entry {
+            Ok(e)
+                if e.file_type().is_some_and(|t| t.is_file() || t.is_symlink())
+                    && !included.contains(e.path()) =>
+            {
+                inventory.push(InventoryEntry::new(
+                    e.path(),
+                    Outcome::ExcludedByPolicy,
+                    "ignore/hidden/symlink policy; contents not read",
+                ));
+            }
+            Err(e) => {
+                let skip = skip_for(&e);
+                if !skipped.iter().any(|s| s.path == skip.path) {
+                    skipped.push(skip);
+                }
+            }
+            _ => {}
+        }
+    }
+    for path in opaque.lock().expect("inventory mutex").iter() {
+        let mut entry = InventoryEntry::new(
+            path,
+            Outcome::ExcludedByPolicy,
+            "opaque build/VCS directory boundary; descendants not enumerated",
+        );
+        entry.kind = "directory".into();
+        inventory.push(entry);
+    }
+    Ok(Discovery {
+        files,
+        skipped,
+        inventory,
+    })
 }
 
 /// Read one [`DiscoveredFile`] into a [`SourceFile`].
@@ -217,7 +291,20 @@ pub fn discover(root: &Path) -> anyhow::Result<Discovery> {
 /// into the resulting text then differ from offsets into the original file.
 /// File read errors propagate; the engine records them as per-file skips.
 pub fn read(file: &DiscoveredFile) -> anyhow::Result<SourceFile> {
-    let bytes = std::fs::read(&file.path)?;
+    Ok(read_with_digest(file)?.0)
+}
+
+pub fn read_with_digest(file: &DiscoveredFile) -> anyhow::Result<(SourceFile, String)> {
+    use std::io::Read as _;
+    let mut bytes = Vec::new();
+    std::fs::File::open(&file.path)?
+        .take(4 * 1024 * 1024 + 1)
+        .read_to_end(&mut bytes)?;
+    anyhow::ensure!(
+        bytes.len() <= 4 * 1024 * 1024,
+        "input exceeds 4 MiB analysis limit"
+    );
+    let digest = format!("blake3:{}", blake3::hash(&bytes).to_hex());
     let (text, transcoded) = match String::from_utf8(bytes) {
         Ok(text) => (text, false),
         Err(e) => {
@@ -230,12 +317,15 @@ pub fn read(file: &DiscoveredFile) -> anyhow::Result<SourceFile> {
         }
     };
 
-    Ok(SourceFile {
-        path: file.path.clone(),
-        lang: file.lang,
-        text,
-        transcoded,
-    })
+    Ok((
+        SourceFile {
+            path: file.path.clone(),
+            lang: file.lang,
+            text,
+            transcoded,
+        },
+        digest,
+    ))
 }
 
 #[cfg(test)]

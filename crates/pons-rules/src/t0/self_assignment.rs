@@ -17,6 +17,7 @@ const LANGUAGES: &[Lang] = &[
 
 fn query_source(lang: Lang) -> &'static str {
     match lang {
+        Lang::Php => unreachable!("PHP uses its native adapter rules"),
         Lang::Python => include_str!("../../rules/self-assignment/python.scm"),
         Lang::JavaScript => include_str!("../../rules/self-assignment/javascript.scm"),
         Lang::TypeScript => include_str!("../../rules/self-assignment/typescript.scm"),

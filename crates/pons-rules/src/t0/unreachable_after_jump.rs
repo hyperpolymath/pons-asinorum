@@ -17,6 +17,7 @@ const LANGUAGES: &[Lang] = &[
 
 fn query_source(lang: Lang) -> &'static str {
     match lang {
+        Lang::Php => unreachable!("PHP uses its native adapter rules"),
         Lang::Python => include_str!("../../rules/unreachable-after-jump/python.scm"),
         Lang::JavaScript => include_str!("../../rules/unreachable-after-jump/javascript.scm"),
         Lang::TypeScript => include_str!("../../rules/unreachable-after-jump/typescript.scm"),
@@ -107,7 +108,24 @@ impl Rule for UnreachableAfterJump {
                 continue;
             };
 
-            let keyword = jump_keyword(jump.kind());
+            // Captures are candidates, not a control-flow proof. Require the
+            // same direct parent and a genuine immediate statement successor.
+            if jump.parent() != next.parent() || jump.next_named_sibling() != Some(next) {
+                continue;
+            }
+            let mut next = Some(next);
+            while next.is_some_and(|n| n.kind().contains("comment")) {
+                next = next.and_then(|n| n.next_named_sibling());
+            }
+            let Some(next) = next else {
+                continue;
+            };
+            let jump_kind = if jump.kind() == "expression_statement" {
+                jump.named_child(0).map(|n| n.kind()).unwrap_or(jump.kind())
+            } else {
+                jump.kind()
+            };
+            let keyword = jump_keyword(jump_kind);
 
             findings.push(RawFinding::new(
                 Tier::T0,

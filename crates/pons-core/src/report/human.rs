@@ -25,6 +25,19 @@ pub fn render_report(report: &ScanReport, explain: bool) -> String {
         report.skipped.len(),
         report.transcoded.len()
     );
+    let _ = writeln!(out, "coverage: {}", report.coverage_status());
+    for failure in &report.coverage_failures {
+        let _ = writeln!(out, "coverage failure: {failure}");
+    }
+    for entry in &report.inventory {
+        if entry.outcome != crate::coverage::Outcome::Analysed {
+            let _ = writeln!(
+                out,
+                "  {:?}: {} — {}",
+                entry.outcome, entry.path, entry.reason
+            );
+        }
+    }
     out
 }
 

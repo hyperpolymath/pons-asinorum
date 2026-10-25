@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MPL-2.0
+schema_version = "0.2.0"
+strict_transitions = true
+id = "crypto-capability"
+description = "Reduced explicit-event model; not source-derived evidence"
+channel = "fixture-instance"
+states = ["unchecked", "supported", "used", "failed"]
+initial = "unchecked"
+
+[[transition]]
+on = "check_shake_available"
+from = "unchecked"
+to = "supported"
+
+[[transition]]
+on = "use_shake"
+from = "supported"
+to = "used"
+
+[[transition]]
+on = "unavailable"
+from = "unchecked"
+to = "failed"

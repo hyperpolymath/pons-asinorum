@@ -1,0 +1,12 @@
+[
+  {
+    "instance": "case",
+    "call": "parse_ok",
+    "line": 1
+  },
+  {
+    "instance": "case",
+    "call": "report_results",
+    "line": 2
+  }
+]

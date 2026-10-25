@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MPL-2.0
+schema_version = "0.2.0"
+strict_transitions = true
+id = "wordpress-publication-auth"
+description = "Reduced explicit-event model; not source-derived evidence"
+channel = "fixture-instance"
+states = ["unchecked", "authorised", "public", "read"]
+initial = "unchecked"
+
+[[transition]]
+on = "authorize"
+from = "unchecked"
+to = "authorised"
+
+[[transition]]
+on = "check_publication"
+from = "authorised"
+to = "public"
+
+[[transition]]
+on = "get_post"
+from = "public"
+to = "read"

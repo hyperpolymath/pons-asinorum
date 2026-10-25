@@ -13,9 +13,9 @@ use crate::finding::Finding;
 /// line, names the finding's rule in a `pons:allow` directive.
 ///
 /// The syntax is `pons:allow <rule-id>[, <rule-id>...] -- <reason>`. The reason
-/// is not machine-enforced for inline comments (project-scoped allowances in
-/// `pons.toml` do require one), but the `--` separator is accepted so the same
-/// wording works in both places.
+/// is mandatory, followed by `| owner=NAME | expires=UNIX_SECONDS`. Expired
+/// or malformed directives never suppress a finding. Scope is the rule and
+/// adjacent source line; coverage accounting never consults suppression.
 pub fn inline_allowed(ctx: &RuleCtx<'_>, finding: &Finding) -> bool {
     let target_line = finding.location().line_start;
     let mut stack = vec![ctx.tree.root_node()];
@@ -26,7 +26,30 @@ pub fn inline_allowed(ctx: &RuleCtx<'_>, finding: &Finding) -> bool {
             if adjacent {
                 let comment = &ctx.text[node.byte_range()];
                 if let Some((_, rest)) = comment.split_once("pons:allow ") {
-                    let ids = rest.split_once(" -- ").map_or(rest, |x| x.0);
+                    let Some((ids, metadata)) = rest.split_once(" -- ") else {
+                        continue;
+                    };
+                    let parts: Vec<_> = metadata
+                        .trim_end_matches("*/")
+                        .split('|')
+                        .map(str::trim)
+                        .collect();
+                    let reason = parts.first().is_some_and(|s| !s.is_empty());
+                    let owner = parts
+                        .iter()
+                        .find_map(|s| s.strip_prefix("owner="))
+                        .is_some_and(|s| !s.trim().is_empty());
+                    let expiry = parts
+                        .iter()
+                        .find_map(|s| s.strip_prefix("expires="))
+                        .and_then(|s| s.trim().parse::<u64>().ok());
+                    let now = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_secs())
+                        .unwrap_or(u64::MAX);
+                    if !reason || !owner || !expiry.is_some_and(|e| e > now) {
+                        continue;
+                    }
                     if ids
                         .split(|c: char| c.is_whitespace() || c == ',')
                         .any(|id| id == finding.rule_id())
@@ -74,7 +97,7 @@ mod tests {
     #[test]
     fn a_preceding_comment_can_allow_a_rule_but_a_string_cannot() {
         let text = concat!(
-            "# pons:allow self-assignment -- deliberate fixture\n",
+            "# pons:allow self-assignment -- deliberate fixture | owner=test | expires=4102444800\n",
             "x = x\n",
             "s = \"# pons:allow self-assignment\"\n",
             "y = y\n",

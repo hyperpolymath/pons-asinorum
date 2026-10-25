@@ -32,26 +32,39 @@ use crate::finding::{EvidenceClass, Finding};
 ///
 /// Not to be confused with the `schema_version` in a protocol TOML
 /// (ADR-0003), which versions a different file entirely.
-pub const SCHEMA_VERSION: &str = "0.3.0";
+pub const SCHEMA_VERSION: &str = "0.4.0";
 
 #[derive(Serialize)]
 struct Envelope<'a> {
     schema_version: &'static str,
     tool: Tool,
+    execution: Execution,
     scanned: Scanned<'a>,
     counts: Counts,
     findings: &'a [Finding],
+    evidence_contract: crate::evidence::Contract<'a>,
+}
+
+#[derive(Serialize)]
+struct Execution {
+    status: &'static str,
+    exit_code: Option<u8>,
 }
 
 #[derive(Serialize)]
 struct Tool {
     name: &'static str,
     version: &'static str,
+    source_commit: &'static str,
+    source_dirty: &'static str,
 }
 
 #[derive(Serialize)]
 struct Scanned<'a> {
     root: &'a str,
+    coverage_status: &'static str,
+    inventory: &'a [crate::coverage::InventoryEntry],
+    coverage_failures: &'a [String],
     files: usize,
     suppressed_findings: usize,
     languages: Vec<&'static str>,
@@ -114,9 +127,18 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
         tool: Tool {
             name: "pons",
             version: env!("CARGO_PKG_VERSION"),
+            source_commit: env!("PONS_SOURCE_COMMIT"),
+            source_dirty: env!("PONS_SOURCE_DIRTY"),
+        },
+        execution: Execution {
+            status: "completed",
+            exit_code: report.exit_code,
         },
         scanned: Scanned {
             root: &report.root,
+            coverage_status: report.coverage_status(),
+            inventory: &report.inventory,
+            coverage_failures: &report.coverage_failures,
             files: report.files_scanned,
             suppressed_findings: report.suppressed_findings,
             languages: report.languages.iter().map(|l| l.name()).collect(),
@@ -128,6 +150,7 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
             total: report.findings.len(),
         },
         findings: &report.findings,
+        evidence_contract: crate::evidence::contract(report),
     };
 
     let mut out = serde_json::to_string_pretty(&envelope)?;
@@ -142,7 +165,13 @@ mod tests {
 
     #[test]
     fn matches_the_appendix_g_golden_envelope() {
-        let out = render(&fixture::report()).unwrap();
+        let out = render(&fixture::report())
+            .unwrap()
+            .replace(env!("PONS_SOURCE_COMMIT"), "TEST-COMMIT");
+        let out = out.replace(
+            &format!("\"source_dirty\": \"{}\"", env!("PONS_SOURCE_DIRTY")),
+            "\"source_dirty\": \"TEST-DIRTY\"",
+        );
         assert_golden(
             "report.json",
             &out,
@@ -259,13 +288,27 @@ mod tests {
         const SHAPE: &[(&str, &[&str])] = &[
             (
                 "",
-                &["counts", "findings", "scanned", "schema_version", "tool"],
+                &[
+                    "counts",
+                    "evidence_contract",
+                    "execution",
+                    "findings",
+                    "scanned",
+                    "schema_version",
+                    "tool",
+                ],
             ),
-            ("tool", &["name", "version"]),
+            (
+                "tool",
+                &["name", "source_commit", "source_dirty", "version"],
+            ),
             (
                 "scanned",
                 &[
+                    "coverage_failures",
+                    "coverage_status",
                     "files",
+                    "inventory",
                     "languages",
                     "root",
                     "skipped",

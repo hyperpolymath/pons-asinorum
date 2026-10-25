@@ -7,6 +7,10 @@
 //! TOML contract. No control-flow, alias, or typestate extraction from
 //! arbitrary source is claimed here.
 
+pub mod policy;
+pub mod stream;
+pub mod wharf;
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::{bail, Result};
@@ -16,6 +20,8 @@ use serde::{Deserialize, Serialize};
 #[serde(deny_unknown_fields)]
 pub struct Protocol {
     pub schema_version: String,
+    #[serde(default)]
+    pub strict_transitions: bool,
     pub id: String,
     pub description: String,
     pub channel: String,
@@ -84,7 +90,7 @@ impl Protocol {
     /// least one known forbidden state. At least one transition or operation
     /// is required.
     pub fn validate(&self) -> Result<()> {
-        if self.schema_version != "0.1.0" {
+        if self.schema_version != "0.1.0" && self.schema_version != "0.2.0" {
             bail!("unsupported protocol schema {}", self.schema_version);
         }
         if self.id.trim().is_empty()
@@ -145,6 +151,12 @@ impl Protocol {
     /// numbers are allowed. Protocol violations are returned as values.
     pub fn check_trace(&self, events: &[Event]) -> Result<Vec<Violation>> {
         self.validate()?;
+        if self.schema_version == "0.2.0" && events.is_empty() {
+            bail!("empty trace provides no protocol evidence");
+        }
+        if events.len() > 100_000 {
+            bail!("trace event budget exceeded");
+        }
         let mut instances: BTreeMap<&str, (&str, usize, bool)> = BTreeMap::new();
         let mut violations = Vec::new();
         let mut last = 0;
@@ -184,6 +196,16 @@ impl Protocol {
                 .find(|t| t.on == event.call && t.from == entry.0)
             {
                 *entry = (&t.to, event.line, entry.2 || t.to != self.initial);
+            } else if self.strict_transitions && self.transition.iter().any(|t| t.on == event.call)
+            {
+                violations.push(Violation {
+                    protocol: self.id.clone(),
+                    instance: event.instance.clone(),
+                    state: entry.0.into(),
+                    entered_at: entry.1,
+                    observed_at: event.line,
+                    message: format!("transition {} denied from {}", event.call, entry.0),
+                });
             }
         }
         if !self.must_exit_in.is_empty() {

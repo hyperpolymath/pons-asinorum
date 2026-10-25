@@ -1,0 +1,269 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Pons PHP/WordPress upgrade — measured implementation report
+:toc:
+
+Date: 25 October 2026. Tested source: `bea5bd60ef5dd3cc644f4cb409396624e156f279`. Baseline:
+`c4394f8eea10abbb6b2440139a291fd6370eb03d`. This report records a bounded
+implementation, not completion of a universal PHP/security verifier. Code was
+prepared on `codex/php-coverage-upgrade`; no main-branch merge or release tag was
+performed. The later evidence-only commit does not change the tested code.
+
+== Implemented
+
+* Inventory before adapter selection, explicit unsupported/excluded/failed
+  outcomes, no-input exit 2, required-language gates, parser versions, byte digests,
+  transcoding disclosure and actual CLI execution status.
+* Native PHP AST parsing and three registered rules: empty security functions,
+  literal includes, and bounded intraprocedural context-specific may-flow.
+* Function-local CFG blocks, branch joins, early exits and loop fixed points;
+  opaque unknown scopes are reported. Existing Python dataflow remains separate.
+* The exact Praxis nested-branch regression and the intentional async Wharf
+  accept-loop control. The original Praxis finding actually covered the trailing
+  comment, not an unreachable sibling branch. Relative `__DIR__` resolution also
+  has an absolute-versus-relative regression test.
+* Strict explicit-event protocol models for transfer ordering, replay/expiry,
+  session/artifact/policy binding, signature/root requirements and durable commit.
+  Framing and prepared-statement policy reference models have conformance tests.
+* Ten language-neutral portfolio model triplets (vulnerable, corrected, similar
+  safe), including authorization/publication, bootstrap, parse-result handling,
+  encoding/hash identity, atomicity, gateway ownership, and request-state lifetime.
+* Versioned JSON schemas, evidence records/fingerprints, malformed-report
+  rejection, mandatory scoped suppression metadata and consumer examples.
+
+See link:PHP-ADAPTER.adoc[adapter limits],
+link:COVERAGE-MIGRATION.adoc[migration], link:PROTOCOL-MODELS.adoc[model premises],
+link:EVIDENCE-CONTRACT.adoc[exchange contract and rule/evidence matrix], and
+link:PHP-RUNTIME-BOUNDARY.adoc[official runtime-advisory boundary].
+
+== Verification
+
+* `209` Rust tests passed; formatting and clippy with warnings denied passed.
+* End-to-end: 46 passed, 0 failed, 0 skipped. Repository-aspect and documentation
+  drift checks passed.
+* 768 deterministic parser mutations across six grammars, seed `0x504f4e53`, plus
+  deep-AST rejection; isolated executable exit 0 under 30 s wall / 20 s CPU /
+  1 GiB virtual-memory limits. This is a bounded fuzz smoke corpus, not exhaustive
+  fuzzing or a proof of parser safety.
+* Five code mutants killed by assertion failures: empty scan success, comment as
+  executable successor, HTML escaping clearing every context, dropped branch
+  facts, and commit without durable application. Executed in a detached
+  disposable checkout at `bea5bd60ef5dd3cc644f4cb409396624e156f279`; each result is exit 101 with an actual failed
+  test, not a compile failure or timeout.
+* All eleven upgraded reports validate against the semantic consumer checks.
+* The existing workflow-style script remains red: its anchored `^name:` grep
+  rejects the flow-style `probe-kyaml-arm.yml`. This pre-existing check was not
+  weakened. Its log also records 20 warnings. This is separate from Rust CI.
+
+== Labelled corpus accuracy
+
+File-level, rule-scoped regression labels: 60 TP, 76 TN, 0 FP, 0 FN across 13
+registered source rules. Precision = 1.0 and recall = 1.0 on this corpus only.
+Corrected controls are included among negatives. The ten protocol-model triplets
+are a separate conformance corpus, not extra source-analysis true positives.
+No representative, independently labelled real-world portfolio corpus exists
+here, so real-world precision/recall remains unknown. The suite was built around
+known reduced cases and must not be marketed as a general 100% accuracy score.
+
+== Eleven portfolio boundaries
+
+All five repository heads were checked against the pinned audit commits and
+matched. Clean isolated checkouts were used for final measurements; the earlier
+shared Aegis checkout had an untracked composer.lock and was not used as the
+final pinned input. Package rows overlap the wordpress-tools row: do not sum
+them as independent files or independent evidence.
+
+[cols="3,1,1,1,1,1,1,1",options="header"]
+|===
+|Target |Old files |New files |Unsupported |Parse rejected |Opaque files |Strict exit |Findings
+|php-aegis |0 |34 |14 |0 |34 |2 |0
+|sanctify-php |0 |11 |37 |0 |10 |2 |4
+|http-capability-gateway |0 |0 |84 |0 |0 |2 |0
+|wordpress-tools |61 |197 |261 |1 |136 |2 |4
+|project-wharf |26 |27 |43 |0 |1 |2 |0
+|wordpress-secured |0 |26 |21 |0 |26 |2 |0
+|wordpress-resurrect |6 |6 |23 |0 |0 |2 |0
+|wordpress-praxis |17 |28 |92 |0 |11 |2 |1
+|wordpress-plugin-conflict-mapper |1 |37 |17 |0 |36 |2 |1
+|wordpress-sinople-theme |5 |33 |25 |0 |28 |2 |2
+|wordpress-journal-theme |7 |40 |26 |1 |33 |2 |0
+|===
+
+Every strict scan exits 2. Unsupported source/config files remain visible, and
+Gateway has no applicable native source adapter. PHP files inside Sanctify's
+test corpus are PHP coverage, not Haskell coverage. The PHP file inside Wharf is
+PHP coverage, not extra Rust coverage. No zero-finding result is called clean.
+The two Sinople findings identify empty cryptography functions. Journal's
+publication/authentication issue is represented by a reduced model, not claimed
+as automatically detected in the real PHP repository.
+
+Most portfolio PHP files have opaque dataflow scopes due to namespaces, calls,
+include/callback/trait resolution or unsupported control flow. Native parsing
+and structural rules still run. The one PHP parser rejection is visible in the
+monorepo and journal boundary. Parser rejection does not by itself prove that
+the deployed PHP interpreter would reject the same source.
+
+== Per-language accounting
+
+Each cell counts inventory outcomes, including policy-excluded files; opaque
+model files are a subset of analysed files. Directory policy boundaries are
+recorded in raw inventory and have unknown descendant counts.
+
+[cols="3,2,1,1,1,1,1,1,1",options="header"]
+|===
+|Boundary |Language |Analysed |Unsupported |Excluded |Parse error |Timeout |Unreadable |Opaque
+|php-aegis |configuration |0 |8 |44 |0 |0 |0 |0
+|php-aegis |out-of-scope |0 |0 |75 |0 |0 |0 |0
+|php-aegis |php |34 |0 |1 |0 |0 |0 |34
+|php-aegis |shell |0 |6 |2 |0 |0 |0 |0
+|sanctify-php |configuration |0 |5 |52 |0 |0 |0 |0
+|sanctify-php |haskell |0 |30 |0 |0 |0 |0 |0
+|sanctify-php |out-of-scope |0 |0 |80 |0 |0 |0 |0
+|sanctify-php |php |11 |0 |0 |0 |0 |0 |10
+|sanctify-php |scheme |0 |1 |0 |0 |0 |0 |0
+|sanctify-php |shell |0 |1 |2 |0 |0 |0 |0
+|http-capability-gateway |configuration |0 |17 |45 |0 |0 |0 |0
+|http-capability-gateway |elixir |0 |57 |1 |0 |0 |0 |0
+|http-capability-gateway |idris |0 |4 |0 |0 |0 |0 |0
+|http-capability-gateway |out-of-scope |0 |0 |74 |0 |0 |0 |0
+|http-capability-gateway |shell |0 |2 |0 |0 |0 |0 |0
+|http-capability-gateway |zig |0 |4 |0 |0 |0 |0 |0
+|wordpress-tools |configuration |0 |159 |208 |0 |0 |0 |0
+|wordpress-tools |elixir |0 |34 |2 |0 |0 |0 |0
+|wordpress-tools |javascript |10 |0 |0 |0 |0 |0 |0
+|wordpress-tools |out-of-scope |0 |0 |498 |0 |0 |0 |0
+|wordpress-tools |php |136 |0 |1 |1 |0 |0 |136
+|wordpress-tools |rust |51 |0 |0 |0 |0 |0 |0
+|wordpress-tools |scheme |0 |7 |0 |0 |0 |0 |0
+|wordpress-tools |shell |0 |27 |3 |0 |0 |0 |0
+|wordpress-tools |stylesheet |0 |13 |0 |0 |0 |0 |0
+|wordpress-tools |template |0 |6 |0 |0 |0 |0 |0
+|wordpress-tools |zig |0 |15 |0 |0 |0 |0 |0
+|project-wharf |configuration |0 |32 |39 |0 |0 |0 |0
+|project-wharf |out-of-scope |0 |0 |257 |0 |0 |0 |0
+|project-wharf |php |1 |0 |0 |0 |0 |0 |1
+|project-wharf |rust |26 |0 |0 |0 |0 |0 |0
+|project-wharf |shell |0 |11 |1 |0 |0 |0 |0
+|wordpress-secured |configuration |0 |12 |30 |0 |0 |0 |0
+|wordpress-secured |out-of-scope |0 |0 |64 |0 |0 |0 |0
+|wordpress-secured |php |26 |0 |1 |0 |0 |0 |26
+|wordpress-secured |scheme |0 |1 |0 |0 |0 |0 |0
+|wordpress-secured |shell |0 |5 |0 |0 |0 |0 |0
+|wordpress-secured |zig |0 |3 |0 |0 |0 |0 |0
+|wordpress-resurrect |configuration |0 |19 |13 |0 |0 |0 |0
+|wordpress-resurrect |out-of-scope |0 |0 |37 |0 |0 |0 |0
+|wordpress-resurrect |rust |6 |0 |0 |0 |0 |0 |0
+|wordpress-resurrect |scheme |0 |1 |0 |0 |0 |0 |0
+|wordpress-resurrect |zig |0 |3 |0 |0 |0 |0 |0
+|wordpress-praxis |configuration |0 |47 |15 |0 |0 |0 |0
+|wordpress-praxis |elixir |0 |33 |2 |0 |0 |0 |0
+|wordpress-praxis |javascript |1 |0 |0 |0 |0 |0 |0
+|wordpress-praxis |out-of-scope |0 |0 |145 |0 |0 |0 |0
+|wordpress-praxis |php |11 |0 |0 |0 |0 |0 |11
+|wordpress-praxis |rust |16 |0 |0 |0 |0 |0 |0
+|wordpress-praxis |scheme |0 |1 |0 |0 |0 |0 |0
+|wordpress-praxis |shell |0 |2 |0 |0 |0 |0 |0
+|wordpress-praxis |stylesheet |0 |3 |0 |0 |0 |0 |0
+|wordpress-praxis |template |0 |3 |0 |0 |0 |0 |0
+|wordpress-praxis |zig |0 |3 |0 |0 |0 |0 |0
+|wordpress-plugin-conflict-mapper |configuration |0 |9 |22 |0 |0 |0 |0
+|wordpress-plugin-conflict-mapper |javascript |1 |0 |0 |0 |0 |0 |0
+|wordpress-plugin-conflict-mapper |out-of-scope |0 |0 |38 |0 |0 |0 |0
+|wordpress-plugin-conflict-mapper |php |36 |0 |0 |0 |0 |0 |36
+|wordpress-plugin-conflict-mapper |scheme |0 |1 |0 |0 |0 |0 |0
+|wordpress-plugin-conflict-mapper |shell |0 |3 |0 |0 |0 |0 |0
+|wordpress-plugin-conflict-mapper |stylesheet |0 |1 |0 |0 |0 |0 |0
+|wordpress-plugin-conflict-mapper |zig |0 |3 |0 |0 |0 |0 |0
+|wordpress-sinople-theme |configuration |0 |11 |24 |0 |0 |0 |0
+|wordpress-sinople-theme |javascript |3 |0 |0 |0 |0 |0 |0
+|wordpress-sinople-theme |out-of-scope |0 |0 |53 |0 |0 |0 |0
+|wordpress-sinople-theme |php |28 |0 |0 |0 |0 |0 |28
+|wordpress-sinople-theme |rust |2 |0 |0 |0 |0 |0 |0
+|wordpress-sinople-theme |scheme |0 |1 |0 |0 |0 |0 |0
+|wordpress-sinople-theme |shell |0 |5 |1 |0 |0 |0 |0
+|wordpress-sinople-theme |stylesheet |0 |5 |0 |0 |0 |0 |0
+|wordpress-sinople-theme |zig |0 |3 |0 |0 |0 |0 |0
+|wordpress-journal-theme |configuration |0 |17 |31 |0 |0 |0 |0
+|wordpress-journal-theme |elixir |0 |1 |0 |0 |0 |0 |0
+|wordpress-journal-theme |javascript |5 |0 |0 |0 |0 |0 |0
+|wordpress-journal-theme |out-of-scope |0 |0 |63 |0 |0 |0 |0
+|wordpress-journal-theme |php |33 |0 |0 |1 |0 |0 |33
+|wordpress-journal-theme |rust |2 |0 |0 |0 |0 |0 |0
+|wordpress-journal-theme |scheme |0 |1 |0 |0 |0 |0 |0
+|wordpress-journal-theme |shell |0 |0 |1 |0 |0 |0 |0
+|wordpress-journal-theme |stylesheet |0 |4 |0 |0 |0 |0 |0
+|wordpress-journal-theme |template |0 |3 |0 |0 |0 |0 |0
+|===
+
+== Performance and memory observations
+
+Both binaries were built with `cargo build --release --locked` on the same host,
+using the same clean inputs. One fresh-process scan per target/version; no
+statistical speedup or regression claim is made. Parser/rule work differs
+substantially because the old binary did not analyse PHP. Wall time uses a
+monotonic clock; RSS is Linux `wait4` ru_maxrss, including process-launch overhead,
+not isolated scanner heap. Repeated RSS floors must not be interpreted as a
+constant-memory proof. The shared host was not isolated from unrelated load.
+
+[cols="3,1,1,1,1",options="header"]
+|===
+|Boundary |Old seconds |New seconds |Old peak KiB |New peak KiB
+|php-aegis |0.138 |0.224 |13004 |14488
+|sanctify-php |0.138 |0.169 |13024 |14480
+|http-capability-gateway |0.150 |0.158 |13172 |13648
+|wordpress-tools |0.352 |0.541 |13176 |14680
+|project-wharf |0.252 |0.323 |15480 |15480
+|wordpress-secured |0.143 |0.216 |15480 |15480
+|wordpress-resurrect |0.170 |0.176 |15480 |15480
+|wordpress-praxis |0.221 |0.291 |15480 |15480
+|wordpress-plugin-conflict-mapper |0.158 |0.210 |15480 |15480
+|wordpress-sinople-theme |0.170 |0.190 |15480 |15480
+|wordpress-journal-theme |0.169 |0.199 |15480 |15480
+|===
+
+== Reproduction and evidence
+
+Checkout the exact baseline and tested source commits in separate worktrees;
+build each with `cargo build --release --locked`, keeping separate binary copies.
+Checkout the five commits in portfolio-summary.json with clean working trees.
+For each recorded target path run the recorded binary with
+`scan TARGET --format json --fail-on-skips`, preserving stdout, stderr and the
+exit status. The summary supplies all commands, input commits and SHA-256 report
+hashes. On Linux, collect wall time and wait4 ru_maxrss, or use GNU time's elapsed
+and maximum-resident-set fields; allow for launcher overhead when comparing.
+
+Run `cargo test --workspace --locked`, `cargo clippy --workspace --all-targets --
+-D warnings`, `cargo fmt --all --check`, `bash tests/e2e.sh` and
+`bash tests/doc_drift.sh`. Run `tests/mutation_smoke.sh` only from a detached
+disposable worktree with PONS_MUTATION_DISPOSABLE and PONS_MUTATION_LOG_DIR set.
+Its per-mutant timeout is 90 s. Parser size bounds are documented in the migration.
+
+* link:evidence/2026-10-25/portfolio-summary.json[Exact target, execution, coverage and timing records]
+* link:evidence/2026-10-25/labelled-corpus.json[Per-rule confusion matrices]
+* link:evidence/2026-10-25/environment.json[Compiler and environment provenance]
+* link:evidence/2026-10-25/raw-reports.jsonl.gz[Raw baseline/upgraded reports and stderr]
+* link:evidence/2026-10-25/test-logs.json.gz[Test, mutation, fuzz and workflow logs]
+
+== Remaining work and acceptance limits
+
+. Resolve Composer autoloading, includes, namespace names, traits, references,
+  callback captures and WordPress hook dispatch incrementally, with falsifiers.
+. Extend PHP CFG/dataflow through exception/finally, richer loops, short-circuit
+  side effects and context-aware template output; never treat opaque as safe.
+. Add real source-to-event/instrumentation adapters for Wharf and the portfolio
+  contracts, backed by runtime verification/durability evidence. The present
+  models accept producer premises; they do not establish those premises.
+. Complete and independently test panic-attack/Sanctify/Wharf CI consumers of
+  contract 1.0.0. Schemas and examples are supplied; those repositories were not
+  modified in this task. Correlated heuristics remain correlated.
+. Obtain independently labelled real-world source cases and extend long-running
+  grammar fuzzing, process-isolated hard resource budgets and sustained load/
+  memory tests. Current limits do not prove immunity to all adversarial inputs.
+. Implement genuine Haskell and Elixir adapters after PHP. Filename inventory
+  and language-neutral fixtures are not language support.
+. Address the separate legacy KYAML workflow-style check without weakening it.
+  Do not tag a release or claim the full original programme is complete solely
+  because local implementation tests pass.
+
+No target application was executed, no live exploit was attempted, and no PHP
+runtime deployment was inspected or certified. The PHP C-engine incidents require
+separate runtime patch/configuration evidence.

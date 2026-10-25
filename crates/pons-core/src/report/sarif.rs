@@ -211,6 +211,7 @@ struct Run {
 struct Invocation {
     #[serde(rename = "executionSuccessful")]
     execution_successful: bool,
+    properties: serde_json::Value,
     #[serde(rename = "toolExecutionNotifications")]
     tool_execution_notifications: Vec<Notification>,
 }
@@ -452,7 +453,9 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
                 // The scan itself completed: per ADR-0005 a skipped subtree is
                 // a partial result, not an operational failure. Consumers can
                 // opt into `--fail-on-skips` at the CLI for a hard gate.
-                execution_successful: true,
+                execution_successful: report.files_scanned > 0 && report.exit_code != Some(2),
+                properties: serde_json::json!({"coverageStatus":report.coverage_status(),
+                    "inventory":report.inventory, "coverageFailures":report.coverage_failures}),
                 tool_execution_notifications: report
                     .skipped
                     .iter()
@@ -499,6 +502,11 @@ mod tests {
         use crate::lang::Lang;
 
         ScanReport {
+            inventory: Vec::new(),
+            target: crate::evidence::Target::default(),
+            exit_code: None,
+            anchors: std::collections::BTreeMap::new(),
+            coverage_failures: Vec::new(),
             root: root.to_string(),
             findings: vec![Finding::new(
                 "div-by-literal-zero",

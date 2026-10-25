@@ -1,0 +1,87 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Exchange contract 1.0.0 / scan envelope 0.4.0
+
+`evidence_contract` carries target Git commit/dirty state (null outside Git),
+execution outcome, native parser inventory and independently identifiable
+records. Every analysed file includes a BLAKE3 digest of its original bytes.
+Excluded/unsupported/unreadable contents are not hashed; these digests are not
+represented as a digest of the entire repository. Dirty input can differ from
+the named commit. Tool metadata contains its build-time source commit and dirty
+state as well as package version. Git provenance is observational, not signed.
+
+Each record includes producer, correlation group, rule, root-relative path,
+line, tier, evidence class, qualitative confidence, trace, assumptions,
+counterconditions and unknown edges. Pons-native T0 records share an AST
+heuristic correlation group. Agreement with panic-attack or Sanctify must not
+be counted as independent proof merely because producer names differ: shared
+rules, models, parser sources and fixtures can correlate their evidence.
+
+Fingerprints use BLAKE3 over rule ID, root-relative path and a whitespace-folded
+source anchor plus occurrence ordinal. Checkout relocation and added blank
+lines preserve them. Renames, changed anchors and insertion of an identical
+occurrence can change them. They are identifiers, not semantic-equivalence
+proofs. Exact duplicate rule/location findings are deduplicated; broad categories
+are never silently suppressed.
+
+`pons validate-report FILE` rejects unknown schema versions, missing inventory,
+contradictory coverage/counts, malformed fingerprints, inconsistent tier/evidence
+and mismatched record/finding rules. Success validates the schema, not the
+security of the target. Consumers must also inspect scan exit status and
+coverage. `scanned.inventory[].analysis_complete` is relative to the registered
+models; it never certifies full language semantics.
+
+Suppression migration: non-empty `suppress.rules` and `suppress.paths` lists are
+now errors. `suppress.allow` requires rule, path, reason, owner and future
+`expires` in Unix seconds. Inline directives require the same metadata, with
+the adjacent line as their scope. Malformed/expired inline allowances do not
+hide findings. Coverage accounting never consults suppression.
+
+== Consumer integration examples
+
+[source,sh]
+----
+# Preserve the scanner status even when collecting output on an incomplete run.
+rc=0
+pons scan . --format json --fail-on-skips --require-language php > pons.json || rc=$?
+pons validate-report pons.json || exit 2
+# Upload pons.json as evidence even when rc is nonzero; do not relabel it clean.
+exit "$rc"
+----
+
+For panic-attack, retain its native report alongside `pons.json`. An adapter can
+consume contract 1.0.0, keeping producer and correlation group unchanged.
+No panic-attack producer/consumer implementation is claimed by this repository.
+Sanctify CI must report Haskell as unsupported by Pons and preserve Sanctify's
+own compiler/parser execution outcome; an empty result after parse failure is
+not acceptable evidence. Wharf CI may emit instrumented event arrays and run
+`pons wharf-trace`; it must retain the events and substantiate verification and
+durability assertions. No source-to-event extraction is provided yet.
+
+== Implemented rule/evidence matrix
+
+[cols="3,1,2,4",options="header"]
+|===
+|Rule |Tier |Adapter |Scope / main limit
+|div-by-literal-zero, self-assignment, constant-condition |T0 |Python, JS, TS/TSX, Rust |AST candidate; no runtime proof
+|while-true-no-break, empty-effect-loop, unreachable-after-jump |T0 |Python, JS, TS/TSX, Rust |Local syntax; await is not proof of progress
+|swallowed-error, string-concat-in-loop |T0 |Python, JS, TS/TSX |Local syntax only
+|dead-store, read-before-init |T1 |Python |Existing CFG may-analysis; opaque functions and infeasible paths disclosed
+|php-empty-security-function |T0 |PHP |Name heuristic plus empty AST body
+|php-unresolved-include |T0 |PHP |Literal source-relative filesystem observation
+|php-context-flow |T1 |PHP |Bounded local CFG; context-specific may-flow, opaque unknown scopes
+|explicit protocol and Wharf traces |T2 |Supplied events |Premise-dependent model conformance; no source extraction
+|Speculative rules |T3 |None registered |Tier plumbing retained; no claim of implemented rules
+|===
+
+No rule applies to Haskell or Elixir source. Composer/WordPress interprocedural
+resolution, PHP exception/finally flow, source-derived protocol extraction,
+full PHP/runtime verification and independently validated production consumer
+adapters remain work items. The labelled regression corpus measures fixture
+behavior; it is not a representative real-world precision/recall estimate.
+
+`execution.status=completed` records that a report-producing invocation finished;
+`execution.exit_code` records the actual CLI outcome separately from coverage.
+Library-only rendering uses null until a caller chooses a gate policy. This
+prevents a findings-threshold exit or failed coverage gate being confused with a
+successful assurance result. Protocol input is capped at 1 MiB; trace/report JSON
+input is capped at 16 MiB, in addition to the event-count/model bounds.

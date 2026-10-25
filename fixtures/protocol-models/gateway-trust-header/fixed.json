@@ -1,0 +1,27 @@
+[
+  {
+    "instance": "case",
+    "call": "strip_untrusted",
+    "line": 1
+  },
+  {
+    "instance": "case",
+    "call": "enforce_limits",
+    "line": 2
+  },
+  {
+    "instance": "case",
+    "call": "resolve_plugin_api",
+    "line": 3
+  },
+  {
+    "instance": "case",
+    "call": "assign_owned_headers",
+    "line": 4
+  },
+  {
+    "instance": "case",
+    "call": "forward",
+    "line": 5
+  }
+]

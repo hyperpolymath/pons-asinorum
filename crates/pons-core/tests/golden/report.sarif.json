@@ -200,6 +200,11 @@
       "invocations": [
         {
           "executionSuccessful": true,
+          "properties": {
+            "coverageFailures": [],
+            "coverageStatus": "partial",
+            "inventory": []
+          },
           "toolExecutionNotifications": [
             {
               "level": "warning",

@@ -1,0 +1,12 @@
+[
+  {
+    "instance": "case",
+    "call": "escape_html",
+    "line": 1
+  },
+  {
+    "instance": "case",
+    "call": "emit_html",
+    "line": 2
+  }
+]

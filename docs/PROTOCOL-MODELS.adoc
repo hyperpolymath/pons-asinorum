@@ -1,0 +1,45 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Protocol and portfolio model boundaries
+
+`pons wharf-trace FILE` checks an explicit JSON array of timestamped session
+events. The model authenticates, binds session/artifact/policy, transfers,
+verifies, and commits only after a producer asserts durable application.
+Missing keys, optional signatures, absent roots, replayed nonces, expiry,
+cross-session artifact mismatches and commit-before-verification are denied.
+Rollback terminates an unfinished session. A denied event never advances state.
+An empty trace, unknown action or malformed field is an operational error.
+
+These are reference-model conformance results (T2 PROTOCOL under premises).
+They are not extracted from Wharf source and do not perform cryptography or
+storage I/O. The producer must substantiate key validity, signature/root
+verification, policy identity, timestamps and fsync/transaction durability.
+Replay protection covers only nonce history supplied in this trace. Rootless or
+unsigned transfers require a different, explicitly reviewed contract; they
+cannot silently pass this model.
+
+`stream::Frames` is a bounded length-prefixed framing abstraction tested at
+every split point, byte by byte and with coalesced frames. It is not a claim
+that Wharf uses that wire format. An actual wire adapter remains necessary.
+The prepared-statement model preserves statement summaries across prepare,
+bind and execute, invalidates binding on reprepare, checks every write against
+exact table identities, denies an empty allow-list, and returns Unknown for
+unresolved hybrid rules. No SQL parser is claimed.
+
+Generic protocol schema 0.2.0 rejects empty traces and can deny known transition
+calls in the wrong state using `strict_transitions=true`. Legacy 0.1.0 behavior
+is retained for existing contracts. Unknown calls remain errors in both.
+
+`fixtures/protocol-models` contains positive, corrected and similar safe traces
+for bootstrap ordering, publication/authorization, parse-error reporting,
+rate-limit critical-section scope, SHAKE capability checks, hash identity,
+encoding labels, output context, gateway trust/header ownership/limits/API
+resolution, and request-state lifetime. All are reduced declared models.
+
+The publication model assumes the exposed RPC requires BOTH authorization and
+publication checks; a policy intentionally serving authorised private posts
+needs a different contract. The atomicity model detects a structural split of
+read/modify/write locking; it does not establish an actual concurrent schedule.
+Sanctify and Gateway examples are language-neutral and do not claim Haskell or
+Elixir analysis. The request-lifetime fixture is research only: it says nothing
+about the PHP C engine's actual memory safety or whether hooks run before
+request parsing. Integration adapters that emit truthful events are outstanding.

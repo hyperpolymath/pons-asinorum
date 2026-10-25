@@ -1,0 +1,22 @@
+[
+  {
+    "instance": "case",
+    "call": "lock",
+    "line": 1
+  },
+  {
+    "instance": "case",
+    "call": "read",
+    "line": 2
+  },
+  {
+    "instance": "case",
+    "call": "write",
+    "line": 3
+  },
+  {
+    "instance": "case",
+    "call": "unlock",
+    "line": 4
+  }
+]

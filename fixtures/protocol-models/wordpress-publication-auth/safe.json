@@ -1,0 +1,12 @@
+[
+  {
+    "instance": "case",
+    "call": "authorize",
+    "line": 1
+  },
+  {
+    "instance": "case",
+    "call": "check_publication",
+    "line": 2
+  }
+]

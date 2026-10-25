@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: MPL-2.0
+schema_version = "0.2.0"
+strict_transitions = true
+id = "algorithm-identity"
+description = "Reduced explicit-event model; not source-derived evidence"
+channel = "fixture-instance"
+states = ["start", "blake2b", "blake3", "labelled"]
+initial = "start"
+
+[[transition]]
+on = "hash_blake2b"
+from = "start"
+to = "blake2b"
+
+[[transition]]
+on = "hash_blake3"
+from = "start"
+to = "blake3"
+
+[[transition]]
+on = "label_blake2b"
+from = "blake2b"
+to = "labelled"
+
+[[transition]]
+on = "label_blake3"
+from = "blake3"
+to = "labelled"

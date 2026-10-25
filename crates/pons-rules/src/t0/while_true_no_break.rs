@@ -17,6 +17,7 @@ const LANGUAGES: &[Lang] = &[
 
 fn query_source(lang: Lang) -> &'static str {
     match lang {
+        Lang::Php => unreachable!("PHP uses its native adapter rules"),
         Lang::Python => include_str!("../../rules/while-true-no-break/python.scm"),
         Lang::JavaScript => include_str!("../../rules/while-true-no-break/javascript.scm"),
         Lang::TypeScript => include_str!("../../rules/while-true-no-break/typescript.scm"),
@@ -33,6 +34,7 @@ fn query_source(lang: Lang) -> &'static str {
 /// false-positive on one that isn't; see the module doc comment.
 fn exit_kinds(lang: Lang) -> &'static [&'static str] {
     match lang {
+        Lang::Php => unreachable!("PHP uses its native adapter rules"),
         Lang::Python => &["break_statement", "return_statement", "raise_statement"],
         Lang::JavaScript | Lang::TypeScript | Lang::Tsx => {
             &["break_statement", "return_statement", "throw_statement"]
@@ -46,6 +48,7 @@ fn exit_kinds(lang: Lang) -> &'static [&'static str] {
 /// function or closure exits *that* function, not the loop being checked.
 fn boundary_kinds(lang: Lang) -> &'static [&'static str] {
     match lang {
+        Lang::Php => unreachable!("PHP uses its native adapter rules"),
         Lang::Python => &["function_definition", "lambda"],
         Lang::JavaScript | Lang::TypeScript | Lang::Tsx => &[
             "function_declaration",
@@ -158,12 +161,21 @@ impl Rule for WhileTrueNoBreak {
                 continue;
             }
 
+            // Await yields to an executor. That rules out this local tight-loop
+            // heuristic; it does not establish progress or cancellation.
+            if body_has_exit(
+                body,
+                &["await_expression", "await"],
+                boundary_kinds(ctx.lang),
+            ) {
+                continue;
+            }
             findings.push(RawFinding::new(
                 Tier::T0,
                 Severity::Warn,
                 Location::from_node(ctx.path.display().to_string(), &stmt, ctx.text),
-                "no way to interrupt this loop",
-                "infinite loop with no reachable break/return/throw".to_string(),
+                "unconditional loop has no syntactic local exit",
+                "AST has no local break/return/throw or await; progress, external cancellation and call termination are unknown".to_string(),
                 Some(
                     "an intentional daemon/event loop that exits via an external \
                      signal rather than a break"

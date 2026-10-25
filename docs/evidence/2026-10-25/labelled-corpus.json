@@ -1,0 +1,93 @@
+[
+  {
+    "rule": "constant-condition",
+    "tp": 5,
+    "tn": 6,
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  {
+    "rule": "dead-store",
+    "tp": 4,
+    "tn": 8,
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  {
+    "rule": "div-by-literal-zero",
+    "tp": 6,
+    "tn": 7,
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  {
+    "rule": "empty-effect-loop",
+    "tp": 5,
+    "tn": 6,
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  {
+    "rule": "php-context-flow",
+    "tp": 5,
+    "tn": 5,
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  {
+    "rule": "php-empty-security-function",
+    "tp": 1,
+    "tn": 2,
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  {
+    "rule": "php-unresolved-include",
+    "tp": 2,
+    "tn": 2,
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  {
+    "rule": "read-before-init",
+    "tp": 8,
+    "tn": 10,
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  {
+    "rule": "self-assignment",
+    "tp": 5,
+    "tn": 6,
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  {
+    "rule": "string-concat-in-loop",
+    "tp": 4,
+    "tn": 5,
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  {
+    "rule": "swallowed-error",
+    "tp": 4,
+    "tn": 5,
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  {
+    "rule": "unreachable-after-jump",
+    "tp": 6,
+    "tn": 7,
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  {
+    "rule": "while-true-no-break",
+    "tp": 5,
+    "tn": 7,
+    "precision": 1.0,
+    "recall": 1.0
+  }
+]
