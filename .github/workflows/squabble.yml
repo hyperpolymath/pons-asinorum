@@ -1,0 +1,251 @@
+# SPDX-License-Identifier: MPL-2.0
+name: CI/CD Squabble
+
+# The estate's CI/CD fighter, run against this repository's own pull
+# requests.
+#
+# WHY THIS IS HERE, SPECIFICALLY
+# ------------------------------
+# This repository's required secret-scan check, `scan / gitleaks`, was
+# `startup_failure` on every run for weeks: the workflow called the shared
+# reusable under its transferred owner spelling (`metadatastician/standards`),
+# which the estate's Actions allowlist does not admit, so the call was
+# refused before any job started and NO check run was ever emitted. Nothing
+# was red. The pull request was simply unmergeable, with no square anywhere
+# to explain why — and `gh pr checks` showed nothing at all, because a
+# rejected run produces no check run.
+#
+# `squabble` is the tool for exactly that class of failure. It reads both
+# protection surfaces (branch rulesets and classic branch protection),
+# compares the required-context set against the realised rollup, and — this
+# is the part that matters here — when a required context refuses to start
+# it probes the repository's Actions permissions and attributes the refusal
+# to the POSTURE that caused it rather than to the reusable's owner or to a
+# security scan. Its invariant is proved in SPARK: green means a required
+# check actually ran and passed. An admin override, a dropped required
+# context or a renamed check are provably not paths to green.
+#
+# WHAT BLOCKS AND WHAT DOES NOT
+# The INSTALLATION blocks: the pinned, sha256- and attestation-verified
+# squabble release must install and run, or this job is red. The DIAGNOSTIC
+# does not block: `squabble fetch` needs Administration:read, which
+# `GITHUB_TOKEN` does not hold. With a token that cannot read the rules the
+# tool says so and exits non-zero, and this workflow reports that plainly
+# rather than pretending the check ran. It is a diagnostic, and a
+# diagnostic that cannot look must not report a pass.
+#
+# THE TOKEN
+# The diagnostic needs a token that can read this repository's branch
+# rulesets and classic branch protection. Three sources are tried, in this
+# order, and the one that was used is reported:
+#
+#   1. A FRESH GITHUB APP INSTALLATION TOKEN, minted on every run from
+#      `SQUABBLE_APP_ID` and `SQUABBLE_APP_PRIVATE_KEY`. An installation
+#      token expires after an hour, so a leaked one is worth little; a
+#      long-lived token in a repository secret is worth a great deal.
+#      This is the source to configure.
+#   2. `SQUABBLE_TOKEN`, a long-lived token kept for the transition. It
+#      works and it is reported as the weaker source it is.
+#   3. `github.token`, which cannot read the rules. The diagnostic says so
+#      and exits non-zero, which is reported rather than swallowed.
+#
+# A FORK PULL REQUEST NEVER RUNS CODE WITH A PRIVILEGED TOKEN. The
+# `pull_request` trigger gives a fork's workflow a read-only GITHUB_TOKEN
+# and no repository secrets, and this workflow checks out nothing and runs
+# no code from the pull request: it only asks the tool to describe the
+# repository's gate. The manual trigger takes the pull request number as
+# an INPUT, so the same diagnostic can be run for a pull request from
+# anywhere without checking that pull request out.
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      pull-request-number:
+        description: "The pull request to diagnose"
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  squabble:
+    name: squabble
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Install the pinned, sha256- and attestation-verified squabble
+      # release. The action refuses any artefact whose digest or build
+      # provenance does not match, so nothing is executed until both hold.
+      - name: Install the pinned, attested squabble release
+        id: squabble
+        uses: hyperpolymath/cicd-squabbler/.github/actions/squabble@14f853fde902ab2d7631070d87a9dc9122e01013 # cicd-squabbler main
+
+      # BLOCKING: the fighter must be present and runnable. A CI/CD gate
+      # that cannot be fought cannot be proved.
+      - name: squabble runs
+        env:
+          SQUABBLE_PATH: ${{ steps.squabble.outputs.path }}
+        run: |
+          set -euo pipefail
+          test -n "$SQUABBLE_PATH"
+          test -x "$SQUABBLE_PATH"
+          "$SQUABBLE_PATH" --version
+
+      # Which pull request to diagnose. The number comes from the EVENT for
+      # a pull request and from the INPUT for a manual run. Both are read
+      # through the environment and never interpolated into a script body:
+      # a `${{ }}` expression inside `run:` is expanded into shell SOURCE,
+      # so anything an attacker can put in it would be executed.
+      - name: Work out which pull request to diagnose
+        id: target
+        env:
+          PR_EVENT: ${{ github.event.pull_request.number }}
+          PR_INPUT: ${{ inputs.pull-request-number }}
+        run: |
+          set -euo pipefail
+          number="${PR_EVENT:-${PR_INPUT:-}}"
+          if ! [[ "$number" =~ ^[0-9]+$ ]]; then
+            echo "::error::no pull request number to diagnose (event: '${PR_EVENT:-none}', input: '${PR_INPUT:-none}')"
+            exit 1
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      # The token the diagnostic reads the gate with. A fresh GitHub App
+      # installation token is preferred; the long-lived secret and the
+      # built-in token are the fallbacks. Whichever was used is reported,
+      # and a minting failure is reported rather than hidden behind a
+      # silent downgrade.
+      - name: Mint the diagnostic token
+        id: token
+        env:
+          APP_ID: ${{ secrets.SQUABBLE_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.SQUABBLE_APP_PRIVATE_KEY }}
+          SQUABBLE_TOKEN: ${{ secrets.SQUABBLE_TOKEN }}
+          FALLBACK_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -uo pipefail
+          source_used="github.token"
+          token="$FALLBACK_TOKEN"
+
+          b64url() {
+            openssl base64 -A | tr '+/' '-_' | tr -d '='
+          }
+
+          if [ -n "$APP_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
+            key_file="$RUNNER_TEMP/squabble-app.pem"
+            printf '%s\n' "$APP_PRIVATE_KEY" > "$key_file"
+            chmod 600 "$key_file"
+            now="$(date +%s)"
+            header="$(printf '%s' '{"alg":"RS256","typ":"JWT"}' | b64url)"
+            payload="$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' "$((now - 60))" "$((now + 600))" "$APP_ID" | b64url)"
+            signing_input="$header.$payload"
+            signature="$(printf '%s' "$signing_input" | openssl dgst -sha256 -sign "$key_file" | b64url)"
+            jwt="$signing_input.$signature"
+            installations="$(curl --proto '=https' --proto-redir '=https' --fail --silent --show-error \
+              --connect-timeout 15 --max-time 60 \
+              -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+              https://api.github.com/app/installations)" || installations=""
+            installation_id="$(jq -r --arg owner "$OWNER" '[.[]? | select(.account.login == $owner) | .id][0] // empty' <<<"$installations" 2>/dev/null || true)"
+            if [ -n "$installation_id" ]; then
+              minted="$(curl --proto '=https' --proto-redir '=https' --fail --silent --show-error \
+                --connect-timeout 15 --max-time 60 --request POST \
+                -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/app/installations/$installation_id/access_tokens" | jq -r '.token // empty')" || minted=""
+              if [ -n "$minted" ]; then
+                token="$minted"
+                source_used="GitHub App installation token (minted for this run)"
+              else
+                echo "::warning::could not mint a GitHub App installation token; falling back to the next source."
+              fi
+            else
+              echo "::warning::no GitHub App installation found for $OWNER; falling back to the next source."
+            fi
+            rm -f "$key_file"
+          fi
+
+          if [ "$source_used" = "github.token" ] && [ -n "$SQUABBLE_TOKEN" ]; then
+            token="$SQUABBLE_TOKEN"
+            source_used="SQUABBLE_TOKEN (a long-lived token; prefer SQUABBLE_APP_ID and SQUABBLE_APP_PRIVATE_KEY)"
+          fi
+
+          printf 'token=%s\n' "$token" >> "$GITHUB_OUTPUT"
+          printf 'source=%s\n' "$source_used" >> "$GITHUB_OUTPUT"
+
+      # The diagnostic. Its exit code is captured rather than propagated: 3 is
+      # the tool's finding ("no required status checks apply to this base
+      # branch"), 2 is a failure (usually the token), and neither is a red
+      # build for this repository.
+      - name: Fetch this pull request's gate
+        id: fetch
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          SQUABBLE_PATH: ${{ steps.squabble.outputs.path }}
+          PR_NUMBER: ${{ steps.target.outputs.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+          rc=0
+          "$SQUABBLE_PATH" fetch "$REPOSITORY" "$PR_NUMBER" \
+            > "$RUNNER_TEMP/gate.json" 2> "$RUNNER_TEMP/fetch.err" || rc=$?
+          printf 'exit-code=%d\n' "$rc" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/fetch.err" || true
+          exit 0
+
+      - name: Report what squabble saw, and what it could not see
+        env:
+          SQUABBLE_PATH: ${{ steps.squabble.outputs.path }}
+          EXIT_CODE: ${{ steps.fetch.outputs.exit-code }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.target.outputs.number }}
+          TOKEN_SOURCE: ${{ steps.token.outputs.source }}
+        run: |
+          set -uo pipefail
+          {
+            echo "### squabble"
+            echo
+            echo "Pull request: \`$PR_NUMBER\` on \`$REPOSITORY\`."
+            echo
+            echo "Token used: $TOKEN_SOURCE."
+            echo
+            if [ "${EXIT_CODE:-}" = "0" ] && [ -s "$RUNNER_TEMP/gate.json" ]; then
+              echo "squabble fetched this pull request's gate. Its report follows."
+              echo
+              echo '```'
+              "$SQUABBLE_PATH" diagnose "$RUNNER_TEMP/gate.json" 2>&1 || true
+              echo '```'
+            else
+              echo "**No gate was fetched.** squabble exited \`${EXIT_CODE:-unknown}\`."
+              echo
+              case "${EXIT_CODE:-}" in
+                3)
+                  echo "Exit 3 is the tool's *finding*, not a malfunction: the base branch carries no \`required_status_checks\` ruleset rule, so there is nothing to squabble over. Both protection surfaces were consulted."
+                  ;;
+                2)
+                  echo "Exit 2 is a failure: squabble could not read this repository's gate. The usual cause is the token — reading branch rulesets and classic branch protection needs **Administration:read**, which \`GITHUB_TOKEN\` does not hold. Give this repository a \`SQUABBLE_TOKEN\` secret (a GitHub App installation token with Administration:read) and the diagnostic will run."
+                  echo
+                  echo "**The check did not run.** That is reported here rather than swallowed."
+                  ;;
+                *)
+                  echo "The tool exited \`${EXIT_CODE:-unknown}\`, which it does not use for 'nothing to report'."
+                  ;;
+              esac
+              if [ -s "$RUNNER_TEMP/fetch.err" ]; then
+                echo
+                echo '```'
+                cat "$RUNNER_TEMP/fetch.err"
+                echo '```'
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

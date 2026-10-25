@@ -1,4 +1,21 @@
 # SPDX-License-Identifier: MPL-2.0
+# Calls the estate's shared OpenSSF Scorecard reusable.
+#
+# ⚠ THE OWNER SPELLING IS LOAD-BEARING: `metadatastician/standards`. See
+# the long note in secret-scanner.yml — the REST API follows the
+# repository's old name, but the ACTIONS resolver does not, and a caller
+# that spells the old name produces a run with no job whose name is the
+# workflow FILE rather than the workflow. It was measured on the same
+# pinned commit; it was not assumed.
+#
+# The grants below are the ones the reusable documents that its calling
+# job must supply: `actions: read`, `contents: read`,
+# `security-events: write` and `id-token: write`. A called workflow cannot
+# exceed its caller's grant, so each of these is load-bearing too.
+#
+# This workflow only runs on a schedule and on pushes to main, so its
+# failure was invisible on pull requests — but the Security tab was never
+# fed either.
 name: Scorecard
 
 on:
@@ -20,5 +37,4 @@ permissions:
 
 jobs:
   scorecard:
-    # Same repaired defining lockfile as the scanner; existing token grants suffice.
     uses: metadatastician/standards/.github/workflows/scorecard-reusable.yml@cf8f91219d80da55cf8cbbfcd587d00c2d8798ed

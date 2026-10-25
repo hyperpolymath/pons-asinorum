@@ -77,3 +77,116 @@ fixture was top-level, outside the queried compound block. Moving it inside a
 function made both the real-code control pass and the mutant fail. This records
 the observed test correction rather than hiding the surviving initial mutant.
 No new portfolio performance, parser-fuzz or mathematical proof claim is made.
+
+== Final disposition — 2026-10-25
+
+This checkpoint compared main with PR #57 and left the pull request open
+and conflicted. The work that followed resolves that state.
+
+=== What PR #57 actually contains now
+
+PR #57 branched from `c4394f8` (the merge of #56) and was never rebased.
+Since then main has taken #58, #61 and #63, which are checkpoints of PR
+#57's own work. So the pull request is not merely *conflicted*: merging it
+forward as a branch would **delete** main's reconciled work — its coverage
+model, its report shape, its PHP context-flow rules and the `schemas/`
+directory are all absent from the branch, because the branch predates them.
+
+The reconciliation above therefore stands, and the disposition of each
+area is unchanged. Concretely, and with the reasons:
+
+* *Coverage, reporting, CLI and SARIF* — main's implementations from #58
+  and #61 are broader and mutually consistent. PR #57's are the
+  pre-reconciliation drafts. Not ported.
+* *The generic `empty-php-function` rule* — still not ported, and the
+  reason is sharper than "needs a decision". Main's
+  `php-empty-security-function` is name-scoped by design, and its
+  **negative** corpus asserts that an empty non-security function
+  (`fixtures/php-empty-security-function/negative/safe.php`, which
+  contains `function on_notification() {}`) produces **no** finding. PR
+  #57's rule flags every empty concrete callable, so it fires on that
+  fixture and the falsifier gate fails. Porting it is not a merge
+  conflict; it is a contradiction of #63's reconciled contract, and it
+  would also double-report every security-named empty function, which
+  `php-empty-security-function` already reports.
+  The narrower and better-scoped rule is a rule for empty **anonymous**
+  callables — PR #57's `fixtures/empty-php-function/positive/callback.php`
+  is the case that matters, and no existing rule covers it. That rule is
+  specified in `docs/PHP-ADAPTER.adoc`'s successor work item; it needs a
+  compiler in hand to land, because it changes the registered rule set,
+  the catalogue and the golden corpus.
+* *Workflows* — PR #57's branch was the first to move the shared
+  reusable's owner to `metadatastician/standards`, and that move was
+  CORRECT: the repository was transferred, GitHub's REST API follows the
+  old name, and the Actions resolver does not. What the branch still had
+  at its tip was the *stale pin* to the reusable at `1f3eef62` — a
+  revision that asked for more permission than the caller grants, which
+  is refused at startup with `startup_failure` and no job. Main re-pinned
+  to `cf8f9121` in #58 and the scanner has been green since. All three
+  ways of losing the required context `scan / gitleaks` are now written
+  down at the call site in `.github/workflows/secret-scanner.yml`, and
+  `docs/CI-CD.adoc` records them; none of the three looks like a failure
+  of the workflow you are looking at.
+* *The unreachable-after-jump comment handling* — main keeps the
+  direct-parent and immediate-sibling guards, and the behaviour PR #57
+  fixed is already covered by main's
+  `fixtures/unreachable-after-jump/positive/after_comment.rs`, which is a
+  positive fixture and therefore fails the falsifier gate if the behaviour
+  regresses.
+
+=== Sonar
+
+The nine annotations on check run 121234512166 were six diagnostics on
+main's fixture corpus plus three on PR #57's `empty-php-function`
+fixtures. The three PR #57 ones disappear with the rule.
+
+The six are now handled by the fixture-aware quality gate this
+checkpoint called outstanding: each is declared with an exact rule key,
+an exact path, a reason, an owner and an expiry in
+`ci/sonar-fixture-diagnostics.kyaml`, and `sonar-project.properties`
+carries the matching criteria. **No broad fixture exclusion is used** —
+the corpus is still analysed, there is no `fixtures/**` pattern in the
+configuration, and a new diagnostic in a fixture fails the SonarCloud
+check until it is declared or the fixture is corrected. The rule keys are
+taken from the SonarPHP analyser's own source rather than from memory:
+`php:S1763` (code following a jump statement), `php:S3626` (redundant
+jump), `php:S112` (generic exception), `php:S1172` (unused function
+parameter) and `php:S100` (function naming).
+
+No fixture was edited. The reconciliation checkpoint is explicit that the
+fixture shapes are preserved and that incidental style noise is corrected
+only where the tested shape survives; correcting it here would have meant
+adding a class declaration to two fixtures and renaming a function in a
+third, and the corpus is worth more unchanged than the waiver list is
+short.
+
+*What the configuration does and does not do.* SonarSource's own
+documentation says that automatic analysis — the analysis behind this
+repository's "SonarCloud Code Analysis" check — **ignores**
+`sonar-project.properties`: "If you import a project that already contains
+a `sonar-project.properties` file, SonarQube Cloud will ignore the
+parameters in your `sonar-project.properties` file." So the criteria in
+that file are the *declaration* of what this repository asks SonarCloud to
+ignore, and the input to `tests/sonar_fixture_gate_test.sh`, which fails
+if the declaration and `ci/sonar-fixture-diagnostics.kyaml` disagree in
+either direction; they are not, on their own, what makes SonarCloud
+ignore a diagnostic today. The effective criteria have to be configured in
+the SonarCloud project's Analysis Configuration, which this repository
+can neither read nor write from CI — it has no SonarCloud token. That
+gap is named in `docs/CI-CD.adoc` rather than papered over: an unverified
+configuration is not an assurance.
+
+The criteria are also declared as ONE comma-separated value. A properties
+file keeps only the LAST assignment of a key, so the original file — which
+assigned `sonar.issue.ignore.multicriteria` once per criterion — had five
+of its six criteria silently dropped, and only the last was in force. The
+gate now refuses a file that assigns the property more than once.
+
+=== Merge state
+
+PR #57 remains open and conflicted, and it should stay that way until its
+branch is either rebased onto the reconciled main or closed as
+superseded. The content that should survive it is specified above and in
+`docs/CI-CD.adoc`; the content that should not — the pre-reconciliation
+coverage model and the generic empty-function rule — would undo #58, #61
+and #63 if it were merged as a branch.

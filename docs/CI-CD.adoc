@@ -1,0 +1,305 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= CI/CD contract
+
+This is the contract this repository's continuous integration holds itself
+to: what runs, why, what each gate is allowed to assume, and what happens
+when a tool is missing.
+
+It is written because the failure mode this repository actually suffered
+was invisible. For weeks every run of the secret scanner died at *startup*
+with no job, no log and no check run. The required context `scan / gitleaks`
+was therefore never emitted, and every pull request was permanently
+unmergeable — with no red square anywhere to explain why, and with
+`gh pr checks` showing nothing at all, because a rejected run produces no
+check run.
+
+== The rules
+
+. *A gate that cannot look must not report a pass.* Every gate here exits
+  `2` — not `0` — when a tool it needs is missing, when a file it reads is
+  absent, or when the check could not be performed. A skip is not a pass.
+. *A gate that has never been deliberately tripped is not a gate.* Every
+  gate in this repository has a companion test that plants one defect at a
+  time and asserts that the gate goes red and names it. Those tests are in
+  `tests/format_ratchet_test.sh`, `tests/proven/provenance_gate_test.sh` and
+  `tests/sonar_fixture_gate_mutation_test.sh`.
+. *A shared gate is called, never copied.* This repository has no
+  `.github/actions/` directory. It calls the estate's reusable workflows at
+  pinned SHAs, so a fix made upstream arrives here without anyone
+  re-copying a file.
+. *A pin that can rot is a pin that will rot.* `track-estate-audit.yml`
+  moves every `cicd-suite` pin to `cicd-suite` HEAD weekly and opens a pull
+  request whose own gate runs are the check.
+. *An exclusion must be exact, justified and expiring.* The fixture corpus
+  is analysed, not excluded; the diagnostics that are inherent to it are
+  waived one at a time with a rule, a path, a reason, an owner and an
+  expiry (see <<The fixture-aware quality gate>>).
+
+== What runs
+
+[cols="2,3,3",options="header"]
+|===
+| Workflow | What it enforces | Required?
+
+| `rust-ci.yml` / `check`
+| `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D
+  warnings`, `cargo test --workspace`, `cargo build --release`, the
+  end-to-end suite, and a non-vacuity control that proves the suite fails
+  against a stub binary.
+| Not required, but everything else assumes it.
+
+| `rust-ci.yml` / `proven-tests`
+| The provenance gate: every declared suite runs, the category x aspect
+  coverage lattice is derived from the suites that RAN and PASSED, and the
+  dashboard is checked against the ledger.
+| Not required.
+
+| `main-estate-audit.yml`
+| The estate's own audit, called as a reusable workflow: governance,
+  hygiene, manifests, languages and advisory.
+| Not required, but it is the gate that caught the debt markers this
+  repository has had.
+
+| `secret-scanner.yml`
+| The estate's shared secret scanner (gitleaks + rust-secrets +
+  shell-secrets).
+| *Yes.* The `Secret-Scan-Floor` ruleset requires the context
+  `scan / gitleaks`.
+
+| `format-policy.yml`
+| I-JSON validity for every JSON file, RFC 8785 canonicality for the
+  declared subset, and the closed-world YAML/JSON inventories.
+| Not required.
+
+| `squabble.yml`
+| The estate's CI/CD fighter: the pinned, attested `squabble` release
+  installs and runs, and the pull request's gate is fetched and diagnosed.
+| Not required. The installation blocks; the diagnostic reports.
+
+The diagnostic needs a token that can read branch rulesets and classic
+branch protection. A fresh GitHub App installation token is minted for
+each run when `SQUABBLE_APP_ID` and `SQUABBLE_APP_PRIVATE_KEY` are
+configured; a long-lived `SQUABBLE_TOKEN` and then `github.token` are the
+fallbacks, and which one was used is reported. A fork's pull request never
+runs this repository's code with a privileged token: the workflow checks
+out nothing from the pull request, and the manual trigger takes the pull
+request number as an input rather than a branch.
+
+| `codeql.yml`, `scorecard.yml`
+| The estate's CodeQL and OpenSSF Scorecard reusables.
+| Not required.
+|===
+
+== The required check, and the three ways of losing it
+
+The `Secret-Scan-Floor` ruleset requires exactly one context:
+`scan / gitleaks`. It is produced by this repository's `scan` job calling
+the estate's `secret-scanner-reusable.yml`, whose own job is named
+`gitleaks`.
+
+Three different mistakes each lose that context, and **all three are
+silent**. This repository has been through all of them, and the signatures
+are worth recording because none of them looks like a failure of the
+workflow you are looking at.
+
+. *The wrong owner spelling.* The shared reusable lives at
+  `metadatastician/standards`. The repository was transferred to the
+  `metadatastician` organisation, and GitHub's REST API follows the old
+  name — `GET /repos/hyperpolymath/standards` answers
+  `full_name: metadatastician/standards` — but the **Actions resolver does
+  not**. Measured here, on the same pinned commit, with the same job key
+  and the same grants:
+
+  * `uses: hyperpolymath/standards/...@<sha>` — no job starts. The run is
+    attributed to the workflow *file*
+    (`.github/workflows/secret-scanner.yml`), not to the workflow.
+    Conclusion `failure`, zero jobs, no log.
+  * `uses: metadatastician/standards/...@<sha>` — the workflow starts, the
+    reusable's jobs run, and the check is published.
+
+  The run that carries the file's name does not even look like the
+  workflow it is. The only way to see it is
+  `gh run list --json conclusion`.
+
+. *A stale pin.* The reusable at an older commit asked for more
+  permission than the caller grants, and a called workflow cannot exceed
+  its caller's job-level grant, so the call is refused at startup with
+  `startup_failure` and no job. The pin and the owner are separate
+  variables: a caller pinned to a bad commit fails whatever it spells the
+  owner.
+
+. *`secrets: inherit`.* The reusable declares no `workflow_call.secrets`
+  and references no `secrets.*` context, so there is nothing to inherit;
+  and forwarding every repository and organisation secret the caller can
+  see to a scanner that needs none is CWE-250. The caller passes no
+  `secrets:` line.
+
+The shared reusable is called at `metadatastician/standards`, at the
+commit whose own actions.lock GitHub accepts at job setup.
+
+The estate's canonical Actions allowlist still names only
+`hyperpolymath/*`, while the repository it describes now lives at
+`metadatastician/standards`. Every live caller in the estate that spells
+the old owner is in the first failure mode above. That is asked upstream
+in `docs/handoffs/upstream-prompts.adoc`, prompt 1.
+
+== The format policy
+
+Standards' `3-practice/JSON-POLICY.adoc` (owner ruling D306) makes
+I-JSON (RFC 7493) plus JCS (RFC 8785) the estate's JSON standard;
+`3-practice/YAML-POLICY.adoc` (D280, D307) makes KYAML the estate's YAML
+dialect, with the `.kyaml` extension for estate-owned configuration.
+
+This repository enforces both as *closed inventories* rather than as scans:
+
+* `ci/yaml-ratchet.kyaml` accounts for every `.yml`, `.yaml` and `.kyaml`
+  file in the tree. A file is either `converted` — and then its bytes must
+  be exactly what `yq -p yaml -o kyaml` produces — or `excluded`, with a
+  stated reason. A YAML file that appears in neither fails the build.
+* `ci/json-ratchet.kyaml` accounts for every `.json` and `.jsonl` file.
+  Every one must be valid I-JSON. The files listed as `canonical` must also
+  be byte-identical to their RFC 8785 form. The rest are declared
+  non-canonical with a reason and are reported, not tolerated silently.
+  Every file is **named**: a glob would let a file that nobody decided
+  anything about pass without a decision, which is the failure this
+  inventory exists to prevent.
+
+The tools are the estate's own, fetched at a pinned commit and verified by
+sha256, so this repository carries no copy that can drift: `yq` 4.53.3 and
+`standards/scripts/kyaml-format.sh` for YAML, and `ijson-jcs` (pinned to a
+commit — it has no releases yet) with `standards/scripts/check-ijson-jcs.sh`
+for JSON.
+
+Why an inventory and not a scan: the estate's own JSON gate reports every
+non-canonical file and exits `0`, which is the right default for an estate
+where most repositories have not converted. But a repository that has made a
+decision about each of its files should hold that decision, and a file added
+without a decision is exactly how a policy decays.
+
+What is *not* converted, and why:
+
+* `.github/dependabot.yml` — Dependabot rewrites it in block YAML.
+* `.github/FUNDING.yml` — GitHub reads it by name and by schema.
+* `.pre-commit-config.yaml` — `pre-commit autoupdate` rewrites `rev:` lines
+  in block style.
+* `.github/workflows/*.yml` — step 6 of YAML-POLICY §5 (`standards#1025`)
+  has not started anywhere in the estate. Converting one repository's
+  workflows ahead of that step would break the bot that updates them.
+
+== The fixture-aware quality gate
+
+`docs/PR57-RECONCILIATION.adoc` records the requirement: expected fixture
+diagnostics need an exact rule and path, a reason, an owner and an expiry;
+they are not false-positive waivers, and no broad fixture exclusion is
+introduced.
+
+This repository implements it:
+
+* `ci/sonar-fixture-diagnostics.kyaml` declares every diagnostic SonarCloud
+  is told to ignore, with its rule key, its exact file path, a reason, an
+  owner and an expiry.
+* `sonar-project.properties` carries the matching
+  `sonar.issue.ignore.multicriteria`. There is no `fixtures/**` pattern
+  anywhere in it: the corpus is still analysed, and a *new* diagnostic in a
+  fixture is not waived by anything — it fails the SonarCloud check until
+  it is declared or the fixture is corrected.
+* `tests/sonar_fixture_gate_test.sh` compares the two in both directions,
+  refuses a criterion that names a pattern rather than a whole file,
+  refuses a wildcard rule key, refuses a waiver for a file outside the
+  corpus, and fails a waiver whose expiry has passed. A criterion list
+  that is assigned more than once is refused too: a properties file keeps
+  only the LAST assignment of a key, so a file that assigns the property
+  once per criterion silently drops every criterion but the last.
+* `tests/sonar_fixture_gate_mutation_test.sh` plants eleven defects one
+  at a time and requires the gate to go red and name each one. A gate that
+  has never been tripped is not a gate.
+
+*What is not verified here, and why.* SonarSource's documentation says
+that automatic analysis — the analysis behind this repository's
+"SonarCloud Code Analysis" check — *ignores* `sonar-project.properties`:
+"If you import a project that already contains a `sonar-project.properties`
+file, SonarQube Cloud will ignore the parameters in your
+`sonar-project.properties` file." The six criteria therefore have to be
+configured in the SonarCloud project's own Analysis Configuration, and
+this repository can neither read nor write that configuration from CI: it
+has no SonarCloud token, and the API is not reachable from the gate. So
+`sonar-project.properties` is the *declaration* and the gate's input, not
+a mechanism that makes SonarCloud ignore anything today. The gap is named
+here rather than papered over: an unverified configuration is not an
+assurance.
+
+== The testing framework
+
+`tests/proven/ledger.kyaml` is the provenance ledger, ported from
+`hyperpolymath/proven-tests-and-benches`. Each entry names a suite, the
+taxonomy category it occupies, the aspects it covers and its provenance
+tier:
+
+* *Actually-Proven* requires a machine-checked proof artefact, registered in
+  the ledger's `proof_artifacts`. This repository has none, so the tier is
+  unreachable and the gate fails such a claim rather than accepting it.
+* *Provisionally-Proven* requires the suite to have run and passed, and
+  requires a recorded reason — the assumption that keeps the claim
+  provisional.
+* *Unproven* is a declared gap. It contributes no coverage and is not a
+  failure, but it must say why.
+
+The lattice is the estate's: 18 categories x 14 aspects = 252 cells, from
+`standards/3-practice/testing-and-benchmarking/TESTING-TAXONOMY.adoc`. A
+cell is covered only when a suite that actually ran and passed occupies it.
+`tests/DASHBOARD.adoc` is the declared map and is re-rendered and compared
+on every run; the derived map is written to `build/proven-report.json` and
+published in the CI job summary.
+
+The inventory is closed: every test and bench script in the tree is either
+an entry or named as harness. A new test that nobody classified fails the
+gate, because an unclassified test is a test whose evidence nobody has
+read.
+
+== Benchmarks
+
+`benches/pons_bench.sh` writes a `proven-bench` JSON v1 document — the
+format the framework's own `check-bench-regression.sh` reads. The workload
+set is frozen, every iteration is checked against a predicate, and the
+workload's checksum is true only when every iteration held.
+
+The predicates check the *finding*, not the envelope. A scan predicate that
+only asks whether the output contains a `schema_version` is satisfied by an
+empty report, so the scan workloads require the finding that the positive
+fixture must produce — `crates/pons-rules/tests/falsifier.rs` asserts that
+every positive fixture produces a finding from its own rule. A scan that
+reports nothing is a broken scan, and the harness says so rather than
+recording a green timing for it. Nothing in the harness is `eval`ed: each
+workload names a runner and a checker, dispatched through an explicit
+allowlist, so a string in the frozen table can never become shell code.
+
+The regression *comparison* is not yet in force: a baseline is cut from the
+mean of the last ten CI runs on main (TESTING-TAXONOMY Part IV), and this
+repository has not had ten. The framework's own checker refuses to compare
+against a baseline that does not exist and says so, so the ledger records
+the comparison as an *Unproven* gap rather than as a passing gate. The
+measurement itself is a declared, executed suite.
+
+The framework's harness is vendored byte-for-byte at a pinned revision in
+`scripts/proven-bench/`, and `scripts/proven-bench/verify-upstream.sh`
+fetches the same revision from upstream and compares the digests, so a
+vendored copy that drifts is caught rather than trusted.
+
+That is also why two defects found in the vendored scripts by review are
+reported upstream rather than patched here: a local patch would make the
+copy stop being the upstream copy. They are in
+`docs/handoffs/upstream-prompts.adoc`, prompt 8. Neither affects this
+repository today, because its baseline does not exist yet.
+
+== Where the failures were
+
+* A workflow that calls a reusable under an owner the Actions allowlist does
+  not admit dies at startup with no job and no check run. Diagnose with
+  `gh run list --json conclusion`, never by the absence of a red tick.
+* A job-level `permissions:` block *replaces* the workflow-level one; it
+  does not merge with it. A callee that asks for more than the caller
+  grants is rejected at startup, for the same reason and with the same
+  silence.
+* `gh actions-lock` re-onboarding a cross-repo reusable caller re-creates
+  the same failure. `cicd-suite/scripts/deonboard-estate-audit.sh` reverses
+  it.

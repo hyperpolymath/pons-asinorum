@@ -1,0 +1,292 @@
+{
+  policy: "Test provenance for this repository, ported from hyperpolymath/proven-tests-and-benches (src/ProvenTests/{Types,Taxonomy,Coverage}.idr) onto the estate taxonomy in standards 3-practice/testing-and-benchmarking/TESTING-TAXONOMY.adoc. A cell of the category x aspect lattice is COVERED only when a test that actually RAN and PASSED occupies it: coverage is derived from results, never declared. A suite that is declared but does not run contributes nothing, and a suite that runs and fails is a failure of the build, not a coverage claim.",
+  provenance_tiers: {
+    Actually-Proven: "A machine-checked proof artefact discharges the obligation. Claiming this tier requires `proof`, a path listed in `proof_artifacts`. This repository has none, so no entry may claim it: the gate fails the claim rather than accepting it.",
+    Provisionally-Proven: "A real, executed, passing test discharges the obligation for the finite domain it covers, and `reason` records the assumption or limitation that keeps the claim provisional. This is the honest tier for an ordinary test suite.",
+    Unproven: "The obligation is acknowledged and not discharged. The entry contributes NO coverage, and `reason` says why. An Unproven entry is a declared gap, not a failure.",
+  },
+  taxonomy: {
+    categories: [
+      "Unit Tests",
+      "Point-to-Point (P2P) Tests",
+      "End-to-End (E2E) Tests",
+      "Build Tests",
+      "Execution & Runtime Tests",
+      "Reflexive Tests",
+      "Lifecycle Tests",
+      "Smoke Tests",
+      "Property-Based / Generative Tests",
+      "Mutation Tests",
+      "Fuzz Tests",
+      "Contract / Invariant Tests",
+      "Regression Tests",
+      "Chaos / Resilience Tests",
+      "Compatibility Tests",
+      "Proof Regression Tests",
+      "Type-Safe Tests",
+      "Coupling / Drift-freedom Tests",
+    ],
+    aspects: [
+      "Dependability",
+      "Security",
+      "Usability",
+      "Interoperability",
+      "Safety",
+      "Performance",
+      "Functionality",
+      "Versability",
+      "Accessibility",
+      "Maintainability",
+      "Privacy",
+      "Observability",
+      "Reproducibility",
+      "Portability",
+    ],
+    cells: 252,
+  },
+  proof_artifacts: [],
+  harness: [
+    "tests/proven/check_test_provenance.sh",
+    "tests/proven/provenance_gate_test.sh",
+    "tests/proven/render_dashboard.sh",
+    "scripts/proven-bench/check-bench-regression.sh",
+    "scripts/proven-bench/compute-bench-baseline.sh",
+    "scripts/proven-bench/bench-stats.jq",
+    "scripts/proven-bench/verify-upstream.sh",
+  ],
+  entries: [
+    {
+      id: "unit-tests",
+      command: [
+        "cargo",
+        "test",
+        "--workspace",
+      ],
+      paths: [],
+      category: "Unit Tests",
+      aspects: [
+        "Functionality",
+        "Dependability",
+      ],
+      provenance: "Provisionally-Proven",
+      reason: "cargo's harness reports a pass per test case, so the finite domain is measured, but there is no proof artefact behind any of them.",
+    },
+    {
+      id: "e2e",
+      command: [
+        "bash",
+        "tests/e2e.sh",
+      ],
+      paths: [
+        "tests/e2e.sh",
+      ],
+      category: "End-to-End (E2E) Tests",
+      aspects: [
+        "Functionality",
+        "Interoperability",
+        "Dependability",
+      ],
+      provenance: "Provisionally-Proven",
+      reason: "the binary's observable contract is asserted end to end, including the exit-code matrix; the coverage is bounded by the cases the script enumerates.",
+    },
+    {
+      id: "aspect-tests",
+      command: [
+        "bash",
+        "tests/aspect_tests.sh",
+      ],
+      paths: [
+        "tests/aspect_tests.sh",
+      ],
+      category: "Unit Tests",
+      aspects: [
+        "Maintainability",
+      ],
+      provenance: "Provisionally-Proven",
+      reason: "the repository's structural invariants (required files, SPDX headers, licence text) are asserted over the whole tree.",
+    },
+    {
+      id: "doc-drift",
+      command: [
+        "bash",
+        "tests/doc_drift.sh",
+      ],
+      paths: [
+        "tests/doc_drift.sh",
+      ],
+      category: "Regression Tests",
+      aspects: [
+        "Maintainability",
+        "Functionality",
+      ],
+      provenance: "Provisionally-Proven",
+      reason: "every documented command and flag is checked against the binary that must accept it, so documentation cannot drift from behaviour unnoticed.",
+    },
+    {
+      id: "build-provenance",
+      command: [
+        "bash",
+        "tests/build_provenance.sh",
+      ],
+      paths: [
+        "tests/build_provenance.sh",
+      ],
+      category: "Build Tests",
+      aspects: [
+        "Reproducibility",
+      ],
+      provenance: "Provisionally-Proven",
+      reason: "the production build script is exercised in an isolated minimal repository; the claim is bounded to that isolated build.",
+    },
+    {
+      id: "workflow-validation",
+      command: [
+        "bash",
+        "tests/workflows/validate_workflows_test.sh",
+      ],
+      paths: [
+        "tests/workflows/validate_workflows_test.sh",
+      ],
+      category: "Contract / Invariant Tests",
+      aspects: [
+        "Interoperability",
+      ],
+      provenance: "Provisionally-Proven",
+      reason: "every workflow is parsed with yq and checked against the estate's workflow contract; the check reads the document, it does not execute it.",
+    },
+    {
+      id: "workflow-regression",
+      command: [
+        "bash",
+        "tests/workflows/validate_workflows_regression.sh",
+      ],
+      paths: [
+        "tests/workflows/validate_workflows_regression.sh",
+      ],
+      category: "Regression Tests",
+      aspects: [
+        "Interoperability",
+      ],
+      provenance: "Provisionally-Proven",
+      reason: "the validator is exercised against planted block-YAML and canonical-KYAML documents, so a regression in the validator itself is caught.",
+    },
+    {
+      id: "format-ratchet",
+      command: [
+        "bash",
+        "tests/format_ratchet.sh",
+      ],
+      paths: [
+        "tests/format_ratchet.sh",
+      ],
+      category: "Contract / Invariant Tests",
+      aspects: [
+        "Interoperability",
+        "Maintainability",
+      ],
+      provenance: "Provisionally-Proven",
+      reason: "every YAML and JSON file in the tree is accounted for in a declared inventory, and the canonical subset is checked with the estate's own ijson-jcs.",
+    },
+    {
+      id: "format-ratchet-mutant",
+      command: [
+        "bash",
+        "tests/format_ratchet_test.sh",
+      ],
+      paths: [
+        "tests/format_ratchet_test.sh",
+      ],
+      category: "Mutation Tests",
+      aspects: [
+        "Functionality",
+        "Maintainability",
+      ],
+      provenance: "Provisionally-Proven",
+      reason: "one defect at a time is planted in a scratch copy and the gate is required to go red and name it, so the gate is proved capable of failing.",
+    },
+    {
+      id: "sonar-fixture-gate",
+      command: [
+        "bash",
+        "tests/sonar_fixture_gate_test.sh",
+      ],
+      paths: [
+        "tests/sonar_fixture_gate_test.sh",
+      ],
+      category: "Contract / Invariant Tests",
+      aspects: [
+        "Interoperability",
+        "Maintainability",
+      ],
+      provenance: "Provisionally-Proven",
+      reason: "every diagnostic SonarCloud is told to ignore on the fixture corpus is declared with an exact rule, path, reason, owner and expiry, and the two sides are compared in both directions. A broad waiver, an undeclared waiver and an expired waiver are all failures.",
+    },
+    {
+      id: "sonar-fixture-gate-mutant",
+      command: [
+        "bash",
+        "tests/sonar_fixture_gate_mutation_test.sh",
+      ],
+      paths: [
+        "tests/sonar_fixture_gate_mutation_test.sh",
+      ],
+      category: "Mutation Tests",
+      aspects: [
+        "Functionality",
+        "Maintainability",
+      ],
+      provenance: "Provisionally-Proven",
+      reason: "one defect at a time is planted in a scratch copy and the gate is required to go red AND name the defect, so the gate is proved capable of failing.",
+    },
+    {
+      id: "mutation-smoke",
+      command: [
+        "bash",
+        "tests/mutation_smoke.sh",
+      ],
+      paths: [
+        "tests/mutation_smoke.sh",
+      ],
+      category: "Mutation Tests",
+      aspects: [
+        "Functionality",
+      ],
+      provenance: "Unproven",
+      reason: "it needs a disposable detached checkout and an out-of-tree log directory, so CI does not run it. It is a declared gap: it contributes NO coverage, and the Mutation Tests category is not claimed for the end-to-end binary behaviour.",
+    },
+    {
+      id: "bench-measurement",
+      command: [
+        "bash",
+        "benches/pons_bench.sh",
+        "--json",
+        "build/bench-current.json",
+      ],
+      paths: [
+        "benches/pons_bench.sh",
+      ],
+      category: "Execution & Runtime Tests",
+      aspects: [
+        "Performance",
+      ],
+      provenance: "Provisionally-Proven",
+      reason: "the frozen workload set is measured on every run and every iteration is checked against a predicate (ADR-0005's exit-code contract and the reporter's output shape), so a workload measuring a broken binary cannot report a green timing.",
+    },
+    {
+      id: "bench-regression",
+      command: [
+        "bash",
+        "scripts/proven-bench/check-bench-regression.sh",
+        "build/bench-current.json",
+        "benches/baseline.json",
+      ],
+      paths: [],
+      category: "Regression Tests",
+      aspects: [
+        "Performance",
+      ],
+      provenance: "Unproven",
+      reason: "a baseline is cut from the mean of the last 10 CI runs on main (TESTING-TAXONOMY Part IV), and this repository has not yet had 10. The framework's own checker refuses to compare against a baseline that does not exist and says so, rather than reporting a pass; until then this entry contributes NO coverage and the Performance aspect is claimed by bench-measurement alone.",
+    },
+  ],
+}

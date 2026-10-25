@@ -1,0 +1,48 @@
+{
+  policy: "The fixture-aware quality gate required by docs/PR57-RECONCILIATION.adoc: every diagnostic that SonarCloud reports on a SCANNER FIXTURE is declared here with an exact rule key, an exact path, a reason, an owner and an expiry, and is ignored by exactly that criterion in sonar-project.properties. The fixtures are still analysed: the criterion set contains no pattern, only whole file paths, and no fixture tree is excluded wholesale. A NEW diagnostic in a fixture is therefore not waived by this file: it fails the SonarCloud check until it is declared here, which is the point. tests/sonar_fixture_gate_test.sh proves that the declaration and the Sonar configuration agree in both directions.",
+  owner: "pons-asinorum maintainers",
+  diagnostics: [
+    {
+      rule: "php:S1763",
+      path: "fixtures/unreachable-after-jump/positive/case.php",
+      reason: "The unreachable statement after `return` IS the subject of the rule this fixture exists to exercise. Deleting it would delete the fixture.",
+      owner: "pons-asinorum maintainers",
+      expires: "2027-04-25",
+    },
+    {
+      rule: "php:S1763",
+      path: "fixtures/unreachable-after-jump/positive/throw.php",
+      reason: "The unreachable statement after `throw` IS the subject of the rule this fixture exists to exercise. Deleting it would delete the fixture.",
+      owner: "pons-asinorum maintainers",
+      expires: "2027-04-25",
+    },
+    {
+      rule: "php:S3626",
+      path: "fixtures/unreachable-after-jump/negative/case.php",
+      reason: "The `return` in one arm of the conditional is the sibling-branch negative control: it must not be adjacent to the following statement, or the rule would fire. Sonar reads the branch as a redundant jump; the fixture needs the jump.",
+      owner: "pons-asinorum maintainers",
+      expires: "2027-04-25",
+    },
+    {
+      rule: "php:S112",
+      path: "fixtures/unreachable-after-jump/negative/throw.php",
+      reason: "The thrown class is the shape the rule matches on - a `throw` inside a conditional. Replacing the generic exception with a dedicated one would add a class declaration to the corpus, which the reconciliation checkpoint reserves.",
+      owner: "pons-asinorum maintainers",
+      expires: "2027-04-25",
+    },
+    {
+      rule: "php:S112",
+      path: "fixtures/unreachable-after-jump/positive/throw.php",
+      reason: "The thrown class is the shape the rule matches on - a `throw` inside a compound statement. Replacing the generic exception with a dedicated one would add a class declaration to the corpus, which the reconciliation checkpoint reserves.",
+      owner: "pons-asinorum maintainers",
+      expires: "2027-04-25",
+    },
+    {
+      rule: "php:S100",
+      path: "fixtures/unreachable-after-jump/negative/throw.php",
+      reason: "The snake_case function name is incidental style noise on a deliberately reduced sample. The reconciliation checkpoint permits correcting such noise only when the tested shape is preserved; the corpus is left unchanged here and the noise is declared instead.",
+      owner: "pons-asinorum maintainers",
+      expires: "2027-04-25",
+    },
+  ],
+}

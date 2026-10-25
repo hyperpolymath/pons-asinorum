@@ -1,0 +1,109 @@
+# SPDX-License-Identifier: MPL-2.0
+name: Format Policy
+
+# The estate's format gates for this repository, both enforcing:
+#
+#   * I-JSON (RFC 7493) + JCS (RFC 8785) for JSON — standards'
+#     3-practice/JSON-POLICY.adoc, owner ruling D306.
+#   * KYAML for YAML — standards' 3-practice/YAML-POLICY.adoc, D280
+#     (content) and D307 (the .kyaml extension).
+#
+# Both tools are the estate's own, fetched at a pinned commit and verified
+# by sha256, so this repository carries no copy of either that can drift.
+# `yq` is pinned the same way: kyaml-format.sh exits 2 (red) on a yq that
+# cannot write KYAML, never green.
+#
+# The gate is a CLOSED inventory, not a scan: `ci/yaml-ratchet.kyaml` and
+# `ci/json-ratchet.kyaml` account for every YAML and JSON file in the tree,
+# and a file that no ratchet accounts for fails the build. `tests/
+# format_ratchet_test.sh` plants one defect at a time and asserts that the
+# gate goes red — a gate that has never been tripped is not a gate.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  format-policy:
+    name: I-JSON/JCS and KYAML ratchets
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # yq 4.53.3, pinned and sha256-verified. This is the estate's pin
+      # (rsr-template-repo #245 uses the same version and the same digest),
+      # so the formatter this gate runs is the one the step-2
+      # comment-preservation proof covers.
+      - name: Install verified yq 4.53.3
+        run: |
+          mkdir -p "$RUNNER_TEMP/yq-bin"
+          curl --proto '=https' --proto-redir '=https' --fail --silent --show-error --location \
+            https://github.com/mikefarah/yq/releases/download/v4.53.3/yq_linux_amd64 \
+            --output "$RUNNER_TEMP/yq-bin/yq"
+          echo "fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4  $RUNNER_TEMP/yq-bin/yq" | sha256sum --check --strict
+          chmod +x "$RUNNER_TEMP/yq-bin/yq"
+          echo "$RUNNER_TEMP/yq-bin" >> "$GITHUB_PATH"
+
+      # standards' own scripts, at one pinned commit, each sha256-verified.
+      # `kyaml-format.sh` is the ONE rewriter the comment-preservation proof
+      # (standards#1021 -> #1022) covers; `check-ijson-jcs.sh` is the estate's
+      # JSON scan.
+      - name: Fetch standards' format scripts (pinned + sha256-verified)
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --proto-redir '=https' --fail --silent --show-error --location \
+            https://raw.githubusercontent.com/hyperpolymath/standards/75bd5994470661a099df562d6d5ad2fe744dbd66/scripts/kyaml-format.sh \
+            --output "$RUNNER_TEMP/kyaml-format.sh"
+          echo "5fddd58fc8cbd2b68766ef5b4b5ba39f299da3f27252ae6cdcff0a641bbaef18  $RUNNER_TEMP/kyaml-format.sh" | sha256sum --check --strict
+          curl --proto '=https' --proto-redir '=https' --fail --silent --show-error --location \
+            https://raw.githubusercontent.com/hyperpolymath/standards/75bd5994470661a099df562d6d5ad2fe744dbd66/scripts/check-ijson-jcs.sh \
+            --output "$RUNNER_TEMP/check-ijson-jcs.sh"
+          echo "b9230a11f9f36275a1fa138fc4dad01d0cbca4b4fb3a3e24eee3ac82ab91d5c3  $RUNNER_TEMP/check-ijson-jcs.sh" | sha256sum --check --strict
+
+      # Pinned to a commit: ijson-jcs has no releases yet. This is the same
+      # revision standards' own self-test installs.
+      - name: Install ijson-jcs
+        run: cargo install --git https://github.com/hyperpolymath/ijson-jcs --rev 0fdeea716fd558e9807362acf6f8202d56d8d88f --locked ijson-jcs
+
+      # The estate's own scan, report-only. It is the independent witness:
+      # this repository's gate decides WHAT must hold, and the estate's tool
+      # reports what it sees.
+      - name: Estate JSON scan (report-only)
+        run: |
+          set -uo pipefail
+          bash "$RUNNER_TEMP/check-ijson-jcs.sh" . | tee "$RUNNER_TEMP/ijson-jcs-report.txt"
+
+      # The estate's own KYAML formatter, over the files this repository has
+      # converted. The list is read with yq — YAML-POLICY Y-1: a gate that
+      # needs a value out of a YAML file asks the parser, never grep.
+      - name: Converted YAML stays KYAML
+        run: |
+          set -euo pipefail
+          mapfile -t converted < <(yq -p yaml -r '.converted[]' ci/yaml-ratchet.kyaml)
+          if [ "${#converted[@]}" -eq 0 ]; then
+            echo "::error::ci/yaml-ratchet.kyaml lists no converted files; the KYAML gate would check nothing." >&2
+            exit 1
+          fi
+          printf 'checking %d converted file(s): %s\n' "${#converted[@]}" "${converted[*]}"
+          bash "$RUNNER_TEMP/kyaml-format.sh" --check "${converted[@]}"
+
+      # This repository's own gate: the closed inventory, I-JSON validity for
+      # every JSON file, and RFC 8785 canonicality for the declared subset.
+      - name: Format ratchet
+        run: bash tests/format_ratchet.sh
+
+      # And the proof that the gate above can fail.
+      - name: Format ratchet self-test
+        run: bash tests/format_ratchet_test.sh

@@ -1,0 +1,313 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Upstream prompts
+
+Findings from the CI/CD and testing work on
+https://github.com/hyperpolymath/pons-asinorum[pons-asinorum] that need a
+change in another repository to be complete.
+
+Each prompt below is written to be pasted as-is into an issue or a pull
+request request. They are ordered by how much they unblock: the first two
+are merge blockers that this repository cannot fix alone.
+
+== 1. `standards` — the transfer broke every caller that spells the old
+owner, and the failure has no job and no log
+
+*Priority: highest. This is measured, it is live, and it is breaking CI in
+repositories that have not noticed.*
+
+The `standards` repository was transferred to the `metadatastician`
+organisation. GitHub's REST API follows the old name —
+`GET /repos/hyperpolymath/standards` answers
+`full_name: metadatastician/standards` — but the **Actions resolver does
+not**. A `uses:` reference under the old owner no longer resolves to a
+repository.
+
+Measured in pons-asinorum, on the same pinned commit, with the same job
+key and the same grants:
+
+[cols="2,4",options="header"]
+|===
+| `uses:` | What happens
+
+| `hyperpolymath/standards/.github/workflows/secret-scanner-reusable.yml@<sha>`
+| No job starts. The run is attributed to the workflow **file**
+(`.github/workflows/secret-scanner.yml`), not to the workflow. Conclusion
+`failure`. Zero jobs. No log. `gh pr checks` shows nothing, because a
+rejected run produces no check run — the only symptom is
+`gh run list --json conclusion`, where the run's name is the file path.
+
+| `metadatastician/standards/.github/workflows/secret-scanner-reusable.yml@<sha>`
+| The workflow starts, the reusable's jobs run, and the check is published
+under the context the ruleset requires.
+|===
+
+The run that carries the file's name does not look like the workflow it
+is, so this is very easy to miss.
+
+> Please move every live `uses:` reference to the shared reusables to
+> `metadatastician/standards`. As of 2026-10-25 the live callers still
+> spelling the old owner are:
+>
+> * `standards` itself — `.github/workflows/ci-pipeline.yml` (two
+>   callers), and `.github/workflows/actions.lock`.
+> * `hyperpolymath/cicd-suite` — `.github/workflows/secret-scanner.yml`
+>   and `.github/workflows/spark-gate.yml`.
+> * `hyperpolymath/rsr-template-repo` — `dogfood-gate.yml` (two),
+>   `governance.yml`, `hypatia-scan.yml`, `mirror.yml`, `rust-ci.yml`,
+>   `scorecard.yml`, `secret-scanner.yml`, and `actions.lock`.
+> * `hyperpolymath/cicd-squabbler` — `actions.lock`.
+>
+> Two of those repositories' last green runs predate the transfer, so they
+> have not run since it and do not know yet. cicd-suite's secret scanner
+> last ran successfully on 2026-10-19; the transfer is later than that.
+>
+> Please also add `metadatastician/*` to
+> `rhodium-standard-repositories/actions-allowlist/allowed-actions.json`,
+> which still lists only `hyperpolymath/*`. A repository whose live
+> Actions policy has been migrated to the new owner is therefore NOT a
+> superset of the canonical list, and `scripts/check-actions-policy.sh`
+> will report it as non-compliant — the two halves of the estate disagree
+> about the name of the repository they are describing.
+>
+> And please record the fact where callers are documented: **the REST
+> API's redirect does not carry over to the Actions resolver**. Every
+> other transfer-shaped mistake in this estate has been diagnosed from a
+> red log; this one has no log, and the run is filed against the file
+> rather than the workflow.
+
+This is the same family as standards#1336 and #1337 — a required context
+that cannot be produced, so every pull request is unmergeable while every
+visible check is green — but it is a different mechanism, and it is
+currently live in repositories that have not yet noticed.
+
+
+== 2. `standards` — step 6 of the KYAML migration (workflows)
+
+*Priority: medium. It blocks the estate-wide YAML migration, not this
+repository.*
+
+> YAML-POLICY §5 step 6 (`standards#1025`) converts workflows to KYAML
+> content, and its stated precondition is that "Dependabot and
+> `gh actions-lock` either emit KYAML or their drift is explicitly
+> accepted in writing".
+>
+> The `gh actions-lock` half of that precondition is already resolved by
+> evidence: §5 step 3's correction records that the earlier claim that
+> `gh actions-lock` v0.1.6 cannot see a `uses:` inside a KYAML workflow is
+> false, and that fix mode left a KYAML workflow byte-identical while
+> keeping its lock entries. Please promote that from a correction in
+> step 3 to a resolution in step 6.
+>
+> The Dependabot half is the real one, and it needs a decision rather than
+> a workaround. Dependabot's GitHub Actions updater rewrites a `uses:`
+> line; in a KYAML workflow that line is `uses: "owner/action@sha",` with
+> the comment moved after the comma, so the updater's matcher may not find
+> it at all. Two candidate resolutions:
+>
+> 1. Teach the Dependabot updater to match the KYAML spelling.
+> 2. Accept the drift in writing, and say where that acceptance is
+>    recorded so a consumer can cite it rather than re-derive it.
+>
+> A third option, if neither is acceptable soon: state that workflows
+> converted to KYAML are excluded from Dependabot's `github-actions`
+> ecosystem in that repository, with the reason, so the bot cannot
+> half-rewrite them.
+>
+> For reference, pons-asinorum has adopted the step-5 scope: its
+> estate-owned configuration is `.kyaml` and its YAML inventory is closed
+> (`ci/yaml-ratchet.kyaml`), with workflows listed as excluded and the
+> reason recorded. When step 6 opens, that repository's workflows join the
+> ratchet by being converted, not by being waived.
+
+== 3. `standards` — the JSON policy's canonical-bytes contract
+
+*Priority: medium. It decides whether pons-asinorum's report contract
+changes.*
+
+> The JSON-POLICY says "the estate file profile requires exactly one
+> final LF", and the ijson-jcs README says the CLI "also accepts canonical
+> bytes without one, so CLI acceptance alone is not that entire on-disk
+> policy. Keep the standards wrapper's framing checks."
+>
+> There is a gap between the *file* profile and the *report* profile, and
+> this repository has run into it. pons-asinorum's JSON report has a
+> contractual field order (`docs/PLAN.adoc` Appendix G) that is
+> deliberately not alphabetical, so its bytes are not RFC 8785 canonical
+> and cannot be made so without changing the published contract.
+>
+> Please decide and record whether an estate artefact that crosses a trust
+> boundary needs a *canonical form* distinct from its *published form* —
+> for example, a documented `canon` rendering of a report, produced by
+> `ijson-jcs canon`, whose bytes are what gets hashed or signed, while the
+> published report keeps its reviewable shape. If the answer is yes, the
+> canonical-bytes contract belongs in JSON-POLICY, and `ijson-jcs` should
+> expose the same "strip the final LF before hashing" rule the README
+> mentions in a form a CI gate can call directly.
+
+== 4. `hyperpolymath/cicd-squabbler` — the consumer integration needs a
+documented permission path
+
+*Priority: medium.*
+
+> The consumer action's README says `verify-satisfied` "reads branch
+> rules, which need *Administration: read*; `github.token` cannot hold
+> that, so pass a GitHub App installation token for it."
+>
+> That is documented, but it makes the tool unusable in the place it is
+> most needed: a consumer repository's own CI, where the only token is
+> `GITHUB_TOKEN`. pons-asinorum now runs the squabble action with
+> `token: ${{ secrets.SQUABBLE_TOKEN || github.token }}` and treats the
+> *installation* as blocking and the *diagnostic* as advisory, reporting
+> precisely what it could not look at.
+>
+> Please add a documented recipe for the consumer side: how a repository
+> mints a GitHub App installation token with Administration:read, what it
+> may be scoped to, and whether `squabble fetch` can be made to work with a
+> lesser grant. `squabble fetch` reads
+> `repos/{owner}/{repo}/rules/branches/{branch}` and
+> `repos/{owner}/{repo}/branches/{branch}/protection`; the second is the
+> one that needs administration. If the classic-protection probe could be
+> skipped when the token cannot see it — with the skip *reported* rather
+> than treated as "no protection" — the tool would work in consumer CI
+> unchanged.
+>
+> The `startup_failure` case is already covered by the playbook and it
+> found a real defect in pons-asinorum within one run, so the tool earns
+> its keep; the gap is only in the permission story.
+
+== 5. `hyperpolymath/proven-tests-and-benches` — a harness contract for
+non-Idris repositories
+
+*Priority: medium.*
+
+> The framework is Idris2, and its `proven-bench` JSON v1 document is
+> written by `benchmarks/Benchmark.idr`. This repository is Rust, and it
+> has ported the *contract* rather than the code: `benches/pons_bench.sh`
+> writes the same document shape (`schema_version`, `suite`,
+> `reps`, `commit`, `runner`, `results[]` with `name`, `iterations`,
+> `samples_ns`, `median_ns`, `checksum`) from shell, and the framework's
+> own `check-bench-regression.sh` reads it unmodified.
+>
+> That works, but it is undocumented, so the next repository in a
+> different language will re-derive it. Please publish the *document
+> contract* as a specification a non-Idris harness can implement — the
+> field meanings, the median convention, the checksum semantics ("true
+> only when every iteration of every sample held") and the frozen-workload
+> rule — so that a shell or Rust harness is a supported way to produce a
+> baseline rather than a private convention.
+>
+> Separately: the framework's own scripts are vendored byte-for-byte in
+> pons-asinorum with a digest check against upstream. If the framework
+> would rather be *fetched* at a pinned revision than vendored, say so; the
+> vendoring exists only because the checker must run offline.
+
+== 6. `hyperpolymath/panic-attack` — the interop contract, for a Rust
+consumer
+
+*Priority: low, but the user asked for a deep recon with it.*
+
+> pons-asinorum is the design companion of panic-attack (ADR-0004), and
+> `docs/PURPOSE-AND-PROOF.adoc` states the division of labour: panic-attack
+> does security and resilience analysis, pons does structural and contract
+> analysis, and they "exchange versioned evidence while retaining
+> independent analyses and identities".
+>
+> The exchange is designed but not exercised. `proven-tests-and-benches`
+> has `scripts/emit-aggregate-inputs.sh`, which feeds proof-ladder files
+> cited by Actually-Proven tests into panic-attack's `aggregate`, and
+> `docs/INTEROP-PANIC-ATTACK.adoc` describes the semantic contract: only
+> Actually-Proven entries are emitted, a ladder file is expected to classify
+> `Closed`, and `Holes`/`Refuted` is a genuine failure.
+>
+> Two questions for panic-attack:
+>
+> 1. Can a *Rust* producer emit the same proof-ladder artefact the Idris2
+>    framework emits, so that the interop is not one-directional? pons has
+>    no machine-checked proof artefact today, so it would be the
+>    `Provisionally-Proven` producer in the meantime — but the ledger
+>    structure exists and the tier is enforced.
+> 2. What is the canonical panic-attack scan that a repository should run
+>    over its *own* source, in the same way pons-asinorum now runs its own
+>    scanner over its own fixtures? The estate's `custom-tools-check` gate
+>    invokes `pons verify .` and `panic-attack scan .` if the binaries are
+>    on `PATH`, and then says "Custom tools validation passed" — which is
+>    not a check, because the tools are never present on the runner. A
+>    documented invocation that a repository can wire into CI for real
+>    would close that gap.
+
+== 7. `hyperpolymath/deed-ecosystem` and `hyperpolymath/k9-ecosystem` —
+the DEED/K9 conformance claim
+
+*Priority: low, and it is a claim that must not be made rather than a
+defect.*
+
+> `docs/PR57-RECONCILIATION.adoc` in pons-asinorum records: "This is not
+> a DEED/K9 migration or conformance claim. Migration still requires
+> authoritative grammars, working readers, pointer-only front doors,
+> attested repository facts, coordination protocol and validated canonical
+> bytes."
+>
+> The estate's `manifest-check` gate validates DEED and K9 *structure*. The
+> pons-asinorum repository carries A2ML contractiles and NCL manifests
+> under `.machine_readable/`, and the structural gate passes them, but
+> structural validity is not a conformance claim: nothing establishes that
+> the Nickel contracts evaluate, that the K9 coordination protocol is
+> honoured, or that the repository's facts are attested.
+>
+> Please state, for a repository that is not a DEED/K9 native, what a
+> truthful statement would be — and whether a repository may say "the
+> structural gate passes" at all, or must say nothing. A vocabulary for
+> "structurally valid but not conformant" would stop the gap being closed
+> by silence.
+
+== 8. `hyperpolymath/proven-tests-and-benches` — two defects in the
+vendored benchmark scripts
+
+*Priority: medium. The scripts are vendored byte-for-byte here, so they
+cannot be fixed in this repository without breaking the digest check that
+proves the copy is the upstream copy.*
+
+> `scripts/proven-bench/` in pons-asinorum holds `check-bench-regression.sh`,
+> `compute-bench-baseline.sh` and `bench-stats.jq` byte-for-byte from this
+> repository, at the revision in `scripts/proven-bench/PIN`.
+> `scripts/proven-bench/verify-upstream.sh` fetches the same revision from
+> upstream and compares SHA-256 digests, so a local patch would make the
+> copy stop being the upstream copy — which is the whole point of
+> vendoring it. Both defects below were found by review in the consuming
+> repository and are therefore being reported here rather than patched
+> there.
+>
+> **1. `compute-bench-baseline.sh` counts file arguments, not validated
+> run documents.**
+>
+> `validate_run` runs
+> `jq -L "$SCRIPT_DIR" -r 'include "bench-stats"; bench_errors[]' "$f"`,
+> which processes each input document separately and produces *no output*
+> for an empty file. An empty file therefore passes validation, the later
+> `jq -s` collects nine documents instead of ten, and the baseline is
+> written with `window: 9` — while the script's own `MIN_RUNS=10` check
+> was satisfied by the number of *arguments*. The gate is then mathematically
+> inert, which is precisely what the script's "BASELINE BOOTSTRAPPING"
+> refusal exists to prevent.
+>
+> Please make the validation reject an empty file and a file containing
+> more than one document, and make the ten-run minimum count the *validated
+> run documents* rather than the supplied file names, so that the slurp
+> calculation cannot write a baseline from fewer than ten validated runs.
+>
+> **2. `check-bench-regression.sh` accepts a baseline file with more than
+> one JSON document.**
+>
+> The comparison uses `--slurpfile b "$BASELINE"` and then reads `$b[0]`.
+> If the baseline file contains two valid documents, both are slurped and
+> only the first is compared, so the gate can classify a regression
+> against the wrong thresholds — and it reports nothing about the extra
+> document. Please reject a baseline that does not contain exactly one
+> valid JSON document before comparing, and keep the existing validation
+> for a single document.
+>
+> Neither defect affects pons-asinorum today: its baseline does not exist
+> yet, and the corresponding ledger entry is an `Unproven` declared gap
+> rather than a passing gate. They will affect the first repository that
+> cuts a baseline from these scripts.
+

@@ -3,6 +3,162 @@
 
 == Unreleased — 0.1.0-dev.1
 
+=== Fixed
+
+* The shared secret scanner's owner spelling is now recorded where it is
+  written, with the measurement behind it. The shared reusable lives at
+  `metadatastician/standards`: the repository was transferred to the
+  `metadatastician` organisation, GitHub's REST API follows the old name,
+  and the **Actions resolver does not**. Measured here, on the same pinned
+  commit, `uses: hyperpolymath/standards/...` starts no job at all — the
+  run is attributed to the workflow *file* rather than to the workflow,
+  with zero jobs and no log — while `uses: metadatastician/standards/...`
+  starts, runs and publishes the check.
+
+  That matters because the ruleset-required context `scan / gitleaks` is
+  produced by that call, and the failure is invisible: `gh pr checks`
+  shows nothing, because a rejected run produces no check run, and the
+  only symptom is `gh run list --json conclusion`. Two further failure
+  modes lose the same context the same way — a stale pin to a reusable
+  revision that asks for more permission than the caller grants
+  (`startup_failure`), and `secrets: inherit` against a reusable that
+  declares no secrets — and all three are now written down at the call
+  site.
+* The estate audit is no longer two generations stale.
+  `.github/workflows/main-estate-audit.yml` pinned cicd-suite `3bbdf75`, the
+  single-job 26-step audit. It now pins `bf7dd95`, whose reusable reports
+  the audit as five components (governance, hygiene, manifests, languages,
+  advisory) and includes the language gates added in cicd-suite#54.
+* `track-estate-audit.yml` was added: it moves every `cicd-suite` pin to
+  `cicd-suite` HEAD weekly and opens a pull request whose own gate runs are
+  the check. This repository has no `AUTOMATION_TOKEN` yet, so the run
+  *reports* the drift and says the bump was skipped, rather than failing
+  every Monday for a secret it does not have or claiming to have opened a
+  pull request it did not open.
+* The 27 stale composite actions under `.github/actions/` were deleted.
+  They were unreferenced copies of the estate's gates, two of them
+  (`prat-check`, `semantic-audit-check`) were stubs that could not fail.
+  The estate's own rule is that a consumer *calls* the reusable rather
+  than copying it; this repository now does that and nothing else.
+* The throwaway probe workflows `probe-kyaml-arm.yml` and
+  `probe-yaml-arm.yml` were deleted. Their own header said to remove them
+  with the branch that introduced them, and that branch is merged.
+
+* The gates this pull request adds were reviewed, and each was checked
+  against the code as it stands. The findings that named a real defect are
+  fixed, and the ones that do not are recorded rather than argued away.
+
+  **The provenance gate was not a gate.** It reported a suite that ran and
+  failed, and then carried on without failing the build: the failure flag
+  was never set, so a build could be green over a red suite whenever
+  another suite happened to occupy the same cells. The flag is set now.
+  The case count was also taken from the LAST `test result: ok.` line, so
+  a suite of many test binaries reported the size of the last one; the
+  counts are summed. And the ledger's `command` was a shell string handed
+  to `bash -c`; it is an ARGV LIST now and is executed directly, so a
+  ledger entry can no longer become shell code.
+
+  **The format ratchet could not read a file.** `ijson-jcs check` was
+  invoked without `--`, so a path beginning with a hyphen was read as an
+  option; and only the exit status was consulted, so a usage error was
+  read as "valid but not canonical", which is a pass. The verdict the tool
+  PRINTS must now agree with the status it returns, and only the three
+  documented verdicts are accepted. A `.jsonl` file is a sequence of
+  records rather than one document, and the tool reads whole documents
+  only, so each record is now canonicalised on its own. The JSON inventory
+  no longer uses globs: a glob let a file that nobody decided anything
+  about pass without a decision, and all ninety are now named.
+
+  **The self-tests asserted the wrong thing.** Each mutation now asserts
+  the DIAGNOSTIC it should produce, not merely a non-zero exit: a gate that
+  goes red for the wrong reason is as useless as one that never goes red.
+  Both self-tests also restored the working tree from the INDEX, which
+  their own runs had staged, so a mutation survived into the next run and
+  masked it. A third self-test is new:
+  `tests/sonar_fixture_gate_mutation_test.sh` plants eleven defects one at
+  a time and requires the fixture-aware Sonar gate to go red and name each
+  one. That gate had never been deliberately tripped.
+
+  **The Sonar configuration had five of its six criteria dropped.**
+  `sonar.issue.ignore.multicriteria` was assigned once per criterion, and
+  a properties file keeps only the LAST assignment of a key, so only the
+  final criterion was in force. The list is now one comma-separated value,
+  and the gate refuses a file that assigns the property more than once. The
+  file also claimed that SonarCloud's automatic analysis reads it; the
+  SonarSource documentation says the opposite, so the claim is corrected
+  and the gap is named in `docs/CI-CD.adoc` instead of being papered over.
+  The gate now also rejects a wildcard rule key and requires an expiry to
+  be a real calendar date strictly in the future.
+
+  **The benchmark harness could measure nothing.** The workloads were
+  `eval`ed from the frozen table, and the scan predicates asked only
+  whether the output contained a `schema_version`, which an empty report
+  satisfies. Nothing is `eval`ed now — each workload names a runner and a
+  checker, dispatched through an explicit allowlist — and the predicates
+  require the finding the positive fixture must produce, so a scan that
+  reports nothing is a broken scan and the harness says so.
+
+  Two defects in the *vendored* benchmark scripts are not patched here:
+  `scripts/proven-bench/` holds them byte-for-byte from
+  `hyperpolymath/proven-tests-and-benches` and a digest check proves it,
+  so a local patch would make the copy stop being the upstream copy. They
+  are reported upstream in `docs/handoffs/upstream-prompts.adoc`, prompt 8.
+
+=== Added
+
+* `docs/CI-CD.adoc`: the CI/CD contract — what runs, what is required, what
+  each gate may assume, and the failure modes this repository actually hit.
+* The format policy gates. `ci/yaml-ratchet.kyaml` and
+  `ci/json-ratchet.kyaml` account for **every** YAML and JSON file in the
+  tree; a file that no ratchet accounts for fails the build. Every JSON
+  file must be valid I-JSON (RFC 7493); the declared subset must also be
+  RFC 8785 canonical. The tools are the estate's own — `yq` 4.53.3 and
+  `standards/scripts/kyaml-format.sh` for KYAML, `ijson-jcs` and
+  `standards/scripts/check-ijson-jcs.sh` for JSON — fetched at pinned
+  commits and verified by sha256, so no copy that can drift is carried
+  here. Estate-owned configuration is written as `.kyaml` with KYAML
+  content, per D280 and D307.
+* The testing framework, ported from
+  `hyperpolymath/proven-tests-and-benches`. `tests/proven/ledger.kyaml`
+  gives every suite a provenance tier (Actually-Proven, Provisionally-
+  Proven, Unproven) and places it in the estate's 18-category x 14-aspect
+  taxonomy lattice. A cell is covered only when a suite that actually ran
+  and passed occupies it, exactly as the framework's `coveredFrom` does.
+  The inventory is closed: a new test that nobody classified fails the
+  gate. `tests/DASHBOARD.adoc` is the declared map; the derived map is
+  written to `build/proven-report.json` and published in the CI job
+  summary.
+* `benches/pons_bench.sh` now writes a `proven-bench` JSON v1 document —
+  the format the framework's own regression checker reads — with a frozen
+  workload set and a per-iteration predicate. The framework's harness is
+  vendored byte-for-byte at a pinned revision with a digest check against
+  upstream.
+* The fixture-aware SonarCloud quality gate that
+  `docs/PR57-RECONCILIATION.adoc` recorded as outstanding.
+  `ci/sonar-fixture-diagnostics.kyaml` declares every diagnostic SonarCloud
+  is told to ignore, with an exact rule key, an exact file path, a reason,
+  an owner and an expiry; `sonar-project.properties` carries the matching
+  criteria and contains **no** `fixtures/**` pattern, so the corpus is
+  still analysed and a new diagnostic in a fixture is not waived by
+  anything. `tests/sonar_fixture_gate_test.sh` compares the two in both
+  directions and refuses a broad, undeclared or expired waiver.
+* The CI/CD squabbler gate. `hyperpolymath/cicd-squabbler`'s pinned,
+  sha256- and attestation-verified release installs and runs on every pull
+  request, and the pull request's gate is fetched and diagnosed. This is
+  the tool that would have named the `startup_failure` above on its first
+  run. The installation blocks; the diagnostic reports, because
+  `squabble fetch` needs Administration:read, which `GITHUB_TOKEN` does
+  not hold.
+
+=== Changed
+
+* The estate's format gates are enforced by *closed inventory* rather than
+  by scan. A scan reports what it finds and exits `0`; an inventory says
+  what each file is, and a file added without a decision fails the build.
+  Every gate here exits `2` — never `0` — when it cannot look, and every
+  gate has a companion test that plants one defect at a time and asserts
+  that the gate goes red and names it.
+
 * Add RSR capability metadata: machine-readable scorecard, descriptiles and
   rsr-profile under `.machine_readable/`.
 * Add an offline rootless container build (Containerfile, firewalld zone,
