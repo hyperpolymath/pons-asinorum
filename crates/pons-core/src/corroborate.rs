@@ -36,6 +36,11 @@ const SEPARATOR: char = '\0';
 
 /// The exact string that is hashed.
 ///
+/// Joins [`SCHEME`], `path`, the decimal `line` and the wire name of `class`
+/// with NUL separators and no trailing separator. Supply a root-relative,
+/// `/`-separated path without a leading `./` and a 1-based start line;
+/// these conventions are not normalised or checked here.
+///
 /// Public because a consumer must be able to mint the same key without pons —
 /// for a panic-attack or Hypatia finding, once the grid has mapped it onto an
 /// evidence class using `schemas/verdict-matrix-1.0.0.json`. An implementation
@@ -61,9 +66,11 @@ pub fn fingerprint_of(path: &str, line: usize, class: EvidenceClass) -> String {
 
 /// The fingerprint of one finding, relative to the scan root.
 ///
-/// The path is put in the same root-relative, `/`-separated spelling the
-/// evidence contract's records use ([`crate::evidence::relative_path`]), so a
-/// key survives a checkout move and matches a record's `path` exactly.
+/// Uses the finding's 1-based start line and evidence class. The path matches
+/// the evidence contract's records ([`crate::evidence::relative_path`]): strip
+/// `root` when it is a prefix, use the basename when `root` is the file itself,
+/// and otherwise retain the path. Backslashes become `/`; no filesystem lookup
+/// is performed.
 pub fn semantic_fingerprint(finding: &Finding, root: &str) -> String {
     let loc = finding.location();
     fingerprint_of(

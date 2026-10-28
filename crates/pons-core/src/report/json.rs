@@ -124,6 +124,8 @@ struct Counts {
 }
 
 impl Counts {
+    /// Count all findings by evidence class, including zero counts, and exclude
+    /// speculative findings from the actionable total regardless of severity.
     fn tally(findings: &[Finding]) -> Self {
         let by_evidence = ByEvidence::tally(findings);
         let demoted = by_evidence.speculative;
@@ -194,6 +196,8 @@ struct FindingView<'a> {
 }
 
 impl<'a> FindingView<'a> {
+    /// Borrow a finding's fields and add its corroboration key relative to the
+    /// scan `root`, using the finding's start line and evidence class.
     fn of(finding: &'a Finding, root: &str) -> Self {
         Self {
             rule_id: finding.rule_id(),

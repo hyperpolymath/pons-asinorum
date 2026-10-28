@@ -30,7 +30,11 @@ pub fn validate_reader(reader: impl std::io::Read) -> Result<String> {
     validate_value(serde_json::from_reader(reader)?)
 }
 
-/// Compile a bundled schema, once per version.
+/// Compile a bundled JSON schema.
+///
+/// # Panics
+///
+/// Panics if `text` is invalid JSON or the schema cannot be compiled.
 fn compiled(text: &str) -> jsonschema::Validator {
     let schema: Value = serde_json::from_str(text).expect("bundled scan schema must be JSON");
     jsonschema::validator_for(&schema).expect("bundled scan schema must compile")
@@ -38,9 +42,9 @@ fn compiled(text: &str) -> jsonschema::Validator {
 
 /// The schema that a declared envelope version is validated against.
 ///
-/// Deliberately a closed list and not "whatever parses": an unknown version is
-/// an error, because validating an unknown shape against the nearest schema is
-/// how a consumer ends up trusting a document nobody specified.
+/// Deliberately a closed list and not "whatever parses": an unknown version
+/// returns `None`, because validating an unknown shape against the nearest
+/// schema is how a consumer ends up trusting a document nobody specified.
 fn validator_for_version(version: &str) -> Option<&'static jsonschema::Validator> {
     static CURRENT: std::sync::OnceLock<jsonschema::Validator> = std::sync::OnceLock::new();
     static FROZEN_0_4_0: std::sync::OnceLock<jsonschema::Validator> = std::sync::OnceLock::new();
@@ -61,6 +65,18 @@ fn validator_for_version(version: &str) -> Option<&'static jsonschema::Validator
     None
 }
 
+/// Validate a report against its declared schema and check its accounting,
+/// coverage and evidence records. Version 0.5.0 also requires matching
+/// corroboration keys and actionable/demoted counts.
+///
+/// Returns the verified coverage status: `no-applicable-input`, `partial` or
+/// `complete-within-policy`.
+///
+/// # Errors
+///
+/// Returns an error for a missing or unsupported version, a schema violation
+/// or inconsistent report data. Field deserialisation and evidence-record
+/// validation errors propagate.
 fn validate_value(v: Value) -> Result<String> {
     // Structural validation precedes semantic checks: hand-picked fields cannot
     // enforce required properties, enums or the closed envelope.

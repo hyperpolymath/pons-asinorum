@@ -14,6 +14,8 @@ pub fn render(findings: &[Finding]) -> String {
 /// Full terminal report, including the accounting a reader needs to know
 /// whether a clean result was a complete scan. `--explain` adds the evidence
 /// class and tier that back (or qualify) each finding.
+/// The verdict summary excludes speculative findings from the actionable count
+/// and reports their demoted count separately; the scanned finding total includes both.
 pub fn render_report(report: &ScanReport, explain: bool) -> String {
     let mut out = render_detailed(&report.findings, explain);
     let _ = writeln!(
