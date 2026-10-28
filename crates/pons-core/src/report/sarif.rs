@@ -791,9 +791,7 @@ mod tests {
         assert_eq!(spec.severity(), Severity::Error);
         assert_eq!(level_of(spec), "note");
         assert_eq!(rank_of(spec.evidence()), 20.0);
-        assert!(message_text(spec).ends_with(crate::verdict::demotion_suffix(
-            spec.evidence()
-        )));
+        assert!(message_text(spec).ends_with(crate::verdict::demotion_suffix(spec.evidence())));
     }
 
     #[test]

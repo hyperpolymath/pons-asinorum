@@ -1,0 +1,429 @@
+   Compiling equivalent v1.0.3
+   Compiling serde_core v1.0.229
+   Compiling memchr v2.8.3
+   Compiling zmij v1.0.23
+   Compiling itoa v1.0.18
+   Compiling foldhash v0.2.0
+   Compiling allocator-api2 v0.2.21
+   Compiling num-traits v0.2.19
+   Compiling hashbrown v0.17.1
+   Compiling regex-syntax v0.8.11
+   Compiling cfg-if v1.0.5
+   Compiling num-integer v0.1.47
+   Compiling libc v0.2.191
+   Compiling aho-corasick v1.1.5
+   Compiling indexmap v2.14.2
+   Compiling serde v1.0.229
+   Compiling serde_json v1.0.151
+   Compiling serde_spanned v0.6.9
+   Compiling toml_datetime v0.6.11
+   Compiling regex-automata v0.4.18
+   Compiling tree-sitter-language v0.1.9
+   Compiling toml_write v0.1.2
+   Compiling winnow v0.7.15
+   Compiling num-bigint v0.4.8
+   Compiling toml_edit v0.22.27
+   Compiling num-rational v0.4.2
+   Compiling getrandom v0.3.4
+   Compiling anyhow v1.0.104
+   Compiling zerocopy v0.8.63
+   Compiling num-iter v0.1.46
+   Compiling num-complex v0.4.6
+   Compiling scopeguard v1.2.0
+   Compiling smallvec v1.16.4
+   Compiling once_cell v1.21.4
+   Compiling parking_lot_core v0.9.12
+   Compiling toml v0.8.23
+   Compiling lock_api v0.4.14
+   Compiling ref-cast v1.0.27
+   Compiling num v0.4.3
+   Compiling tree-sitter v0.27.0
+   Compiling crossbeam-utils v0.8.23
+   Compiling borrow-or-share v0.2.4
+   Compiling bit-vec v0.8.0
+   Compiling bit-set v0.8.0
+   Compiling crossbeam-epoch v0.9.21
+   Compiling fluent-uri v0.4.1
+   Compiling fraction v0.17.0
+   Compiling parking_lot v0.12.5
+   Compiling regex v1.13.1
+   Compiling bstr v1.13.1
+   Compiling ahash v0.8.12
+   Compiling micromap v0.3.0
+   Compiling num-cmp v0.1.0
+   Compiling percent-encoding v2.3.2
+   Compiling vsimd v0.8.0
+   Compiling bytecount v0.6.9
+   Compiling outref v0.5.2
+   Compiling same-file v1.0.6
+   Compiling log v0.4.34
+   Compiling walkdir v2.5.0
+   Compiling jsonschema-value v0.57.0
+   Compiling globset v0.4.18
+   Compiling uuid-simd v0.8.0
+   Compiling referencing v0.57.0
+   Compiling strum v0.28.0
+   Compiling crossbeam-deque v0.8.8
+   Compiling unicode-general-category v1.1.0
+   Compiling fancy-regex v0.19.2
+   Compiling email_address v0.2.9
+   Compiling jsonschema-regex v0.57.0
+   Compiling cpufeatures v0.3.1
+   Compiling arrayvec v0.7.8
+   Compiling data-encoding v2.11.1
+   Compiling streaming-iterator v0.1.9
+   Compiling constant_time_eq v0.4.2
+   Compiling pons-core v0.1.0 (/home/runner/work/pons-asinorum/pons-asinorum/crates/pons-core)
+   Compiling blake3 v1.8.7
+   Compiling jsonschema v0.57.0
+   Compiling ignore v0.4.33
+   Compiling tree-sitter-rust v0.24.2
+   Compiling tree-sitter-javascript v0.25.0
+   Compiling tree-sitter-php v0.25.1
+   Compiling tree-sitter-python v0.25.0
+   Compiling tree-sitter-typescript v0.23.2
+   Compiling utf8parse v0.2.2
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling anstyle-parse v1.0.0
+   Compiling anstyle v1.0.14
+   Compiling colorchoice v1.0.5
+   Compiling anstyle-query v1.1.5
+   Compiling clap_lex v1.1.1
+   Compiling anstream v1.0.0
+   Compiling strsim v0.11.1
+   Compiling pons-protocols v0.1.0 (/home/runner/work/pons-asinorum/pons-asinorum/crates/pons-protocols)
+   Compiling clap_builder v4.6.6
+   Compiling roff v1.1.1
+   Compiling clap v4.6.6
+   Compiling clap_mangen v0.2.33
+   Compiling pons-rules v0.1.0 (/home/runner/work/pons-asinorum/pons-asinorum/crates/pons-rules)
+   Compiling pons-cli v0.1.0 (/home/runner/work/pons-asinorum/pons-asinorum/crates/pons-cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 30.60s
+     Running unittests src/main.rs (target/debug/deps/pons-8907c5d3d7d5b71f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/contracts.rs (target/debug/deps/contracts-fc475abab606bd79)
+
+running 6 tests
+test a_0_4_0_declaration_cannot_carry_a_0_5_0_key ... ok
+test a_forged_corroboration_key_is_rejected ... ok
+test a_finding_outside_the_scan_root_is_rejected ... ok
+test a_report_pinned_at_the_frozen_0_4_0_version_still_validates ... ok
+test an_unknown_envelope_version_is_refused ... ok
+test a_speculative_finding_cannot_be_promoted_into_the_actionable_count ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.76s
+
+     Running tests/coverage.rs (target/debug/deps/coverage-b32fbab8174288f4)
+
+running 15 tests
+test absent_required_language_cannot_be_suppressed ... ok
+test estate_formats_are_visible_unsupported_configuration ... ok
+test forced_parser_failure_preserves_language_version_and_artifact_identity ... ok
+test dir_include_resolution_agrees_for_relative_and_absolute_scan_roots ... ok
+test bare_forced_file_has_nonempty_root_and_valid_evidence_offline ... ok
+test forced_parser_without_applicable_rule_keeps_actual_provenance ... ok
+test fingerprints_survive_checkout_move_and_blank_line_insertion ... ok
+test generated_report_validates_and_malformed_claims_fail_closed ... ok
+test inventory_accounts_for_supported_unsupported_excluded_and_parse_error ... ok
+test imported_sanitizer_alias_is_partial_and_fails_required_php_coverage ... ok
+test target_git_provenance_does_not_execute_fsmonitor ... ok
+test no_input_is_not_success_even_without_strict_flag ... ok
+test suppression_metadata_is_required_and_never_hides_coverage ... ok
+test inline_suppression_requires_distinct_reason_owner_and_expiry ... ok
+test validator_accepts_large_valid_reports_and_rejects_trailing_garbage ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.55s
+
+     Running unittests src/lib.rs (target/debug/deps/pons_core-b3d2a62c0bf023ae)
+
+running 141 tests
+test cfg::grammar_probe::a_bare_annotation_is_an_assignment_that_binds_nothing ... ok
+test cfg::grammar_probe::every_node_kind_the_builder_depends_on_is_produced_by_this_grammar ... ok
+test cfg::grammar_probe::the_except_as_binding_is_nested_in_an_as_pattern_not_a_field_of_the_clause ... ok
+test cfg::grammar_probe::except_star_parses_clean_so_has_error_cannot_be_its_opaque_trigger ... ok
+test cfg::grammar_probe::the_fields_only_some_nodes_of_a_kind_carry_are_present ... ok
+test cfg::grammar_probe::the_probe_corpus_parses_without_error ... ok
+test cfg::tests::a_bare_annotation_is_local_and_global_names_are_not ... ok
+test cfg::tests::a_class_pattern_name_and_a_keyword_name_are_not_locals ... ok
+test cfg::tests::a_comprehension_target_does_not_leak_but_its_walrus_does ... ok
+test cfg::grammar_probe::try_with_and_delete_hide_their_parts_from_child_by_field_name ... ok
+test cfg::grammar_probe::while_else_exists_even_though_the_adr_table_omits_it ... ok
+test cfg::tests::a_dynamic_scope_call_in_a_nested_def_does_not_make_the_outer_opaque ... ok
+test cfg::grammar_probe::the_fields_the_builder_will_use_are_all_present ... ok
+test cfg::tests::a_handler_is_reached_from_try_entry_and_from_the_body_tail ... ok
+test cfg::tests::a_nested_def_and_class_bind_their_names_but_not_their_bodies ... ok
+test cfg::tests::a_wildcard_import_anywhere_in_the_module_makes_every_function_opaque ... ok
+test cfg::tests::a_parse_error_in_the_function_makes_it_opaque ... ok
+test cfg::tests::cfg_comprehension_walrus ... ok
+test cfg::tests::cfg_for_else ... ok
+test cfg::tests::an_except_star_handler_makes_a_function_opaque ... ok
+test cfg::tests::cfg_jumps_run_a_copy_of_finally ... ok
+test cfg::tests::cfg_try_except_finally ... ok
+test cfg::tests::cfg_match_arms_and_captures ... ok
+test cfg::tests::frame_introspection_makes_a_function_opaque ... ok
+test cfg::tests::cfg_while_true_has_no_false_edge ... ok
+test cfg::tests::each_dynamic_scope_builtin_makes_a_function_opaque ... ok
+test config::tests::an_unknown_suppressed_rule_is_rejected ... ok
+test corroborate::tests::a_key_is_64_lowercase_hex_characters ... ok
+test corroborate::tests::a_pinned_key_pins_the_scheme ... ok
+test corroborate::tests::a_single_file_scan_keys_the_file_name_not_the_absolute_path ... ok
+test corroborate::tests::the_canonical_input_is_four_nul_separated_fields ... ok
+test corroborate::tests::the_key_ignores_the_rule_id_because_overlap_is_the_point ... ok
+test corroborate::tests::the_key_uses_the_contract_path_spelling_and_survives_a_checkout_move ... ok
+test corroborate::tests::the_key_changes_with_the_path_the_line_and_the_class ... ok
+test config::tests::a_relative_suppression_path_matches_a_root_relative_finding ... ok
+test dataflow::tests::a_captured_local_is_never_a_dead_store ... ok
+test dataflow::tests::a_handler_read_of_a_name_bound_in_try_is_may_unbound ... ok
+test dataflow::tests::a_for_loop_over_a_non_empty_literal_has_no_zero_trip_exit ... ok
+test dataflow::tests::a_handler_ending_in_raise_does_not_poison_the_live_join ... ok
+test dataflow::tests::a_parameter_is_bound_on_entry ... ok
+test dataflow::tests::a_read_after_a_one_armed_if_is_may_unbound ... ok
+test dataflow::tests::a_store_in_finally_is_dead_only_if_dead_in_every_copy ... ok
+test dataflow::tests::a_read_in_a_nested_function_is_not_judged_here ... ok
+test dataflow::tests::a_store_in_unreachable_code_is_not_reported ... ok
+test dataflow::tests::a_store_in_try_read_only_by_the_handler_is_live ... ok
+test dataflow::tests::a_store_never_read_is_dead ... ok
+test dataflow::tests::a_walrus_binds_for_may_unbound ... ok
+test dataflow::tests::a_store_read_round_a_loop_back_edge_is_live ... ok
+test dataflow::tests::a_store_read_only_in_finally_on_the_return_path_is_live ... ok
+test dataflow::tests::a_walrus_does_not_end_a_live_range ... ok
+test dataflow::tests::a_while_true_loop_exits_only_through_break ... ok
+test dataflow::tests::a_with_that_can_suppress_keeps_the_earlier_store_live ... ok
+test dataflow::tests::an_overwritten_store_is_dead_and_the_read_one_is_not ... ok
+test dataflow::tests::the_except_alias_is_unbound_after_its_handler ... ok
+test dataflow::tests::del_makes_a_name_unbound_again_and_reaches_the_handler ... ok
+test dataflow::tests::the_loop_variable_after_a_loop_that_may_not_run_is_may_unbound ... ok
+test dataflow::tests::the_last_store_in_try_is_live_if_a_handler_reads_it ... ok
+test engine::tests::findings_are_sorted_by_file_then_byte_offset_whatever_order_files_arrive_in ... ok
+test engine::tests::one_unreadable_file_is_skipped_and_the_scan_still_reports_the_good_one ... ok
+test engine::tests::scan_stamps_rule_id_from_the_rule_never_from_the_finding ... ok
+test engine::tests::a_directory_the_walker_could_not_enter_is_reported_alongside_the_findings ... ok
+test finding::tests::a_column_is_utf16_code_units_not_bytes_and_not_code_points ... ok
+test finding::tests::byte_offsets_stay_byte_based_while_columns_do_not ... ok
+test finding::tests::deserializing_never_trusts_a_wire_evidence_value ... ok
+test engine::tests::scan_with_zero_rules_yields_zero_findings ... ok
+test finding::tests::a_tampered_evidence_value_on_the_wire_is_discarded_not_trusted ... ok
+test finding::tests::from_node_converts_zero_based_point_to_one_based_location ... ok
+test finding::tests::evidence_class_is_derived_from_tier ... ok
+test finding::tests::name_matches_the_wire_spelling_and_the_tier_edge ... ok
+test finding::tests::the_end_column_is_measured_on_the_line_the_node_ends_on ... ok
+test lang::tests::every_lang_variant_produces_a_loadable_grammar ... ok
+test lang::tests::jsx_maps_to_javascript_not_tsx ... ok
+test lang::tests::unknown_extension_maps_to_none ... ok
+test parse::tests::parses_a_small_python_snippet ... ok
+test parse::tests::an_error_recovered_tree_is_rejected ... ok
+test php::tests::branch_join_early_exit_and_loop_fixed_point ... ok
+test php::tests::imported_sanitizer_names_are_unknown_not_safe ... ok
+test php::tests::native_php_syntax_and_template_unknowns ... ok
+test php::tests::output_contexts_are_distinct ... ok
+test php::tests::unknown_is_not_safe_and_scopes_do_not_leak ... ok
+test report::human::golden_tests::matches_the_golden_human_output ... ok
+test report::human::golden_tests::the_speculative_finding_is_demoted_in_the_shared_fixture ... ok
+test report::human::golden_tests::the_summary_demotes_speculative_numerically ... ok
+test report::human::tests::heuristic_findings_are_not_demoted ... ok
+test report::human::tests::missing_counter_condition_omits_the_when_fine_line ... ok
+test report::human::tests::speculative_findings_are_demoted_in_the_message_line ... ok
+test report::json::tests::a_0_5_0_finding_is_a_0_4_0_finding_plus_one_appended_key ... ok
+test report::json::tests::a_skipped_entry_carries_the_path_and_the_reason ... ok
+test report::json::tests::a_speculative_finding_is_demoted_by_its_evidence_field ... ok
+test report::json::tests::counter_condition_is_null_when_absent_never_omitted ... ok
+test report::json::tests::envelope_shape_is_pinned_to_the_schema_version ... ok
+test report::json::tests::every_evidence_class_is_counted_even_at_zero ... ok
+test report::json::tests::every_finding_carries_its_corroboration_key ... ok
+test report::json::tests::field_order_follows_appendix_g_not_the_alphabet ... ok
+test report::json::tests::matches_the_appendix_g_golden_envelope ... ok
+test report::json::tests::skipped_is_an_empty_array_when_nothing_was_skipped_never_omitted ... ok
+test report::json::tests::the_counts_demote_speculative_numerically ... ok
+test report::json::tests::the_frozen_0_4_0_schema_is_still_the_file_this_build_was_tested_against ... ok
+test report::json::tests::the_schema_index_attests_every_published_contract_file ... ok
+test report::sarif::tests::a_colon_cannot_turn_a_relative_uri_into_a_scheme ... ok
+test report::sarif::tests::a_non_speculative_error_keeps_error_level_and_carries_no_suffix ... ok
+test report::json::tests::a_frozen_0_4_0_report_still_satisfies_the_frozen_schema ... ok
+test report::sarif::tests::a_speculative_finding_is_demoted_to_note_even_when_its_severity_is_error ... ok
+test php::tests::bounded_cfg_records_exhaustion ... ok
+test report::sarif::tests::an_already_relative_path_is_unchanged_by_a_dot_root ... ok
+test report::sarif::tests::counter_condition_is_omitted_from_properties_when_absent ... ok
+test report::sarif::tests::descriptor_names_are_derived_from_the_rule_id ... ok
+test report::sarif::tests::invocations_remains_present_when_nothing_was_skipped ... ok
+test report::sarif::tests::matches_the_golden_sarif_output ... ok
+test report::sarif::tests::a_transcoded_file_omits_artifact_byte_offsets ... ok
+test report::sarif::tests::rule_index_points_at_the_matching_driver_rule ... ok
+test report::sarif::tests::scanning_a_single_file_names_that_file_rather_than_nothing ... ok
+test report::sarif::tests::a_normalised_uri_still_validates_against_the_bundled_schema ... ok
+test report::sarif::tests::strict_policy_failure_does_not_claim_the_completed_scan_failed_to_execute ... ok
+test report::sarif::tests::the_uri_does_not_depend_on_how_the_scan_root_was_spelled ... ok
+test report::sarif::tests::output_validates_against_the_sarif_210_schema ... ok
+test report::sarif::tests::uri_segments_are_percent_escaped_but_separators_are_not ... ok
+test report::validate::tests::every_frozen_version_has_its_own_schema ... ok
+test report::sarif::tests::skipped_paths_are_visible_in_sarif_invocation_notifications ... ok
+test source::tests::a_directory_named_corpus_is_not_silently_hidden ... ok
+test report::validate::tests::published_json_schema_accepts_native_report_and_rejects_tier_promotion ... ok
+test source::tests::a_nonexistent_root_is_an_error_not_an_empty_scan ... ok
+test source::tests::a_single_file_root_is_scannable ... ok
+test source::tests::a_skip_names_its_path_through_the_wrappers_a_walk_actually_produces ... ok
+test source::tests::an_unreadable_root_is_an_error_even_though_an_unreadable_subdirectory_is_not ... ok
+test source::tests::read_applies_the_latin1_fallback_for_non_utf8_bytes ... ok
+test source::tests::an_unreadable_subdirectory_is_skipped_and_the_rest_of_the_tree_still_enumerates ... ok
+test source::tests::reading_a_file_that_vanished_after_discovery_is_an_error_not_a_panic ... ok
+test source::tests::skips_configured_directories ... ok
+test source::tests::unknown_extensions_are_skipped ... ok
+test suppress::tests::a_preceding_comment_can_allow_a_rule_but_a_string_cannot ... ok
+test verdict::tests::a_published_level_is_appendix_e_pinned ... ok
+test verdict::tests::corroboration_fields_match_the_implementation ... ok
+test verdict::tests::a_speculative_cell_weighs_nothing_at_any_severity ... ok
+test verdict::tests::every_severity_and_class_pair_appears_exactly_once ... ok
+test verdict::tests::the_published_matrix_matches_the_code ... ok
+test verdict::tests::the_tier_and_class_columns_are_inverses ... ok
+test verdict::tests::the_two_ordinal_scales_stay_distinct ... ok
+test verdict::tests::speculative_stays_visible_in_sarif_even_though_it_weighs_nothing ... ok
+test report::sarif::tests::the_validator_rejects_a_corrupted_sarif_field ... ok
+test cfg::tests::more_than_max_locals_makes_a_function_opaque ... ok
+
+test result: ok. 141 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.42s
+
+     Running tests/parser_adversarial.rs (target/debug/deps/parser_adversarial-64c4348018fae0a2)
+
+running 2 tests
+test deep_ast_is_rejected_before_recursive_rules ... ok
+test fixed_seed_parser_mutations ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.87s
+
+     Running tests/smoke.rs (target/debug/deps/smoke-d8263c21793bece0)
+
+running 5 tests
+test javascript_grammar_loads_and_queries ... ok
+test python_grammar_loads_and_queries ... ok
+test tsx_grammar_loads_and_queries ... ok
+test rust_grammar_loads_and_queries ... ok
+test typescript_grammar_loads_and_queries ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running unittests src/lib.rs (target/debug/deps/pons_protocols-96bfce988b20267b)
+
+running 11 tests
+test policy::tests::all_writes_exact_tables_empty_allowlist_and_hybrid ... ok
+test policy::tests::prepared_statements_keep_policy_across_bind_and_execute ... ok
+test stream::tests::malformed_and_truncated_never_pass ... ok
+test tests::legacy_schema_cannot_enable_strict_transition_semantics ... ok
+test tests::instances_are_independent ... ok
+test tests::linear_egg_is_consumed_once ... ok
+test stream::tests::every_fragmentation_and_coalescing_has_same_frames ... ok
+test wharf::tests::complete_and_rollback_traces_are_accepted ... ok
+test wharf::tests::replay_expiry_and_cross_session_fail ... ok
+test wharf::tests::denied_transition_matrix ... ok
+test tests::malformed_and_ambiguous_contracts_fail ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/portfolio_models.rs (target/debug/deps/portfolio_models-2c051257ee52ee1a)
+
+running 1 test
+test portfolio_protocols_have_positive_corrected_and_safe_traces ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/pons_rules-c48f85423a14efc7)
+
+running 68 tests
+test t0::constant_condition::tests::does_not_fire_on_python_variable_condition ... ok
+test t0::constant_condition::tests::does_not_fire_on_python_while_true ... ok
+test t0::constant_condition::tests::does_not_fire_on_js_while_true ... ok
+test t0::constant_condition::tests::does_not_fire_on_rust_while_true ... ok
+test t0::constant_condition::tests::fires_on_js_if_false ... ok
+test t0::constant_condition::tests::fires_on_python_if_true ... ok
+test t0::div_by_literal_zero::tests::does_not_recognise_nonzero_literals ... ok
+test t0::div_by_literal_zero::tests::recognises_zero_in_every_literal_shape ... ok
+test t0::constant_condition::tests::fires_on_python_while_false ... ok
+test t0::empty_effect_loop::tests::does_not_fire_on_js_loop_with_effect ... ok
+test t0::empty_effect_loop::tests::does_not_fire_on_rust_loop_with_effect ... ok
+test t0::constant_condition::tests::fires_on_rust_if_true ... ok
+test t0::empty_effect_loop::tests::does_not_fire_on_python_loop_with_effect ... ok
+test t0::empty_effect_loop::tests::fires_on_js_empty_while ... ok
+test t0::empty_effect_loop::tests::fires_on_python_for_pass ... ok
+test t0::empty_effect_loop::tests::fires_on_python_while_pass ... ok
+test t0::empty_effect_loop::tests::fires_on_rust_empty_loop ... ok
+test t0::empty_effect_loop::tests::overlaps_while_true_no_break_on_empty_infinite_loop ... ok
+test t0::self_assignment::tests::does_not_fire_on_python_attribute_self_assign ... ok
+test t0::self_assignment::tests::does_not_fire_on_python_different_names ... ok
+test t0::self_assignment::tests::fires_on_js_self_assign ... ok
+test t0::self_assignment::tests::fires_on_python_self_assign ... ok
+test t0::self_assignment::tests::does_not_fire_on_rust_let_shadow ... ok
+test t0::self_assignment::tests::fires_on_rust_self_assign ... ok
+test t0::string_concat_in_loop::tests::does_not_fire_across_a_nested_function_boundary ... ok
+test t0::string_concat_in_loop::tests::does_not_fire_on_js_numeric_accumulation ... ok
+test registry::tests::registry_registers_the_catalogue_in_order_as_it_lands ... ok
+test t0::string_concat_in_loop::tests::does_not_fire_on_numeric_target_with_identifier_addend ... ok
+test t0::string_concat_in_loop::tests::does_not_fire_on_python_concat_outside_loop ... ok
+test t0::string_concat_in_loop::tests::does_not_fire_on_python_numeric_accumulation ... ok
+test t0::string_concat_in_loop::tests::fires_on_js_augmented_string_concat_in_for_of_loop ... ok
+test t0::string_concat_in_loop::tests::fires_on_python_augmented_concat_of_identifier_onto_string_typed_target ... ok
+test t0::swallowed_error::tests::does_not_fire_on_js_catch_that_handles_the_error ... ok
+test t0::string_concat_in_loop::tests::fires_on_python_self_referential_concat_in_while_loop ... ok
+test t0::string_concat_in_loop::tests::fires_on_python_augmented_string_concat_in_for_loop ... ok
+test t0::swallowed_error::tests::does_not_fire_on_js_catch_with_comment ... ok
+test t0::swallowed_error::tests::does_not_fire_on_python_except_pass_with_comment ... ok
+test t0::string_concat_in_loop::tests::fires_on_typescript_self_referential_concat_in_while_loop ... ok
+test t0::swallowed_error::tests::fires_on_js_empty_catch ... ok
+test t0::swallowed_error::tests::fires_on_python_except_pass ... ok
+test t0::unreachable_after_jump::tests::does_not_fire_on_js_code_in_separate_block ... ok
+test t0::unreachable_after_jump::tests::does_not_fire_on_python_return_at_block_end ... ok
+test t0::unreachable_after_jump::tests::does_not_fire_on_rust_return_as_tail_expression ... ok
+test t0::unreachable_after_jump::tests::fires_on_js_code_after_break ... ok
+test t0::while_true_no_break::tests::does_not_fire_on_js_while_true_with_throw ... ok
+test t0::while_true_no_break::tests::does_not_fire_on_python_while_true_with_break ... ok
+test t0::while_true_no_break::tests::does_not_fire_on_python_while_true_with_nested_def_break ... ok
+test t0::unreachable_after_jump::tests::fires_on_python_code_after_return ... ok
+test t0::unreachable_after_jump::tests::fires_on_rust_code_after_return ... ok
+test t0::while_true_no_break::tests::does_not_fire_on_rust_loop_with_break ... ok
+test t0::while_true_no_break::tests::does_not_fire_on_rust_while_false ... ok
+test t0::while_true_no_break::tests::fires_on_js_while_true_no_break ... ok
+test t0::while_true_no_break::tests::fires_on_python_while_true_no_break ... ok
+test t1::dead_store::tests::a_dead_store_of_a_call_is_info_with_the_adr_counter_condition ... ok
+test t1::dead_store::tests::a_function_calling_exec_produces_no_finding_and_its_twin_does ... ok
+test t1::dead_store::tests::a_plain_dead_store_is_warn_with_no_counter_condition ... ok
+test t1::dead_store::tests::an_underscore_target_is_suppressed_and_its_twin_is_not ... ok
+test t1::dead_store::tests::module_level_code_is_not_a_unit ... ok
+test t1::read_before_init::tests::a_correlated_guard_read_is_pruned_but_a_mismatched_guard_is_not ... ok
+test t1::read_before_init::tests::a_function_calling_exec_produces_no_finding_and_its_twin_does ... ok
+test t1::read_before_init::tests::a_global_name_is_never_checked ... ok
+test t1::read_before_init::tests::a_mutation_between_identical_guards_disables_pruning ... ok
+test t1::read_before_init::tests::a_read_after_an_else_less_if_is_warn_and_the_two_armed_twin_is_clean ... ok
+test t0::while_true_no_break::tests::fires_on_rust_loop_no_break ... ok
+test t1::read_before_init::tests::augmented_assignment_with_no_binding_is_a_genuine_read ... ok
+test t0::while_true_no_break::tests::fires_on_rust_while_true_no_break ... ok
+test tests::catalogue_lists_every_registered_rule_in_registry_order ... ok
+test t0::unreachable_after_jump::tests::php_jump_candidates_stay_in_their_block ... ok
+
+test result: ok. 68 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.30s
+
+     Running tests/falsifier.rs (target/debug/deps/falsifier-8fcf214975e91eb8)
+
+running 1 test
+test every_rule_is_proven_by_its_own_fixture_corpus ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.66s
+
+   Doc-tests pons_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests pons_protocols
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests pons_rules
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
