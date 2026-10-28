@@ -1,4 +1,0 @@
-fmt exit: 1
-clippy exit: 0
-test exit: 0
-e2e exit: 0
