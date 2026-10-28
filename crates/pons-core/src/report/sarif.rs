@@ -11,7 +11,6 @@ use serde::Serialize;
 
 use crate::engine::ScanReport;
 use crate::finding::{EvidenceClass, Finding, Tier};
-use crate::report::SPECULATIVE_SUFFIX;
 
 const SARIF_SCHEMA: &str = "https://json.schemastore.org/sarif-2.1.0.json";
 const INFORMATION_URI: &str = "https://github.com/hyperpolymath/pons-asinorum";
@@ -165,11 +164,13 @@ fn descriptor_name(id: &str) -> String {
 }
 
 fn message_text(f: &Finding) -> String {
-    if f.evidence() == EvidenceClass::Speculative {
-        format!("{}{}", f.message(), SPECULATIVE_SUFFIX)
-    } else {
-        f.message().to_string()
-    }
+    // The suffix is the published `demotion_suffix`, not a copy of it: a second
+    // literal here could drift from what the matrix promises.
+    format!(
+        "{}{}",
+        f.message(),
+        crate::verdict::demotion_suffix(f.evidence())
+    )
 }
 
 #[derive(Serialize)]
@@ -790,7 +791,9 @@ mod tests {
         assert_eq!(spec.severity(), Severity::Error);
         assert_eq!(level_of(spec), "note");
         assert_eq!(rank_of(spec.evidence()), 20.0);
-        assert!(message_text(spec).ends_with(SPECULATIVE_SUFFIX));
+        assert!(message_text(spec).ends_with(crate::verdict::demotion_suffix(
+            spec.evidence()
+        )));
     }
 
     #[test]

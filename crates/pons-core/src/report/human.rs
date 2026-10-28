@@ -3,8 +3,7 @@
 use std::fmt::Write as _;
 
 use crate::engine::ScanReport;
-use crate::finding::{EvidenceClass, Finding, Severity};
-use crate::report::SPECULATIVE_SUFFIX;
+use crate::finding::{Finding, Severity};
 
 /// Deterministic, colour-free rendering of findings for terminal/CI output.
 pub fn render(findings: &[Finding]) -> String {
@@ -31,10 +30,13 @@ pub fn render_report(report: &ScanReport, explain: bool) -> String {
     // guess visually; this line stops it being added to the count a reader
     // takes away, which is the same distinction the JSON envelope publishes as
     // counts.actionable / counts.demoted_speculative.
+    // The predicate and the text both come from verdict.rs, which is where the
+    // published matrix gets them: a local `== Speculative` test here would be a
+    // second source of truth the matrix drift test cannot see.
     let speculative = report
         .findings
         .iter()
-        .filter(|f| f.evidence() == EvidenceClass::Speculative)
+        .filter(|f| !crate::verdict::counts_toward_verdict(f.evidence()))
         .count();
     let _ = writeln!(
         out,
@@ -79,11 +81,7 @@ fn render_one(f: &Finding, out: &mut String, explain: bool) {
         Severity::Error => "ERROR",
     };
 
-    let suffix = if f.evidence() == EvidenceClass::Speculative {
-        SPECULATIVE_SUFFIX
-    } else {
-        ""
-    };
+    let suffix = crate::verdict::demotion_suffix(f.evidence());
 
     let loc = f.location();
     let _ = writeln!(

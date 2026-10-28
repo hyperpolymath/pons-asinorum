@@ -41,7 +41,8 @@ use crate::finding::{EvidenceClass, Finding, Location, Severity, Tier};
 /// 0.4.0 does not disappear. It is **frozen**: `schemas/scan-0.4.0.json` is
 /// byte-pinned by [`FROZEN_0_4_0_SCHEMA_BLAKE3`] and by `schemas/index.json`,
 /// `validate-report` still accepts a 0.4.0 report against that schema, and
-/// `a_frozen_0_4_0_report_still_validates` in `pons-cli` proves it. A frozen
+/// `a_report_pinned_at_the_frozen_0_4_0_version_still_validates` in
+/// `pons-cli/tests/contracts.rs` proves it. A frozen
 /// version is never edited and never re-issued; a change is a new file.
 ///
 /// Not to be confused with the `schema_version` in a protocol TOML

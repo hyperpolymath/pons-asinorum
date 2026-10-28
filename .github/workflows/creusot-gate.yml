@@ -6,6 +6,23 @@ name: Creusot Gate
 # steps of its own, exactly like main-estate-audit.yml — a copy would freeze
 # this repository at whatever cicd-suite commit it happened to hold.
 #
+# Why this file exists at all: the estate audit's own `languages` job runs the
+# Idris2, Zig, proof-runner and BoJ checks, not this one, so before this file
+# nothing in this repository watched for a Creusot claim. The gate's checks are
+# therefore new coverage here, not a duplicate of the audit's.
+#
+# KNOWN LIMIT OF THE PINNED GATE (reviewed, upstream fix required): the pinned
+# script recognises a Creusot dependency by its literal `creusot-std` /
+# `creusot-contracts` key. A crate that renames the dependency
+# (`creusot = { package = "creusot-std" }`) and writes contracts would set
+# `obligations=true` while leaving the selected-crate list empty, so the proof
+# loop could run over nothing and still exit green. That is a gap in the gate,
+# not a pass for this tree, and it cannot be fixed from here without copying
+# the gate (which is what this repository refuses to do). It is recorded so the
+# first aliased dependency arrives with someone looking; the honest fix is a
+# cicd-suite release that resolves the alias and rejects an empty crate list
+# when obligations exist.
+#
 # WHAT THIS GATE DOES, AND WHAT IT DOES NOT CLAIM
 # -----------------------------------------------
 # Three phases, run by the reusable:

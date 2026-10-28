@@ -17,10 +17,11 @@ for the operator-facing distinction and bounded next steps.
 
 == The Rust deductive-verification lane (Creusot)
 
-The estate runs its Creusot gate over this tree, and this repository now calls
-it as its own check (`.github/workflows/creusot-gate.yml`, the same cicd-suite
-pin as the estate audit) rather than only inheriting it from the audit's
-`languages` component.
+This repository now calls the estate's Creusot gate as its own check
+(`.github/workflows/creusot-gate.yml`), at the same cicd-suite pin the estate
+audit uses. Before this, the gate was not run here at all: the pinned estate
+audit's `languages` job runs the Idris2, Zig, proof-runner and BoJ checks, not
+the Creusot one, so nothing was watching for a Creusot claim in this tree.
 
 Measured on this tree with the gate's own `detect` and `theatre` phases
 (2026-10-28): `obligations=false claims=false contract_count=0

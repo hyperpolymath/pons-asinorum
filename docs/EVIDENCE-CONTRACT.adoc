@@ -13,7 +13,10 @@ state as well as package version. Git provenance is observational, not signed.
 
 Each record includes producer, correlation group, rule, root-relative path,
 line, tier, evidence class, qualitative confidence, trace, assumptions,
-counterconditions and unknown edges.
+counterconditions and unknown edges. Pons-native T0 records share an AST
+heuristic correlation group. Agreement with panic-attack or Sanctify must not be
+counted as independent proof merely because producer names differ: shared
+rules, models, parser sources and fixtures can correlate their evidence.
 
 == Versions, and what "frozen" means
 
@@ -123,10 +126,7 @@ The document is generated from `crates/pons-core/src/verdict.rs`, which is also
 where the SARIF reporter, the SARIF rank table, the confidence labels and
 `--fail-on` get their values; `the_published_matrix_matches_the_code` fails if
 the committed file and the code disagree.
- Pons-native T0 records share an AST
-heuristic correlation group. Agreement with panic-attack or Sanctify must not
-be counted as independent proof merely because producer names differ: shared
-rules, models, parser sources and fixtures can correlate their evidence.
+
 
 Fingerprints use BLAKE3 over rule ID, root-relative path and a whitespace-folded
 source anchor plus occurrence ordinal. Checkout relocation and added blank
