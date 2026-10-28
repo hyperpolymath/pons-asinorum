@@ -56,13 +56,13 @@ fn validator_for_version(version: &str) -> Option<&'static jsonschema::Validator
     }
     // One frozen generation so far. A second one adds its own schema file and
     // its own OnceLock here; the dispatch stays explicit on purpose.
-    if super::json::FROZEN_SCHEMA_VERSIONS.contains(&version) {
-        return Some(
+    match version {
+        "0.4.0" => Some(
             FROZEN_0_4_0
                 .get_or_init(|| compiled(include_str!("../../../../schemas/scan-0.4.0.json"))),
-        );
+        ),
+        _ => None,
     }
-    None
 }
 
 /// Validate a report against its declared schema and check its accounting,

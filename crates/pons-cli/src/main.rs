@@ -8,7 +8,7 @@ use anyhow::{bail, Context, Result};
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use pons_core::config::Config;
 use pons_core::engine::{Engine, ScanReport};
-use pons_core::finding::EvidenceClass;
+use pons_core::finding::{EvidenceClass, Severity};
 use pons_core::lang::Lang;
 use pons_core::report::{human, json, sarif};
 use pons_core::source::DiscoveredFile;
@@ -93,11 +93,11 @@ enum FailOn {
 }
 
 impl FailOn {
-    fn rank(self) -> u8 {
+    fn severity(self) -> Severity {
         match self {
-            FailOn::Info => 0,
-            FailOn::Warn => 1,
-            FailOn::Error => 2,
+            FailOn::Info => Severity::Info,
+            FailOn::Warn => Severity::Warn,
+            FailOn::Error => Severity::Error,
         }
     }
 }
@@ -445,11 +445,12 @@ fn run_scan(
         || (fail_on_skips && !report.skipped.is_empty());
     let finding_threshold = fail_on.is_some_and(|threshold| {
         report.findings.iter().any(|f| {
-            f.evidence() != EvidenceClass::Speculative
+            pons_core::verdict::counts_toward_verdict(f.evidence())
                 // One rank table, shared with the published verdict matrix
                 // (schemas/verdict-matrix-1.0.0.json), so a consumer reading
                 // the data and the binary get the same gate.
-                && pons_core::verdict::fail_on_rank(f.severity()) >= threshold.rank()
+                && pons_core::verdict::fail_on_rank(f.severity())
+                    >= pons_core::verdict::fail_on_rank(threshold.severity())
         })
     });
     report.exit_code = Some(if coverage_failed {
