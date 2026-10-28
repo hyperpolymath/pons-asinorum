@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
-= Exchange contract 1.0.0 / scan envelope 0.4.0
+= Scan envelope 0.5.0 (0.4.0 frozen) / exchange contract 1.0.0
 
 `evidence_contract` carries the observed target Git commit (null outside Git),
 execution outcome, native parser inventory and independently identifiable
@@ -13,7 +13,107 @@ state as well as package version. Git provenance is observational, not signed.
 
 Each record includes producer, correlation group, rule, root-relative path,
 line, tier, evidence class, qualitative confidence, trace, assumptions,
-counterconditions and unknown edges. Pons-native T0 records share an AST
+counterconditions and unknown edges.
+
+== Versions, and what "frozen" means
+
+`schemas/index.json` is the machine-readable inventory: per artifact, its
+version, file, whether that version is `frozen` or `current`, and the BLAKE3
+digest of the bytes Pons was tested against. Three rules hold it together:
+
+* A **frozen** version is never edited and never re-issued. `scan-0.4.0.json` is
+  byte-pinned by `FROZEN_0_4_0_SCHEMA_BLAKE3` in
+  `crates/pons-core/src/report/json.rs`, so an edit fails a test rather than
+  changing what a pinned consumer reads.
+* A change is a **new version in a new file**, listed beside the frozen ones.
+* `pons validate-report` accepts every frozen version as well as the current one,
+  and the version declared *inside the document* selects the schema it is
+  validated against. A 0.4.0 declaration carrying a 0.5.0 key is rejected, and a
+  report pinned at 0.4.0 still validates.
+
+`0.5.0` is the envelope emitted by this build. Against `0.4.0` it adds three
+keys, all appended and all additive — no key was renamed, moved or retyped:
+
+[cols="1,2",options="header"]
+|===
+|Key |Why it exists
+
+|`findings[].semantic_fingerprint`
+|The cross-producer corroboration key. A verdict grid can mark one site once
+instead of adding Pons's finding to panic-attack's or Hypatia's at the same line.
+
+|`counts.actionable`
+|`counts.total` minus the demoted count: the number an aggregating consumer
+sums. Published rather than left to subtraction, so the demotion is a number in
+the document rather than a convention a consumer might miss.
+
+|`counts.demoted_speculative`
+|How many findings are demoted as guesses. Equal to `by_evidence.SPECULATIVE`,
+published twice on purpose: a consumer reading only the aggregate must see it.
+`validate-report` rejects a document whose `actionable + demoted_speculative`
+does not account for `counts.total`, or whose demoted count disagrees with
+`by_evidence`.
+|===
+
+== Corroborating a Pons finding against another producer
+
+Each finding carries `semantic_fingerprint`: 64 lowercase hexadecimal characters,
+BLAKE3 over
+
+....
+pons-corroboration-v1 NUL root-relative-path NUL 1-based-start-line NUL evidence-class
+....
+
+with NUL (`0x00`) as the field separator and the evidence class spelled exactly
+as the envelope spells it (`HEURISTIC`, `DATAFLOW`, `PROTOCOL`, `SPECULATIVE`).
+The path is the same root-relative, `/`-separated spelling records use, so a key
+survives a checkout move. A consumer can mint the same key for a foreign
+producer's finding without running Pons; `schemas/verdict-matrix-1.0.0.json`
+publishes the recipe and the token that identifies it.
+
+What the key is for, and what it is not:
+
+* Same key means **same path, same line, same evidence class** — a site, not a
+  defect. Two Pons rules firing on one line in one class share a key by design,
+  and so do two producers. The grid counts that site once and keeps both
+  findings' provenance.
+* It deliberately **ignores the rule id, the producer and the severity**, so it
+  stays stable when a rule's severity is tuned. Severity is advisory; the
+  evidence class is the honesty invariant.
+* It is **not** the record fingerprint. `evidence_contract.records[].fingerprint`
+  identifies one finding (rule id plus a whitespace-folded anchor) and survives
+  blank-line insertion; this key identifies one site and survives a rule rename.
+  Both are identifiers, neither is a semantic-equivalence proof.
+* A `SPECULATIVE` key **corroborates nothing**. Agreement between two guesses is
+  two guesses; the demoted bucket is excluded from every verdict.
+* Agreement is corroboration, not independent proof. Shared rules, models,
+  parser sources and fixtures correlate evidence across producers, and
+  `validate-report` cannot detect that — only the consumer, holding both
+  provenance records, can.
+
+== Severity × evidence, published as data
+
+`schemas/verdict-matrix-1.0.0.json` states, for all twelve
+(severity, evidence class) pairs, what an aggregating consumer must do with a
+finding:
+
+* `aggregate_weight` — `severity weight (INFO 1, WARN 2, ERROR 3) × evidence
+  weight (HEURISTIC 50, DATAFLOW 80, PROTOCOL 70, SPECULATIVE 0)`. **Zero for
+  every speculative cell**, whatever severity the finding claims: a guess adds
+  nothing to a sum.
+* `sarif_level`, `counts_toward_verdict`, `gate_eligible`, `count_bucket`
+  (`actionable` or `demoted`) and `demotion_suffix`.
+
+`sarif_rank` (50/80/70/20) is also published and is a *different number* from
+the weight: it is how much attention Appendix E's `rank` asks a viewer to pay,
+and speculative findings keep their 20 so they stay visible. Visible, not
+counted — collapsing the two would either hide guesses or inflate totals.
+
+The document is generated from `crates/pons-core/src/verdict.rs`, which is also
+where the SARIF reporter, the SARIF rank table, the confidence labels and
+`--fail-on` get their values; `the_published_matrix_matches_the_code` fails if
+the committed file and the code disagree.
+ Pons-native T0 records share an AST
 heuristic correlation group. Agreement with panic-attack or Sanctify must not
 be counted as independent proof merely because producer names differ: shared
 rules, models, parser sources and fixtures can correlate their evidence.

@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0.0",
+  "producer": "pons",
+  "policy": "A frozen version is never edited and never re-issued: its file stays byte-identical and its blake3 digest is pinned here and in the crate's tests. A change is a new version with a new file, listed alongside the frozen ones, so a consumer at a pin can read the version it needs and verify it holds the bytes pons was tested against.",
+  "artifacts": [
+    {
+      "id": "scan-envelope",
+      "version": "0.4.0",
+      "file": "scan-0.4.0.json",
+      "kind": "json-schema",
+      "status": "frozen",
+      "blake3": "bdef6c68691ffa0681b56d86adc31450e8c625d7ce5884090efe6fbc8fc46562",
+      "note": "Still accepted by `pons validate-report`; never emitted by this build."
+    },
+    {
+      "id": "scan-envelope",
+      "version": "0.5.0",
+      "file": "scan-0.5.0.json",
+      "kind": "json-schema",
+      "status": "current",
+      "blake3": "43e76fb7339b36ba5cdea1ac9b7e48b5fdd15c50b4a4b4f7ff78c5a06f5cdfb5",
+      "note": "The envelope `pons scan --format json` emits."
+    },
+    {
+      "id": "evidence-contract",
+      "version": "1.0.0",
+      "file": "evidence-1.0.0.json",
+      "kind": "json-schema",
+      "status": "current",
+      "blake3": "0dd397f09a31884614ad0e1727b4af595013aadb672701be1ff485810aa55fd8",
+      "note": "The `evidence_contract` object nested in every scan envelope."
+    },
+    {
+      "id": "verdict-matrix",
+      "version": "1.0.0",
+      "file": "verdict-matrix-1.0.0.json",
+      "kind": "contract-data",
+      "status": "current",
+      "blake3": "14f8e7d4ca897ec586d4d4f6c8fded34ce540b9312bdd0a5e5b77813f7d55db8",
+      "note": "Severity x evidence dispositions, the demoted-count fields and the corroboration key recipe. Generated from crates/pons-core/src/verdict.rs."
+    }
+  ]
+}

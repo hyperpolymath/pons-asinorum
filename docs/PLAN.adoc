@@ -233,6 +233,20 @@ mixed fixture directory (Python + JS/TS + Rust). All boxes green ⇒ tag
 * A rule that fires on its own negative corpus is *demoted* (tier down and/or
   severity down) or removed — never merged as-is (kickoff falsifier discipline).
 
+*Published as data.* Consumers must not re-derive any of this.
+`schemas/verdict-matrix-1.0.0.json` carries the twelve (severity, evidence)
+cells with `sarif_level`, `aggregate_weight`, `counts_toward_verdict`,
+`gate_eligible`, `count_bucket` and `demotion_suffix`, plus the two scales and
+the corroboration-key recipe. It is generated from
+`crates/pons-core/src/verdict.rs` — the same module the SARIF reporter,
+`--fail-on` and the evidence-contract confidence labels read — and a drift test
+fails if the committed file and the code disagree.
+
+Two numbers that look alike are deliberately distinct: `sarif_rank`
+(50/80/70/20) is Appendix E's *attention* rank, and `weight` is what a class
+contributes to an aggregate total, which is **zero** for `SPECULATIVE`. A guess
+stays visible and adds nothing.
+
 == Appendix C — The falsifier gate (CI mechanics)
 
 Implement as a single Rust integration test `tests/falsifier.rs` (plus a
@@ -385,16 +399,22 @@ unless `--lang` forces one.
 [source,json]
 ----
 {
-  "schema_version": "0.3.0",
-  "tool": { "name": "pons", "version": "<cargo pkg version>" },
+  "schema_version": "0.5.0",
+  "tool": { "name": "pons", "version": "<cargo pkg version>",
+            "source_commit": "<build-time commit>", "source_dirty": "true|false|unknown" },
+  "execution": { "status": "completed", "exit_code": 0 },
   "scanned": { "root": "<root exactly as given on the command line>",
+               "coverage_status": "complete-within-policy",
+               "inventory": [], "coverage_failures": [],
                "files": 123, "suppressed_findings": 2,
                "languages": ["python","rust"], "transcoded": [],
                "skipped": [ { "path": "app/broken.py",
                               "reason": "could not read: No such file or directory (os error 2)" } ] },
   "counts": { "by_evidence": { "HEURISTIC": 4, "DATAFLOW": 2,
                                "PROTOCOL": 1, "SPECULATIVE": 3 },
-              "total": 10 },
+              "total": 10,
+              "actionable": 7,
+              "demoted_speculative": 3 },
   "findings": [
     {
       "rule_id": "dead-store",
@@ -407,15 +427,22 @@ unless `--lang` forces one.
                     "line_end": 41, "col_end": 12 },
       "message": "value assigned to `total` is never read before it is overwritten",
       "evidence_note": "live-variable analysis: `total` not in LiveOut after this store",
-      "counter_condition": null
+      "counter_condition": null,
+      "semantic_fingerprint": "<64 lowercase hex: blake3 of scheme, path, line, evidence class>"
     }
-  ]
+  ],
+  "evidence_contract": { "schema_version": "1.0.0", "...": "see EVIDENCE-CONTRACT.adoc" }
 }
 ----
 
 Field order stable (golden-file tested). `counter_condition` is `null` when
-absent, never omitted. This envelope is compatible in shape with panic-attack's
-JSON habit (`schema_version` + typed arrays), easing the ADR-0004 records sink.
+absent, never omitted. `semantic_fingerprint` is appended *after*
+`counter_condition`: the first eight keys of a 0.5.0 finding are exactly the
+0.4.0 keys, in 0.4.0's order, so a reader written against 0.4.0 reads a complete
+finding before it meets the new key. `evidence_contract` is abbreviated above;
+the keys it must carry are in `schemas/evidence-1.0.0.json`, unchanged by this
+bump. This envelope is compatible in shape with panic-attack's JSON habit
+(`schema_version` + typed arrays), easing the ADR-0004 records sink.
 
 `scanned.skipped` names every part of the tree that was found but not analysed:
 a subdirectory the walker could not enumerate, a file that could not be read, a
@@ -443,6 +470,21 @@ is version-visible from its first release.
 It moved `0.2.0 -> 0.3.0` when `scanned.suppressed_findings` and
 `scanned.transcoded` were added, making filtration and encoding uncertainty
 visible to consumers. Purely additive, but version-visible for the same reason.
+It moved `0.3.0 -> 0.4.0` for the coverage inventory, execution outcome and
+nested evidence contract.
+It moved `0.4.0 -> 0.5.0` when `findings[].semantic_fingerprint`,
+`counts.actionable` and `counts.demoted_speculative` were appended — the three
+things an aggregating verdict grid needs and cannot derive. Additive in both
+directions: a 0.4.0-shaped reading of a 0.5.0 document still works, and the
+bump is still taken, because a consumer must be able to tell whether a report
+carries the corroboration key at all.
+
+`0.4.0` is **frozen**, not superseded-in-place: `schemas/scan-0.4.0.json` is
+byte-pinned (a test recomputes its digest), `pons validate-report` still accepts
+a 0.4.0 report against that schema, and the version declared inside the document
+selects the schema — so a 0.4.0 declaration cannot carry a 0.5.0 key.
+`schemas/index.json` lists every published version, its file and its digest;
+`schemas/README.adoc` states the freeze rule and how to add a version.
 
 A version constant that nothing checks is a comment, not a contract, so the key
 set above is asserted against `SCHEMA_VERSION` by
@@ -457,7 +499,8 @@ the whole suite passing at an unchanged `schema_version`.
 The PHP/WordPress upgrade authorises the implementation and explicit limits in
 COVERAGE-MIGRATION.adoc, PHP-ADAPTER.adoc, PROTOCOL-MODELS.adoc and
 EVIDENCE-CONTRACT.adoc. These supersede older envelope/exit/suppression wording:
-scan schema is 0.4.0; no-applicable-input exits 2; native PHP is a bounded adapter;
+scan schema is 0.5.0 with 0.4.0 frozen; no-applicable-input exits 2; native PHP
+is a bounded adapter;
 unsupported languages are accounted for; source-derived universal protocol
 verification remains unimplemented. Measured evidence is kept separately from
 these design commitments. No release tag or claim of completion of the entire

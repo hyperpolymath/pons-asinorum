@@ -25,6 +25,21 @@ pub fn render_report(report: &ScanReport, explain: bool) -> String {
         report.skipped.len(),
         report.transcoded.len()
     );
+    // The numeric half of the demotion. The per-finding suffix above demotes a
+    // guess visually; this line stops it being added to the count a reader
+    // takes away, which is the same distinction the JSON envelope publishes as
+    // counts.actionable / counts.demoted_speculative.
+    let speculative = report
+        .findings
+        .iter()
+        .filter(|f| f.evidence() == EvidenceClass::Speculative)
+        .count();
+    let _ = writeln!(
+        out,
+        "verdict: {} actionable finding(s); {} speculative demoted, not counted",
+        report.findings.len() - speculative,
+        speculative
+    );
     let _ = writeln!(out, "coverage: {}", report.coverage_status());
     for failure in &report.coverage_failures {
         let _ = writeln!(out, "coverage failure: {failure}");
@@ -165,6 +180,17 @@ mod golden_tests {
             "report.txt",
             &out,
             include_str!("../../tests/golden/report.txt"),
+        );
+    }
+
+    #[test]
+    fn the_summary_demotes_speculative_numerically() {
+        // The shared fixture carries one SPECULATIVE finding of four.
+        let out = render_report(&fixture::report(), false);
+        assert!(
+            out.contains("verdict: 3 actionable finding(s); 1 speculative demoted, not counted"),
+            "the aggregate line must separate guesses from the count a reader \
+             takes away; got:\n{out}"
         );
     }
 

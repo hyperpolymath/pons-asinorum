@@ -30,6 +30,24 @@ impl From<Tier> for EvidenceClass {
     }
 }
 
+impl EvidenceClass {
+    /// The wire spelling, as it appears in every report.
+    ///
+    /// A method rather than four string literals wherever a class has to be
+    /// named outside serde — the corroboration fingerprint hashes this string,
+    /// so it must be the same spelling the envelope carries. The test below
+    /// compares the two, so a rename in either place fails the build rather
+    /// than silently minting a second vocabulary.
+    pub fn name(self) -> &'static str {
+        match self {
+            EvidenceClass::Heuristic => "HEURISTIC",
+            EvidenceClass::Dataflow => "DATAFLOW",
+            EvidenceClass::Protocol => "PROTOCOL",
+            EvidenceClass::Speculative => "SPECULATIVE",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum Severity {
@@ -400,6 +418,27 @@ mod tests {
             col_start: 1,
             line_end: 1,
             col_end: 2,
+        }
+    }
+
+    #[test]
+    fn name_matches_the_wire_spelling_and_the_tier_edge() {
+        // One spelling, three consumers: serde in the envelope, the
+        // corroboration fingerprint, and the published verdict matrix. This
+        // asserts the method against serde, so a rename in either place fails
+        // here rather than silently minting a second vocabulary.
+        for (class, tier) in [
+            (EvidenceClass::Heuristic, Tier::T0),
+            (EvidenceClass::Dataflow, Tier::T1),
+            (EvidenceClass::Protocol, Tier::T2),
+            (EvidenceClass::Speculative, Tier::T3),
+        ] {
+            assert_eq!(
+                serde_json::to_value(class).unwrap(),
+                serde_json::json!(class.name())
+            );
+            // ...and the tier edge still points the same way.
+            assert_eq!(EvidenceClass::from(tier), class);
         }
     }
 

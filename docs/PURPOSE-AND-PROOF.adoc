@@ -50,7 +50,13 @@ describes its scope; this repository does not audit its advertised guarantees.
 The interface is link:EVIDENCE-CONTRACT.adoc[versioned evidence], not a shared
 scanner engine. Preserve producer, rule, parser and target versions, premises,
 correlation group and execution outcome. Agreement between correlated analyses
-is corroboration, not independent proof. Consumer integrations remain unfinished.
+is corroboration, not independent proof. When two producers agree, the agreement
+is expressed by a published key rather than by a merged count: pons emits
+`findings[].semantic_fingerprint` (root-relative path, line, evidence class), the
+same recipe is published in `schemas/verdict-matrix-1.0.0.json`, and a site both
+producers name is counted once. A `SPECULATIVE` key corroborates nothing, and a
+corroborated finding is still corroboration — the consumer keeps both producers'
+provenance. Consumer integrations remain unfinished.
 
 == How far the solver and proof work has got
 

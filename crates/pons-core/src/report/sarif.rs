@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::Serialize;
 
 use crate::engine::ScanReport;
-use crate::finding::{EvidenceClass, Finding, Severity, Tier};
+use crate::finding::{EvidenceClass, Finding, Tier};
 use crate::report::SPECULATIVE_SUFFIX;
 
 const SARIF_SCHEMA: &str = "https://json.schemastore.org/sarif-2.1.0.json";
@@ -130,30 +130,22 @@ fn artifact_uri(file: &str, root: &str) -> String {
 
 /// SARIF severity for a finding.
 ///
-/// The `SPECULATIVE` check comes **first** and unconditionally: Appendix E
-/// requires T3 to render as `"note"` whatever its own severity says. A
-/// speculative finding must never arrive in a code-scanning UI wearing the
-/// colour of a verdict.
+/// Delegates to [`crate::verdict::sarif_level`], which owns the mapping because
+/// the same table is published as data for consumers. That function keeps the
+/// `SPECULATIVE` check **first** and unconditional: Appendix E requires T3 to
+/// render as `"note"` whatever its own severity says. A speculative finding
+/// must never arrive in a code-scanning UI wearing the colour of a verdict.
 fn level_of(f: &Finding) -> &'static str {
-    if f.evidence() == EvidenceClass::Speculative {
-        return "note";
-    }
-    match f.severity() {
-        Severity::Error => "error",
-        Severity::Warn => "warning",
-        Severity::Info => "note",
-    }
+    crate::verdict::sarif_level(f.evidence(), f.severity())
 }
 
 /// Appendix E's fixed rank table: how much attention the evidence class has
-/// earned, independent of severity.
+/// earned, independent of severity. Owned by [`crate::verdict::sarif_rank`] so
+/// the published matrix cannot state a different number than this reporter
+/// emits; note that this rank is *not* an aggregation weight — see
+/// [`crate::verdict::evidence_weight`].
 fn rank_of(evidence: EvidenceClass) -> f64 {
-    match evidence {
-        EvidenceClass::Heuristic => 50.0,
-        EvidenceClass::Dataflow => 80.0,
-        EvidenceClass::Protocol => 70.0,
-        EvidenceClass::Speculative => 20.0,
-    }
+    f64::from(crate::verdict::sarif_rank(evidence))
 }
 
 /// `div-by-literal-zero` -> `DivByLiteralZero`. SARIF wants a readable
@@ -486,6 +478,7 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::finding::Severity;
     use crate::report::{assert_golden, fixture};
 
     /// The SARIF 2.1.0 schema, bundled rather than fetched: a validator that

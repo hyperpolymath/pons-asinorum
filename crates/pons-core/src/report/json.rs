@@ -19,7 +19,7 @@
 use serde::Serialize;
 
 use crate::engine::{ScanReport, SkippedFile};
-use crate::finding::{EvidenceClass, Finding};
+use crate::finding::{EvidenceClass, Finding, Location, Severity, Tier};
 
 /// Version of the envelope itself, not of the tool.
 ///
@@ -30,9 +30,40 @@ use crate::finding::{EvidenceClass, Finding};
 /// start. `envelope_shape_is_pinned_to_the_schema_version` below is what
 /// stops the next change skipping this line silently.
 ///
+/// 0.4.0 -> 0.5.0 added the three keys an aggregating consumer needs and could
+/// not derive: `findings[].semantic_fingerprint` (the cross-producer
+/// corroboration key from [`crate::corroborate`]) and the two demoted-count
+/// fields `counts.actionable` / `counts.demoted_speculative`. All three are
+/// additive and appended, so a 0.4.0-shaped reading of a 0.5.0 document still
+/// works; the bump is still taken, because a consumer must be able to tell
+/// whether a report carries the corroboration key at all.
+///
+/// 0.4.0 does not disappear. It is **frozen**: `schemas/scan-0.4.0.json` is
+/// byte-pinned by [`FROZEN_0_4_0_SCHEMA_BLAKE3`] and by `schemas/index.json`,
+/// `validate-report` still accepts a 0.4.0 report against that schema, and
+/// `a_frozen_0_4_0_report_still_validates` in `pons-cli` proves it. A frozen
+/// version is never edited and never re-issued; a change is a new file.
+///
 /// Not to be confused with the `schema_version` in a protocol TOML
 /// (ADR-0003), which versions a different file entirely.
-pub const SCHEMA_VERSION: &str = "0.4.0";
+pub const SCHEMA_VERSION: &str = "0.5.0";
+
+/// Envelope versions this build will still validate, and only validate.
+///
+/// Pinned consumers keep their old reports; refusing to read them would make
+/// the freeze worthless. Each entry is a schema file on disk, byte-attested by
+/// [`FROZEN_0_4_0_SCHEMA_BLAKE3`] and `schemas/index.json`.
+pub const FROZEN_SCHEMA_VERSIONS: &[&str] = &["0.4.0"];
+
+/// BLAKE3 of `schemas/scan-0.4.0.json`, as committed.
+///
+/// The freeze is a claim about bytes, so it is checked against bytes: editing
+/// the frozen schema — even to "just add a key" — fails
+/// `the_frozen_0_4_0_schema_is_still_the_file_this_build_was_tested_against`.
+/// A 0.4.0 consumer pinned to this repository therefore reads a document that
+/// cannot change underneath it.
+pub const FROZEN_0_4_0_SCHEMA_BLAKE3: &str =
+    "bdef6c68691ffa0681b56d86adc31450e8c625d7ce5884090efe6fbc8fc46562";
 
 #[derive(Serialize)]
 struct Envelope<'a> {
@@ -41,7 +72,7 @@ struct Envelope<'a> {
     execution: Execution,
     scanned: Scanned<'a>,
     counts: Counts,
-    findings: &'a [Finding],
+    findings: Vec<FindingView<'a>>,
     evidence_contract: crate::evidence::Contract<'a>,
 }
 
@@ -81,6 +112,28 @@ struct Scanned<'a> {
 struct Counts {
     by_evidence: ByEvidence,
     total: usize,
+    /// `total` minus the demoted count: the number an aggregating consumer adds
+    /// up. Published rather than left to subtraction so the demotion is a
+    /// number in the document, not a convention a consumer might miss.
+    actionable: usize,
+    /// Findings that are demoted precisely because they are guesses — the
+    /// numeric half of the demotion the human and SARIF reporters apply
+    /// visually. Equal to `by_evidence.SPECULATIVE`, and published twice on
+    /// purpose: a consumer reading only the aggregate must see it.
+    demoted_speculative: usize,
+}
+
+impl Counts {
+    fn tally(findings: &[Finding]) -> Self {
+        let by_evidence = ByEvidence::tally(findings);
+        let demoted = by_evidence.speculative;
+        Counts {
+            by_evidence,
+            total: findings.len(),
+            actionable: findings.len() - demoted,
+            demoted_speculative: demoted,
+        }
+    }
 }
 
 /// A fixed four-field struct rather than a map: every evidence class must
@@ -119,6 +172,43 @@ impl ByEvidence {
     }
 }
 
+/// One finding as the envelope carries it: the finding itself, plus the
+/// corroboration key the verdict grid matches other producers against.
+///
+/// A view rather than a field on [`Finding`] because the key needs the scan
+/// root, which no rule and no engine step knows — the reporter does. Field
+/// order is the contract: the first eight fields are exactly 0.4.0's, in
+/// 0.4.0's order, and `semantic_fingerprint` is appended, so the 0.5.0 finding
+/// really is a 0.4.0 finding plus one key rather than a reshuffle.
+#[derive(Serialize)]
+struct FindingView<'a> {
+    rule_id: &'a str,
+    tier: Tier,
+    evidence: EvidenceClass,
+    severity: Severity,
+    location: &'a Location,
+    message: &'a str,
+    evidence_note: &'a str,
+    counter_condition: Option<&'a str>,
+    semantic_fingerprint: String,
+}
+
+impl<'a> FindingView<'a> {
+    fn of(finding: &'a Finding, root: &str) -> Self {
+        Self {
+            rule_id: finding.rule_id(),
+            tier: finding.tier(),
+            evidence: finding.evidence(),
+            severity: finding.severity(),
+            location: finding.location(),
+            message: finding.message(),
+            evidence_note: finding.evidence_note(),
+            counter_condition: finding.counter_condition(),
+            semantic_fingerprint: crate::corroborate::semantic_fingerprint(finding, root),
+        }
+    }
+}
+
 /// Render a [`ScanReport`] as the Appendix G envelope, with a trailing
 /// newline so the output is a well-formed text stream.
 pub fn render(report: &ScanReport) -> anyhow::Result<String> {
@@ -145,11 +235,12 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
             transcoded: report.transcoded.iter().map(String::as_str).collect(),
             skipped: &report.skipped,
         },
-        counts: Counts {
-            by_evidence: ByEvidence::tally(&report.findings),
-            total: report.findings.len(),
-        },
-        findings: &report.findings,
+        counts: Counts::tally(&report.findings),
+        findings: report
+            .findings
+            .iter()
+            .map(|f| FindingView::of(f, &report.root))
+            .collect(),
         evidence_contract: crate::evidence::contract(report),
     };
 
@@ -316,7 +407,10 @@ mod tests {
                     "transcoded",
                 ],
             ),
-            ("counts", &["by_evidence", "total"]),
+            (
+                "counts",
+                &["actionable", "by_evidence", "demoted_speculative", "total"],
+            ),
             (
                 "counts.by_evidence",
                 &["DATAFLOW", "HEURISTIC", "PROTOCOL", "SPECULATIVE"],
@@ -361,5 +455,224 @@ mod tests {
             "the golden envelope declares a different schema_version than the \
              constant — one of the two was bumped without the other"
         );
+    }
+
+    /// 0.5.0 promises that a finding gained exactly one key and gained it last.
+    /// A key set cannot show order, so the order is asserted on the rendered
+    /// text against the *frozen 0.4.0 schema's own* required list — the frozen
+    /// file is the specification of "what a 0.4.0 finding was", so this cannot
+    /// drift into agreeing with a mistake in this module.
+    #[test]
+    fn a_0_5_0_finding_is_a_0_4_0_finding_plus_one_appended_key() {
+        let frozen: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../schemas/scan-0.4.0.json")).unwrap();
+        let four_oh: Vec<&str> = frozen["properties"]["findings"]["items"]["required"]
+            .as_array()
+            .expect("the frozen schema lists required finding keys")
+            .iter()
+            .map(|v| v.as_str().expect("required keys are strings"))
+            .collect();
+        assert_eq!(
+            four_oh,
+            vec![
+                "rule_id",
+                "tier",
+                "evidence",
+                "severity",
+                "location",
+                "message",
+                "evidence_note",
+                "counter_condition",
+            ],
+            "the 0.4.0 finding shape is the baseline this test is anchored to"
+        );
+
+        let out = render(&fixture::report()).unwrap();
+        let tail = &out[out.find("\"findings\": [").expect("findings array")..];
+        let positions: Vec<usize> = four_oh
+            .iter()
+            .map(|key| {
+                tail.find(&format!("\"{key}\": "))
+                    .unwrap_or_else(|| panic!("0.4.0 key {key} vanished from a finding"))
+            })
+            .collect();
+        let mut sorted = positions.clone();
+        sorted.sort_unstable();
+        assert_eq!(
+            positions, sorted,
+            "the 0.4.0 keys are no longer a prefix of the 0.5.0 finding, in order"
+        );
+
+        let fingerprint = tail
+            .find("\"semantic_fingerprint\": ")
+            .expect("0.5.0 findings carry the corroboration key");
+        assert!(
+            fingerprint > *positions.last().expect("non-empty baseline"),
+            "semantic_fingerprint must be appended, not interleaved: a 0.4.0 \
+             reader that stops at counter_condition must still have read a \
+             complete finding"
+        );
+    }
+
+    #[test]
+    fn every_finding_carries_its_corroboration_key() {
+        let out = render(&fixture::report()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
+        for finding in parsed["findings"].as_array().unwrap() {
+            let key = finding["semantic_fingerprint"]
+                .as_str()
+                .unwrap_or_else(|| panic!("missing key on {finding}"));
+            assert_eq!(key.len(), 64, "{key}");
+            assert!(
+                key.bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
+                "{key} is not lowercase hex"
+            );
+        }
+        // Tied to the implementation, not just to a shape: recompute the first
+        // one from the fields the same document publishes.
+        let first = &parsed["findings"][0];
+        let class: EvidenceClass =
+            serde_json::from_value(first["evidence"].clone()).expect("evidence class");
+        let expected = crate::corroborate::fingerprint_of(
+            "app/svc.py",
+            first["location"]["line_start"].as_u64().unwrap() as usize,
+            class,
+        );
+        assert_eq!(first["semantic_fingerprint"], expected);
+    }
+
+    /// The numeric half of the demotion. A guess is reported, never added up:
+    /// `actionable` is what a verdict grid sums, and `total` still equals the
+    /// array length so no consumer loses sight of a finding.
+    #[test]
+    fn the_counts_demote_speculative_numerically() {
+        let out = render(&fixture::report()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
+        let counts = &parsed["counts"];
+        assert_eq!(counts["total"], 4);
+        assert_eq!(counts["demoted_speculative"], 1);
+        assert_eq!(counts["actionable"], 3);
+        let actionable = counts["actionable"].as_u64().unwrap();
+        let demoted = counts["demoted_speculative"].as_u64().unwrap();
+        assert_eq!(
+            actionable + demoted,
+            counts["total"].as_u64().unwrap(),
+            "actionable + demoted must account for every finding exactly once"
+        );
+        assert_eq!(
+            counts["demoted_speculative"],
+            counts["by_evidence"]["SPECULATIVE"]
+        );
+    }
+
+    /// The freeze, checked against the bytes rather than asserted in prose.
+    #[test]
+    fn the_frozen_0_4_0_schema_is_still_the_file_this_build_was_tested_against() {
+        let bytes = std::fs::read(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../schemas/scan-0.4.0.json"),
+        )
+        .expect("the frozen 0.4.0 schema must be committed");
+        let actual = blake3::hash(&bytes).to_hex().to_string();
+        assert_eq!(
+            actual, FROZEN_0_4_0_SCHEMA_BLAKE3,
+            "schemas/scan-0.4.0.json changed. A frozen envelope version is never \
+             edited: revert the edit, or publish a new version and add it to \
+             FROZEN_SCHEMA_VERSIONS with its own schema file."
+        );
+    }
+
+    /// A 0.4.0 report remains readable by this build's validator, and the
+    /// frozen schema is genuinely closed — so this is not a test that passes
+    /// against any JSON at all.
+    #[test]
+    fn a_frozen_0_4_0_report_still_satisfies_the_frozen_schema() {
+        let schema: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../schemas/scan-0.4.0.json")).unwrap();
+        let validator = jsonschema::validator_for(&schema).expect("the frozen schema compiles");
+
+        // Both samples carry the golden tests' `TEST-DIRTY` placeholder, which
+        // is deliberately not one of the three wire values (`true`, `false`,
+        // `unknown`) — an artefact of how the goldens are made, not of the
+        // envelope. Normalising that one field keeps this test about the shape;
+        // the assertion below proves the placeholder really was there, so the
+        // normalisation cannot be hiding an invalid document.
+        fn with_unknown_dirty(mut v: serde_json::Value) -> serde_json::Value {
+            v["tool"]["source_dirty"] = serde_json::json!("unknown");
+            v
+        }
+
+        let frozen: serde_json::Value =
+            serde_json::from_str(include_str!("../../tests/golden/report-0.4.0.json")).unwrap();
+        assert_eq!(frozen["schema_version"], "0.4.0");
+        assert_eq!(
+            frozen["tool"]["source_dirty"], "TEST-DIRTY",
+            "precondition: the frozen sample carries the golden placeholder"
+        );
+        assert!(
+            validator.is_valid(&with_unknown_dirty(frozen)),
+            "the committed 0.4.0 sample no longer validates against its own schema"
+        );
+
+        let current =
+            with_unknown_dirty(serde_json::from_str(&render(&fixture::report()).unwrap()).unwrap());
+        assert!(
+            !validator.is_valid(&current),
+            "the frozen 0.4.0 schema accepted a {} document — it is not closed, \
+             and the version dispatch in validate.rs is doing nothing",
+            SCHEMA_VERSION
+        );
+    }
+
+    /// `schemas/index.json` is how a consumer at a pin discovers the artifacts
+    /// and checks it has the bytes pons was tested with.
+    #[test]
+    fn the_schema_index_attests_every_published_contract_file() {
+        let index: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../schemas/index.json")).unwrap();
+        let artifacts = index["artifacts"]
+            .as_array()
+            .expect("the index lists artifacts");
+        assert!(!artifacts.is_empty(), "an empty index attests nothing");
+
+        let schemas = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../schemas");
+        for artifact in artifacts {
+            let file = artifact["file"].as_str().expect("file");
+            let version = artifact["version"].as_str().expect("version");
+            assert!(
+                file.contains(version),
+                "schemas/{file} does not carry its version {version} in its name"
+            );
+            let bytes = std::fs::read(schemas.join(file))
+                .unwrap_or_else(|e| panic!("cannot read schemas/{file}: {e}"));
+            let actual = blake3::hash(&bytes).to_hex().to_string();
+            assert_eq!(
+                artifact["blake3"].as_str().expect("blake3"),
+                actual.as_str(),
+                "schemas/{file} changed: update its blake3 entry in schemas/index.json"
+            );
+        }
+
+        let envelopes: Vec<&serde_json::Value> = artifacts
+            .iter()
+            .filter(|a| a["id"] == "scan-envelope")
+            .collect();
+        let current: Vec<&&serde_json::Value> = envelopes
+            .iter()
+            .filter(|a| a["status"] == "current")
+            .collect();
+        assert_eq!(
+            current.len(),
+            1,
+            "exactly one scan envelope version is the one this build emits"
+        );
+        assert_eq!(current[0]["version"], SCHEMA_VERSION);
+        for frozen in envelopes.iter().filter(|a| a["status"] == "frozen") {
+            assert!(
+                FROZEN_SCHEMA_VERSIONS.contains(&frozen["version"].as_str().expect("version")),
+                "schemas/index.json calls {} frozen, FROZEN_SCHEMA_VERSIONS does not",
+                frozen["version"]
+            );
+        }
     }
 }

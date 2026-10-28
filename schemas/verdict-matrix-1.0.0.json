@@ -1,0 +1,209 @@
+{
+  "schema_version": "1.0.0",
+  "producer": "pons",
+  "generated_from": "crates/pons-core/src/verdict.rs",
+  "severity_scale": [
+    {
+      "severity": "ERROR",
+      "weight": 3,
+      "fail_on_rank": 2,
+      "sarif_level_when_not_demoted": "error"
+    },
+    {
+      "severity": "WARN",
+      "weight": 2,
+      "fail_on_rank": 1,
+      "sarif_level_when_not_demoted": "warning"
+    },
+    {
+      "severity": "INFO",
+      "weight": 1,
+      "fail_on_rank": 0,
+      "sarif_level_when_not_demoted": "note"
+    }
+  ],
+  "evidence_scale": [
+    {
+      "evidence": "HEURISTIC",
+      "tier": "T0",
+      "sarif_rank": 50,
+      "weight": 50,
+      "confidence": "heuristic",
+      "counts_toward_verdict": true
+    },
+    {
+      "evidence": "DATAFLOW",
+      "tier": "T1",
+      "sarif_rank": 80,
+      "weight": 80,
+      "confidence": "model-dependent",
+      "counts_toward_verdict": true
+    },
+    {
+      "evidence": "PROTOCOL",
+      "tier": "T2",
+      "sarif_rank": 70,
+      "weight": 70,
+      "confidence": "premise-dependent",
+      "counts_toward_verdict": true
+    },
+    {
+      "evidence": "SPECULATIVE",
+      "tier": "T3",
+      "sarif_rank": 20,
+      "weight": 0,
+      "confidence": "speculative",
+      "counts_toward_verdict": false
+    }
+  ],
+  "corroboration": {
+    "scheme": "pons-corroboration-v1",
+    "hash": "blake3",
+    "encoding": "64 lowercase hexadecimal characters",
+    "input_template": "scheme, then one NUL, then the root-relative path, one NUL, the 1-based start line in decimal, one NUL, then the evidence class name; the whole string is hashed",
+    "class_source": "The producer's own evidence class, or the class the consuming grid has explicitly mapped a foreign producer onto. Never a raw foreign severity, and never an upgrade of one.",
+    "path_convention": "Root-relative, '/' separated, no leading './' — the same spelling as evidence_contract.records[].path, so a key survives a checkout move.",
+    "line_convention": "1-based line of the finding's start; a finding spanning lines is keyed on the line it starts on.",
+    "caution": "Equal keys assert the same path, line and evidence class and nothing more. They are not proof of semantic equivalence, and a demoted class corroborates no verdict."
+  },
+  "grid": [
+    {
+      "severity": "ERROR",
+      "evidence": "HEURISTIC",
+      "sarif_level": "error",
+      "aggregate_weight": 150,
+      "counts_toward_verdict": true,
+      "gate_eligible": true,
+      "count_bucket": "actionable",
+      "demotion_suffix": ""
+    },
+    {
+      "severity": "ERROR",
+      "evidence": "DATAFLOW",
+      "sarif_level": "error",
+      "aggregate_weight": 240,
+      "counts_toward_verdict": true,
+      "gate_eligible": true,
+      "count_bucket": "actionable",
+      "demotion_suffix": ""
+    },
+    {
+      "severity": "ERROR",
+      "evidence": "PROTOCOL",
+      "sarif_level": "error",
+      "aggregate_weight": 210,
+      "counts_toward_verdict": true,
+      "gate_eligible": true,
+      "count_bucket": "actionable",
+      "demotion_suffix": ""
+    },
+    {
+      "severity": "ERROR",
+      "evidence": "SPECULATIVE",
+      "sarif_level": "note",
+      "aggregate_weight": 0,
+      "counts_toward_verdict": false,
+      "gate_eligible": false,
+      "count_bucket": "demoted",
+      "demotion_suffix": " (heuristic — not a verdict)"
+    },
+    {
+      "severity": "WARN",
+      "evidence": "HEURISTIC",
+      "sarif_level": "warning",
+      "aggregate_weight": 100,
+      "counts_toward_verdict": true,
+      "gate_eligible": true,
+      "count_bucket": "actionable",
+      "demotion_suffix": ""
+    },
+    {
+      "severity": "WARN",
+      "evidence": "DATAFLOW",
+      "sarif_level": "warning",
+      "aggregate_weight": 160,
+      "counts_toward_verdict": true,
+      "gate_eligible": true,
+      "count_bucket": "actionable",
+      "demotion_suffix": ""
+    },
+    {
+      "severity": "WARN",
+      "evidence": "PROTOCOL",
+      "sarif_level": "warning",
+      "aggregate_weight": 140,
+      "counts_toward_verdict": true,
+      "gate_eligible": true,
+      "count_bucket": "actionable",
+      "demotion_suffix": ""
+    },
+    {
+      "severity": "WARN",
+      "evidence": "SPECULATIVE",
+      "sarif_level": "note",
+      "aggregate_weight": 0,
+      "counts_toward_verdict": false,
+      "gate_eligible": false,
+      "count_bucket": "demoted",
+      "demotion_suffix": " (heuristic — not a verdict)"
+    },
+    {
+      "severity": "INFO",
+      "evidence": "HEURISTIC",
+      "sarif_level": "note",
+      "aggregate_weight": 50,
+      "counts_toward_verdict": true,
+      "gate_eligible": true,
+      "count_bucket": "actionable",
+      "demotion_suffix": ""
+    },
+    {
+      "severity": "INFO",
+      "evidence": "DATAFLOW",
+      "sarif_level": "note",
+      "aggregate_weight": 80,
+      "counts_toward_verdict": true,
+      "gate_eligible": true,
+      "count_bucket": "actionable",
+      "demotion_suffix": ""
+    },
+    {
+      "severity": "INFO",
+      "evidence": "PROTOCOL",
+      "sarif_level": "note",
+      "aggregate_weight": 70,
+      "counts_toward_verdict": true,
+      "gate_eligible": true,
+      "count_bucket": "actionable",
+      "demotion_suffix": ""
+    },
+    {
+      "severity": "INFO",
+      "evidence": "SPECULATIVE",
+      "sarif_level": "note",
+      "aggregate_weight": 0,
+      "counts_toward_verdict": false,
+      "gate_eligible": false,
+      "count_bucket": "demoted",
+      "demotion_suffix": " (heuristic — not a verdict)"
+    }
+  ],
+  "aggregation": {
+    "demoted_evidence": [
+      "SPECULATIVE"
+    ],
+    "demoted_sarif_level": "note",
+    "demotion_suffix": " (heuristic — not a verdict)",
+    "demoted_count_field": "counts.demoted_speculative",
+    "actionable_count_field": "counts.actionable",
+    "total_count_field": "counts.total",
+    "total_includes_demoted": true,
+    "actionable_definition": "counts.total - counts.demoted_speculative",
+    "rules": [
+      "A demoted finding contributes zero aggregate_weight and is counted only in counts.demoted_speculative; it is never part of counts.actionable.",
+      "Demotion is unconditional and overrides the finding's own severity: ERROR + SPECULATIVE is still not a verdict, and its SARIF level is 'note'.",
+      "An aggregating consumer reports counts.actionable as its finding total, or reports both numbers; a total that includes demoted findings must say so.",
+      "Corroboration collapses a site, not a finding: two producers minting the same semantic_fingerprint are one corroborated site and one count, with both producers' provenance retained."
+    ]
+  }
+}

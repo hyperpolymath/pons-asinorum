@@ -95,8 +95,9 @@ Components marked *planned* carry the milestone that delivers them; see
 * Inline comment allowances; strings cannot suppress findings
 * Suppressed findings are counted rather than silently erased
 . *Reporter* — *built*
-* Human-readable output with SPECULATIVE visually demoted
-* JSON 0.3.0 envelope with skip, transcode and suppression accounting
+* Human-readable output with SPECULATIVE visually *and* numerically demoted
+* JSON 0.5.0 envelope (0.4.0 frozen and still validatable) with skip, transcode,
+  suppression, demoted-count and corroboration-key accounting
 * SARIF 2.1.0 with invocation notifications and honest artifact offsets
 * Generated catalogue and man page from the live registry/CLI model
 

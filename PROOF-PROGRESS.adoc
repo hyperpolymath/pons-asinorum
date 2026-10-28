@@ -15,6 +15,34 @@ conformance, not source-derived typestate or a proof of all executions. See
 link:docs/PURPOSE-AND-PROOF.adoc[purpose, comparison, proof status and opportunities]
 for the operator-facing distinction and bounded next steps.
 
+== The Rust deductive-verification lane (Creusot)
+
+The estate runs its Creusot gate over this tree, and this repository now calls
+it as its own check (`.github/workflows/creusot-gate.yml`, the same cicd-suite
+pin as the estate audit) rather than only inheriting it from the audit's
+`languages` component.
+
+Measured on this tree with the gate's own `detect` and `theatre` phases
+(2026-10-28): `obligations=false claims=false contract_count=0
+trusted_count=0`. The gate's verdict is therefore, in its own words, *"no
+Creusot obligations and no verification claims in this tree. Nothing was proved
+and nothing claims to be — this gate is silent, not green-as-assurance."*
+
+That silence is the accurate status, not a pass: there is no `creusot-std`
+dependency, no `#[requires]`/`#[ensures]` anywhere, and no claim of Creusot
+verification in this documentation. What the lane now guarantees is the
+negative: a claim of Creusot verification with no contracts behind it (T1) is a
+build failure, a `creusot-std` dependency that annotates nothing (T2) is a
+failure here because `enforce_hollow` is set, and every `#[trusted]` axiom has
+to be listed (T3).
+
+Adding a first real obligation needs three things together — the `creusot-std`
+dependency, the nightly pin Creusot is built against, and a crate whose
+contracts `cargo creusot prove` discharges — and honesty about ordering: with
+no obligation, the `prove` phase does not run, so nothing about this tree is
+proved today. The provenance ledger keeps `Actually-Proven` unreachable
+(`proof_artifacts: []`) so that no test can claim it in the meantime.
+
 == Headline
 
 [cols="2,1,4",options="header"]

@@ -2,6 +2,7 @@
 
 pub mod cfg;
 pub mod config;
+pub mod corroborate;
 pub mod coverage;
 pub mod dataflow;
 pub mod engine;
@@ -13,3 +14,4 @@ pub mod php;
 pub mod report;
 pub mod source;
 pub mod suppress;
+pub mod verdict;

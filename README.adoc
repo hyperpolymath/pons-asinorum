@@ -30,7 +30,7 @@ and link:docs/adr/0004-companion-to-panic-attack.adoc[ADR-0004].
 
 *Implementation in progress toward v0.1.0.* Milestones M0–M4 are present: the
 Rust workspace, scanning engine, six native tree-sitter grammars including PHP,
-JSON 0.4.0/SARIF reporters, Python CFG/dataflow and a bounded PHP context-flow
+JSON 0.5.0 (0.4.0 frozen)/SARIF reporters, Python CFG/dataflow and a bounded PHP context-flow
 slice. Thirteen source rules are registered (ten T0, three T1).
 `pons scan <PATH>`, `pons catalogue`, `pons man`, `pons doctor`, `pons trace`,
 `pons wharf-trace` and `pons validate-report` exist;

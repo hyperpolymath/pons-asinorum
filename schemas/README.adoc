@@ -1,0 +1,72 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Published contracts
+
+Everything in this directory is a contract a consumer may depend on at a pinned
+commit. `index.json` is the machine-readable inventory of it; this page is the
+human one. The prose contract is link:../docs/EVIDENCE-CONTRACT.adoc[].
+
+[cols="2,1,1,1,3",options="header"]
+|===
+|Artifact |Version |File |Status |What it is
+
+|Scan envelope
+|0.4.0
+|`scan-0.4.0.json`
+|frozen
+|The previous JSON envelope. Never emitted by this build, still accepted by
+`pons validate-report`.
+
+|Scan envelope
+|0.5.0
+|`scan-0.5.0.json`
+|current
+|What `pons scan --format json` emits. `0.4.0` plus three appended keys.
+
+|Evidence contract
+|1.0.0
+|`evidence-1.0.0.json`
+|current
+|The `evidence_contract` object nested inside every scan envelope.
+
+|Verdict matrix
+|1.0.0
+|`verdict-matrix-1.0.0.json`
+|current
+|Severity × evidence dispositions, the demoted-count fields and the recipe for
+the corroboration key. Generated from `crates/pons-core/src/verdict.rs`.
+|===
+
+== The freeze rule
+
+A **frozen** version is a promise about bytes, not about intent:
+
+. its file is never edited and never re-issued — a change is a new version in a
+  new file, listed beside the frozen one;
+. its BLAKE3 digest is recorded in `index.json` *and* pinned in the crate, so an
+  edit fails a test (`the_frozen_0_4_0_schema_is_still_the_file_this_build_was_tested_against`)
+  rather than quietly changing what a pinned consumer reads;
+. it stays readable. `pons validate-report` accepts every frozen version, and the
+  version declared *inside* the document selects the schema it is validated
+  against — so an old report cannot be validated against a new shape, and a new
+  key cannot hide behind an old version number.
+
+`index.json` is itself checked: every listed file must exist, must carry its
+version in its name, and must match its recorded digest
+(`the_schema_index_attests_every_published_contract_file`). Exactly one scan
+envelope is marked `current`, and it is the version the binary emits.
+
+== Adding a version
+
+. Write the new file; never touch an existing version's file.
+. Add it to `index.json` with `"status": "current"`, and mark the previous one
+  `"frozen"`.
+. If it is the scan envelope, bump `SCHEMA_VERSION` in
+  `crates/pons-core/src/report/json.rs`, update `FROZEN_SCHEMA_VERSIONS`, add the
+  frozen digest constant, and add an arm to `validator_for_version`.
+. Update the shape test, Appendix G of `docs/PLAN.adoc`, and the version history
+  there and in `CHANGELOG.adoc`.
+. Re-bless the verdict matrix only if the policy itself changed
+  (`PONS_BLESS=1 cargo test -p pons-core`), and say why in the changelog.
+
+A version constant nothing checks is a comment, not a contract: every step above
+that can be checked automatically is.

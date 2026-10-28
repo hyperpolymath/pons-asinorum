@@ -1,5 +1,13 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Fail-closed validation for the 0.4.0 scan exchange envelope.
+//! Fail-closed validation for the scan exchange envelope.
+//!
+//! Two envelope versions are readable: the one this build emits
+//! ([`super::json::SCHEMA_VERSION`]) and every version listed in
+//! [`super::json::FROZEN_SCHEMA_VERSIONS`]. The version declared in the document
+//! selects the schema it is validated against, so a consumer pinned to 0.4.0
+//! keeps a validator for its own artifacts, and a 0.4.0 declaration cannot
+//! smuggle in a 0.5.0 key. Checks that only exist in the newer shape are gated
+//! on the newer version rather than skipped silently.
 use crate::{
     coverage::{InventoryEntry, Outcome},
     evidence::Record,
@@ -22,23 +30,52 @@ pub fn validate_reader(reader: impl std::io::Read) -> Result<String> {
     validate_value(serde_json::from_reader(reader)?)
 }
 
+/// Compile a bundled schema, once per version.
+fn compiled(text: &str) -> jsonschema::Validator {
+    let schema: Value = serde_json::from_str(text).expect("bundled scan schema must be JSON");
+    jsonschema::validator_for(&schema).expect("bundled scan schema must compile")
+}
+
+/// The schema that a declared envelope version is validated against.
+///
+/// Deliberately a closed list and not "whatever parses": an unknown version is
+/// an error, because validating an unknown shape against the nearest schema is
+/// how a consumer ends up trusting a document nobody specified.
+fn validator_for_version(version: &str) -> Option<&'static jsonschema::Validator> {
+    static CURRENT: std::sync::OnceLock<jsonschema::Validator> = std::sync::OnceLock::new();
+    static FROZEN_0_4_0: std::sync::OnceLock<jsonschema::Validator> = std::sync::OnceLock::new();
+
+    if version == super::json::SCHEMA_VERSION {
+        return Some(
+            CURRENT.get_or_init(|| compiled(include_str!("../../../../schemas/scan-0.5.0.json"))),
+        );
+    }
+    // One frozen generation so far. A second one adds its own schema file and
+    // its own OnceLock here; the dispatch stays explicit on purpose.
+    if super::json::FROZEN_SCHEMA_VERSIONS.contains(&version) {
+        return Some(
+            FROZEN_0_4_0
+                .get_or_init(|| compiled(include_str!("../../../../schemas/scan-0.4.0.json"))),
+        );
+    }
+    None
+}
+
 fn validate_value(v: Value) -> Result<String> {
     // Structural validation precedes semantic checks: hand-picked fields cannot
     // enforce required properties, enums or the closed envelope.
-    static SCHEMA: std::sync::OnceLock<jsonschema::Validator> = std::sync::OnceLock::new();
-    let validator = SCHEMA.get_or_init(|| {
-        let schema: Value =
-            serde_json::from_str(include_str!("../../../../schemas/scan-0.4.0.json"))
-                .expect("bundled scan schema must be JSON");
-        jsonschema::validator_for(&schema).expect("bundled scan schema must compile")
-    });
+    let version = v["schema_version"]
+        .as_str()
+        .context("missing schema_version")?
+        .to_string();
+    let validator = validator_for_version(&version).context("unsupported report schema")?;
     validator
         .validate(&v)
         .map_err(|e| anyhow::anyhow!("report schema: {e} at {}", e.instance_path()))?;
-    ensure!(
-        v["schema_version"] == super::json::SCHEMA_VERSION,
-        "unsupported report schema"
-    );
+    // The corroboration key and the demoted-count fields exist only from 0.5.0;
+    // their checks are gated rather than dropped so a 0.4.0 artifact stays
+    // valid while a 0.5.0 one cannot skip them.
+    let has_corroboration = version == super::json::SCHEMA_VERSION;
     let tool = required(&v, "tool")?;
     for k in ["name", "version", "source_commit", "source_dirty"] {
         ensure!(
@@ -134,6 +171,7 @@ fn validate_value(v: Value) -> Result<String> {
         v["counts"]["total"].as_u64() == Some(findings.len() as u64),
         "finding count mismatch"
     );
+    let root = s["root"].as_str().context("missing scan root")?;
     for f in findings {
         let tier: Tier = serde_json::from_value(required(f, "tier")?.clone())?;
         let evidence: EvidenceClass = serde_json::from_value(required(f, "evidence")?.clone())?;
@@ -160,12 +198,48 @@ fn validate_value(v: Value) -> Result<String> {
                 .any(|e| e.outcome == Outcome::Analysed && location["file"] == e.path),
             "finding outside analysed inventory"
         );
+        if has_corroboration {
+            // Recomputed, not merely present: a key the grid deduplicates on is
+            // worthless if a producer can write an arbitrary one, and a keyed
+            // site that does not match its own location would silently fail to
+            // corroborate anything.
+            let file = location["file"].as_str().context("missing finding file")?;
+            let line = location["line_start"]
+                .as_u64()
+                .context("missing finding line")? as usize;
+            let expected = crate::corroborate::fingerprint_of(
+                &crate::evidence::relative_path(file, root),
+                line,
+                evidence,
+            );
+            ensure!(
+                f["semantic_fingerprint"] == expected.as_str(),
+                "semantic fingerprint mismatch"
+            );
+        }
     }
     for class in ["HEURISTIC", "DATAFLOW", "PROTOCOL", "SPECULATIVE"] {
         ensure!(
             v["counts"]["by_evidence"][class].as_u64()
                 == Some(findings.iter().filter(|f| f["evidence"] == class).count() as u64),
             "evidence count mismatch"
+        );
+    }
+    let demoted = findings
+        .iter()
+        .filter(|f| f["evidence"] == "SPECULATIVE")
+        .count() as u64;
+    if has_corroboration {
+        // The demotion has to hold numerically where a consumer sums: a
+        // document that counted a guess as actionable is rejected rather than
+        // silently re-added by the reader.
+        ensure!(
+            v["counts"]["demoted_speculative"].as_u64() == Some(demoted),
+            "demoted speculative count mismatch"
+        );
+        ensure!(
+            v["counts"]["actionable"].as_u64() == Some(findings.len() as u64 - demoted),
+            "actionable count mismatch"
         );
     }
     let contract = required(&v, "evidence_contract")?;
@@ -184,7 +258,6 @@ fn validate_value(v: Value) -> Result<String> {
         let file = f["location"]["file"]
             .as_str()
             .context("missing finding file")?;
-        let root = s["root"].as_str().context("missing scan root")?;
         let notes = &inventory
             .iter()
             .find(|e| e.path == file)
@@ -209,13 +282,18 @@ fn validate_value(v: Value) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
+    /// The rendered report is validated against the schema its own
+    /// `schema_version` selects — through the same dispatch the validator
+    /// uses, so this cannot drift into checking the wrong generation.
     #[test]
     fn published_json_schema_accepts_native_report_and_rejects_tier_promotion() {
-        let schema: serde_json::Value =
-            serde_json::from_str(include_str!("../../../../schemas/scan-0.4.0.json")).unwrap();
-        let validator = jsonschema::validator_for(&schema).unwrap();
         let text = crate::report::json::render(&crate::report::fixture::report()).unwrap();
         let mut value: serde_json::Value = serde_json::from_str(&text).unwrap();
+        let version = value["schema_version"]
+            .as_str()
+            .expect("the report declares its version");
+        let validator = super::validator_for_version(version)
+            .expect("this build's own version must have a schema");
         assert!(validator.is_valid(&value));
         value["findings"][0]["evidence"] = serde_json::json!("PROTOCOL");
         assert!(!validator.is_valid(&value));
