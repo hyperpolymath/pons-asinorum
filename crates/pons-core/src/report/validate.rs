@@ -214,6 +214,24 @@ fn validate_value(v: Value) -> Result<String> {
                 .any(|e| e.outcome == Outcome::Analysed && location["file"] == e.path),
             "finding outside analysed inventory"
         );
+        // The corroboration key is minted from the root-relative path, so a
+        // path that cannot be made relative — an absolute file outside the
+        // scan root, or one climbing out with `..` — would mint a key encoding
+        // the build machine and matching nothing a consumer can derive.
+        // `relative_path` falls back to the path unchanged in that case, which
+        // is right for rendering and wrong for a join key, so it is refused.
+        if has_corroboration {
+            let file = location["file"]
+                .as_str()
+                .context("missing finding file")?;
+            let relative = crate::evidence::relative_path(file, root);
+            ensure!(
+                !std::path::Path::new(&relative).is_absolute()
+                    && !relative.starts_with("../")
+                    && relative != "..",
+                "finding path is not inside the scan root"
+            );
+        }
         if has_corroboration {
             // Recomputed, not merely present: a key the grid deduplicates on is
             // worthless if a producer can write an arbitrary one, and a keyed
@@ -298,6 +316,30 @@ fn validate_value(v: Value) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
+    /// Every version the build claims to read has its own schema.
+    ///
+    /// The frozen list and the dispatch are two facts that must be one; this
+    /// makes a forgotten dispatch arm a failing test rather than a silent
+    /// fallback to the nearest shape.
+    #[test]
+    fn every_frozen_version_has_its_own_schema() {
+        for version in crate::report::json::FROZEN_SCHEMA_VERSIONS {
+            assert!(
+                super::validator_for_version(version).is_some(),
+                "{version} is listed as frozen but validator_for_version has no \
+                 arm for it"
+            );
+        }
+        assert!(
+            super::validator_for_version(crate::report::json::SCHEMA_VERSION).is_some(),
+            "the current version has no schema"
+        );
+        assert!(
+            super::validator_for_version("9.9.9").is_none(),
+            "an unknown version must not resolve to any schema"
+        );
+    }
+
     /// The rendered report is validated against the schema its own
     /// `schema_version` selects — through the same dispatch the validator
     /// uses, so this cannot drift into checking the wrong generation.

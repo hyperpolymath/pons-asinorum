@@ -36,7 +36,7 @@
       "file": "verdict-matrix-1.0.0.json",
       "kind": "contract-data",
       "status": "current",
-      "blake3": "14f8e7d4ca897ec586d4d4f6c8fded34ce540b9312bdd0a5e5b77813f7d55db8",
+      "blake3": "b04cfb1b96808366251f0950d81a8d848277a6173de54fa56e4b81c65f11124d",
       "note": "Severity x evidence dispositions, the demoted-count fields and the corroboration key recipe. Generated from crates/pons-core/src/verdict.rs."
     }
   ]

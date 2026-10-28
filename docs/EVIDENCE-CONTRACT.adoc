@@ -84,6 +84,16 @@ What the key is for, and what it is not:
   identifies one finding (rule id plus a whitespace-folded anchor) and survives
   blank-line insertion; this key identifies one site and survives a rule rename.
   Both are identifiers, neither is a semantic-equivalence proof.
+* Every finding's `location.file` must be expressible **inside** the scan root.
+  A path that cannot be made relative — an absolute file elsewhere on the
+  machine, or one climbing out with `..` — is rejected rather than substituted
+  unchanged, because a key minted from it would encode the build machine and
+  match nothing a consumer can derive.
+* The `counts.*` figures count **findings**, while corroboration collapses
+  **sites across producers**. Two Pons rules firing on one line in one class are
+  two findings sharing one key; a Pons finding and another producer's finding at
+  the same site are one corroborated site. Both directions are published in
+  `schemas/verdict-matrix-1.0.0.json` (`aggregation.rules`).
 * A `SPECULATIVE` key **corroborates nothing**. Agreement between two guesses is
   two guesses; the demoted bucket is excluded from every verdict.
 * Agreement is corroboration, not independent proof. Shared rules, models,

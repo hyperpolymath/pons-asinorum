@@ -230,3 +230,42 @@ fn a_speculative_finding_cannot_be_promoted_into_the_actionable_count() {
         String::from_utf8_lossy(&rejected.stderr)
     );
 }
+
+#[test]
+fn a_finding_outside_the_scan_root_is_rejected() {
+    let fixture = Fixture::new();
+    let mut report = fixture.scan();
+    let original = report["findings"][0]["location"]["file"]
+        .as_str()
+        .expect("the finding names a file")
+        .to_string();
+    let outside = "/elsewhere/outside.php";
+
+    // Move the finding AND its inventory entry together, so the only thing
+    // wrong with the document is that the path cannot be expressed relative to
+    // the scan root. Without the inventory move it would be rejected earlier,
+    // for a different reason, and this test would pass without exercising the
+    // check it is named for.
+    report["findings"][0]["location"]["file"] = json!(outside);
+    for entry in report["scanned"]["inventory"]
+        .as_array_mut()
+        .expect("inventory array")
+    {
+        if entry["path"] == json!(original) {
+            entry["path"] = json!(outside);
+        }
+    }
+
+    let rejected = fixture.validate(&report);
+    assert_eq!(
+        rejected.status.code(),
+        Some(2),
+        "a finding outside the scan root must be rejected: {}",
+        String::from_utf8_lossy(&rejected.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&rejected.stderr).contains("not inside the scan root"),
+        "it must be rejected BY the root check, not incidentally by another: {}",
+        String::from_utf8_lossy(&rejected.stderr)
+    );
+}

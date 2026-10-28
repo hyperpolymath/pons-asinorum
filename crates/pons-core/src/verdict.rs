@@ -316,9 +316,10 @@ pub fn matrix() -> Matrix {
                  SPECULATIVE is still not a verdict, and its SARIF level is 'note'.",
                 "An aggregating consumer reports counts.actionable as its finding total, or \
                  reports both numbers; a total that includes demoted findings must say so.",
-                "Corroboration collapses a site, not a finding: two producers minting the same \
-                 semantic_fingerprint are one corroborated site and one count, with both \
-                 producers' provenance retained.",
+                "Corroboration collapses a site ACROSS producers, not findings within one \
+                 report: two producers minting the same semantic_fingerprint are one \
+                 corroborated site, while counts.* count findings, so two Pons rules at one \
+                 site in one class are two findings sharing one key.",
             ],
         },
     }
