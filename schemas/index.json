@@ -18,7 +18,7 @@
       "file": "scan-0.5.0.json",
       "kind": "json-schema",
       "status": "current",
-      "blake3": "43e76fb7339b36ba5cdea1ac9b7e48b5fdd15c50b4a4b4f7ff78c5a06f5cdfb5",
+      "blake3": "1370aa9f168ae316cda9a13a364a03773c8aab2ad37465c043cf17d7295fe56a",
       "note": "The envelope `pons scan --format json` emits."
     },
     {
