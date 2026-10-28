@@ -221,9 +221,7 @@ fn validate_value(v: Value) -> Result<String> {
         // `relative_path` falls back to the path unchanged in that case, which
         // is right for rendering and wrong for a join key, so it is refused.
         if has_corroboration {
-            let file = location["file"]
-                .as_str()
-                .context("missing finding file")?;
+            let file = location["file"].as_str().context("missing finding file")?;
             let relative = crate::evidence::relative_path(file, root);
             ensure!(
                 !std::path::Path::new(&relative).is_absolute()
