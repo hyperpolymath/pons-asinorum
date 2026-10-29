@@ -1,0 +1,768 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= Next-session priorities and cross-repository prompts
+:toc: left
+:toclevels: 3
+:sectnums:
+
+Recon date: 2026-10-29. Baseline: `main` at `84f58f9`, the squash merge of PR
+#67. Every number below was measured on that commit or read from the GitHub
+API on that date; where something is inference rather than measurement it says
+so. This file carries *prompts*, not plans: each block under "Prompts" is
+written to be pasted into a fresh session unchanged.
+
+== Where the repository actually is
+
+=== Measured state
+
+[cols="1,4",options="header"]
+|===
+|Fact |Measurement
+
+|Tree
+|673 tracked files; 4-crate workspace (`pons-core`, `pons-rules`,
+`pons-protocols`, `pons-cli`); version `0.1.0` in all four manifests.
+
+|Rules
+|13 registered: 8 T0 (`div-by-literal-zero`, `swallowed-error`,
+`self-assignment`, `constant-condition`, `while-true-no-break`,
+`empty-effect-loop`, `unreachable-after-jump`, `string-concat-in-loop`),
+2 T1 Python (`dead-store`, `read-before-init`), 3 PHP
+(`php-context-flow`, `php-empty-security-function`, `php-unresolved-include`).
+
+|Grammars
+|Six native tree-sitter grammars: Python, JavaScript, TypeScript, TSX, Rust,
+PHP.
+
+|Report contract
+|Envelope `0.5.0` current, `0.4.0` byte-frozen
+(`FROZEN_0_4_0_SCHEMA_BLAKE3`); `verdict-matrix-1.0.0.json` generated from
+`pons-core/src/verdict.rs` with a drift test; `findings[].semantic_fingerprint`,
+`counts.actionable`, `counts.demoted_speculative`.
+
+|Release surface
+|**Zero tags. Zero GitHub releases. Not published to crates.io.** `gh release
+list` and `git ls-remote --tags` are both empty.
+
+|CI on `main`
+|Green at `84f58f9`: Secret Scanner, Creusot Gate, Scorecard, Central Estate
+CI/CD Audit, Format Policy, `rust-ci`, CodeQL.
+
+|Required checks
+|**One**: `scan / gitleaks`, from the `Secret-Scan-Floor` ruleset. Nothing else
+on `main` is required.
+
+|Branch rules in force
+|`Branch-Floor` (deletion, non-fast-forward); `Require-Signed-Commits`
+(`required_signatures`, admin bypass); `Secret-Scan-Floor` (the one required
+check); `Immutable-Tags` (deletion, non-fast-forward, update,
+`required_signatures`, **no bypass actors**).
+
+|Commit signatures
+|**Unsigned.** `0eb5651` reports `verified: false, reason: "unsigned"`. PR #67
+reached `main` only because `--admin` bypassed the signature rule; the squash
+commit `84f58f9` is signed by GitHub (`verified: true`) because GitHub signs
+web/squash merges.
+
+|Creusot
+|`obligations=false claims=false contract_count=0 trusted_count=0`. No
+`creusot-std` dependency, no contract attribute anywhere. The gate's own
+verdict: "silent, not green-as-assurance".
+
+|Open issues
+|8: #29, #30, #32, #33, #43, #47, #48, #50. All are either "code present,
+closure evidence not recorded" or "repair recorded in PROOF-PROGRESS, issue
+never closed".
+
+|Dead lanes
+|`deed-conformance.yml` and `k9-conformance.yml` are `workflow_dispatch`-only
+stubs because the org Actions allowlist refuses both reusables at startup.
+|===
+
+=== Drift that survived the merge
+
+* `EXPLAINME.adoc` still says "five grammars, eight T0 rules … Ten rules are
+  registered". `README.adoc`, `SCOPE.adoc`, `PROOF-PROGRESS.adoc` and
+  `wiki/Home.md` all say six grammars and thirteen rules. `EXPLAINME.adoc` is
+  the second file a reader opens (it is named in `.well-known/ai.txt` and
+  `README`).
+* Two ADRs are numbered 0005. One is marked superseded; renumbering is
+  recorded as an owner decision and has not been taken.
+* `tests/doc_drift.sh` checks commands and flags against `pons --help`, the man
+  page and the catalogue. It does **not** check *counts* (rules, grammars,
+  tiers), which is exactly the claim class that rotted.
+* `PROOF-PROGRESS.adoc` says #29/#30 "remain open until their closure evidence
+  is re-run and recorded". That is honest and it is also a standing debt:
+  eight issues carry work that the tree claims is done.
+
+=== What is genuinely strong, and should not be disturbed
+
+The evidence-class invariant (tier derives the class; `Finding`'s private
+fields make a forged class unrepresentable), the frozen-schema discipline with
+a recomputed digest, the falsifier gate with mandatory negative corpora, and
+the `verdict.rs` single-gate refactor that makes the CLI, the human reporter,
+SARIF and `Counts::tally` read one table. The 0.5.0 contract is the most
+consumer-facing thing this repository has produced. Nothing below proposes
+reopening any of it.
+
+== Priority order, and why
+
+[cols="1,2,4",options="header"]
+|===
+|Rank |Work |Why now
+
+|P0
+|Close the eight open issues with recorded evidence; kill the count-drift class
+|It is cheap, it is entirely within this repository, and it is the repository's
+own stated standard. A tool whose proposition is "never dress a heuristic up as
+a proof" cannot leave eight issues open over repairs it claims are landed.
+
+|P1
+|A real release surface: signed tag, attested binaries, a documented install
+|**Six** consumers or near-consumers now build this from source per SHA
+(`metadatastician/standards` does it on every run, in `~/.pons`, with a
+ten-minute timeout). Every one of them pays for the absence of a release. But
+this cannot precede P0: a tag is a claim.
+
+|P2
+|M8 measured acceptance: external corpus, per-rule precision with intervals
+|This is the gate on v0.1.0 and it is the difference between "a tool" and "a
+measurement instrument". Everything in `EXNOVATION-ROADMAP.adoc` Phase 1 is
+already specified; it has never been run.
+
+|P3
+|M5 source-derived T2 typestate (rule 11)
+|The flagship capability. ADR-0003 is ratified and implemented nowhere. This is
+a multi-session project, not a session.
+
+|P4
+|First genuine Creusot obligation
+|Correctly ranked last: it needs the dependency, the nightly pin and a crate
+whose contracts discharge, and it changes nothing a consumer sees. The gate's
+current silence is the honest state and is already guarded against false
+claims.
+|===
+
+== Cross-repository clash analysis
+
+This section exists because the most likely way to damage the estate from here
+is to make other repositories fit *this* repository's shape.
+
+=== The verdict-grid identity clash (metadatastician/standards)
+
+`metadatastician/standards` already renders a `pons asinorum` row
+(`scripts/lib/verdict-grid.jq`, `docs/VERDICT-GRID-SPEC.adoc`, VG v1.0 schema
+3). Measured on that repository's `main`:
+
+* Its cross-reporter fingerprint is `[normalised path, positive line,
+  normalised class or CWE]`, where a pons finding's class falls back to its
+  `rule_id`.
+* Pons's new `semantic_fingerprint` is `BLAKE3(root-relative path, line,
+  evidence class)`.
+
+**These are different keys and must stay different.** The grid's third
+component is a *defect* class; pons's is an *evidence* class. Substituting
+pons's key into the grid would make every pons finding on a line collapse with
+every other producer's finding on that line regardless of defect — a
+`syntactic-heuristic` at line 40 corroborating an `sql-injection` at line 40.
+That is precisely the over-merge the grid's `uncorrelatable_total` guard and
+its "absent identity must never collapse distinct defects" comment exist to
+prevent. Pons's own documentation claims that agreement "at the same line" is
+one corroborated site; that claim is about a *site*, and the grid's stricter
+model is the one that should win, because it is the only one that can tell a
+heuristic overlap from a defect overlap. The honest resolution is a separate,
+non-grading "site overlap" figure — never a replacement key.
+
+=== Demotion is a number now, and it must land before T3 does
+
+No T3 rule is registered, so `counts.demoted_speculative` is 0 and a consumer
+that ignores it behaves identically today. That is the whole point of adopting
+it now: the standards lane counts pons findings by `severity` alone, so the
+first registered T3 rule at `INFO` renders "blue, minor" and at `ERROR` would
+render purple. The contract says a speculative finding never counts toward a
+verdict. Adopt the demotion while it is a no-op, not after the first guess
+appears in a graded row.
+
+=== Exit 2 means "no applicable input", and the consumer does not know that
+
+Pons exits 2 when nothing applicable was analysed, and still prints a parseable
+JSON envelope with `scanned.coverage_status == "no-applicable-input"`
+(`docs/COVERAGE-MIGRATION.adoc`, ADR-0005 amendment). The standards lane
+currently writes `status: error` for *any* non-zero exit, so a documentation-only
+repository gets a permanent orange pons row reading "pons scan exited 2" —
+missing evidence where the truth is "nothing to analyse". `cicd-suite`'s
+`custom-tools-check` already maps that exit code to `not_run`, so the estate is
+internally inconsistent about it, and the fix belongs in the consumer.
+
+=== The release-dependency direction runs against the grain
+
+`metadatastician/standards` builds pons from source by pinned SHA with a
+ten-minute timeout and a `~/.pons` cache keyed by that SHA. That is a defensible
+supply-chain posture, not a workaround. If pons cuts attested release binaries,
+the lane *may* prefer them — but pons must not plan its release to suit one
+consumer, and the lane must not relax its pinning to suit pons. The prompt below
+asks the question and accepts "no" as an answer.
+
+=== Tag signing is a hard wall for this environment
+
+`Immutable-Tags` requires signed tags and declares **no bypass actors**. Every
+agent session in this sandbox produces unsigned commits (measured above). So a
+release tag cannot be created from here by any route; it needs a signing key on
+the account or a human's signed tag. Any prompt that says "cut v0.1.0" is
+therefore unsatisfiable as written, and the release prompt below says so
+explicitly rather than letting a session discover it at the last step.
+
+=== The vendored benchmark scripts gate P2
+
+`scripts/proven-bench/` is vendored byte-for-byte from
+`hyperpolymath/proven-tests-and-benches` with a digest check, so it cannot be
+patched here. Two defects are already drafted for upstream
+(`docs/handoffs/upstream-prompts.adoc` §8): `compute-bench-baseline.sh` accepts
+an empty file as a validated run and then writes `window: 9` while its own
+`MIN_RUNS=10` check is satisfied by *argument count*, and
+`check-bench-regression.sh` silently compares against `$b[0]` of a multi-document
+baseline. Pons has no baseline yet, so nothing is broken today — but P2's
+performance gate writes the *first* baseline, which makes the upstream fix a
+precondition rather than a nice-to-have.
+
+== Prompts
+
+Each block is self-contained. The first two are for this repository; the rest
+are for repositories this one cannot change, with the permissions, installs and
+contingencies each one will actually meet.
+
+=== P0/P1 — pons-asinorum, next session
+
+[source,text]
+----
+SESSION: pons-asinorum — pay the truth debt, then make the release real.
+
+Baseline: main @ 84f58f9 (squash of PR #67), all CI green, 250 tests passing.
+
+READ FIRST: PROOF-PROGRESS.adoc, docs/SCOPE.adoc ("Next: finish the ratified
+core"), docs/PLAN.adoc (M8 and Appendices G/H), docs/AUDIT.adoc ("Remaining
+release and operational gaps"), docs/CI-CD.adoc, docs/handoffs/
+2026-10-29-next-session-priorities.adoc.
+
+TASK A — close the eight open issues, with evidence or not at all.
+Issues: #29, #30, #32, #33, #43, #47, #48, #50.
+PROOF-PROGRESS.adoc states that #29 and #30 have code and regression tests on
+main but "remain open until their closure evidence is re-run and recorded".
+Do exactly that, one issue at a time: re-run the specific test or command that
+covers the claim on current main, and paste the command plus its observed
+output into the issue before closing it.
+  * If the evidence does not reproduce, do NOT close. Convert the issue to a
+    defect with the failing command and reopen it.
+  * Do not batch-close with a single "all fixed in #67" comment. That is the
+    failure mode this task exists to correct.
+  * Where a fix is in the tree but untested, write the test first.
+
+TASK B — kill the count-drift class, not just the instance.
+EXPLAINME.adoc still claims "five grammars, eight T0 rules … Ten rules are
+registered"; the tree has six grammars and 13 rules, and README.adoc,
+SCOPE.adoc, PROOF-PROGRESS.adoc and wiki/Home.md all say so. Fix EXPLAINME.adoc
+AND extend tests/doc_drift.sh so that numeric claims about rule count, T0/T1/PHP
+split and grammar count in README.adoc, EXPLAINME.adoc and wiki/Home.md are
+compared against `pons catalogue` output and the grammar registry.
+The gate must ship with a mutant, as the existing fake-`--flag` mutant does: a
+scratch copy with a bumped number must make the check fail. A drift check
+without a mutant is a comment.
+
+TASK C — one number per ADR.
+Two files claim 0005. 0005-cli-exit-code-contract.adoc is normative;
+0005-rookie-scanner-development.adoc is marked superseded. Renumbering is an
+owner decision recorded in docs/OWNER-DECISIONS.adoc. Propose the choice in the
+PR body and take the documented default (renumber the superseded file to the
+next free number, leave a pointer at the old path, keep the normative one
+untouched). Do not silently renumber anything normative, and do not edit
+historical records to look tidier.
+
+TASK D — release readiness, without a release claim.
+Write docs/RELEASING.adoc stating: (1) exactly what must be true before v0.1.0
+can be tagged (the M8 gate, itemised); (2) what a consumer can trust today and
+what it cannot; (3) the supported install, which is the path
+metadatastician/standards already uses:
+  cargo install --git https://github.com/hyperpolymath/pons-asinorum \
+    --rev <40-hex-sha> --locked --force --root "$HOME/.pons" pons-cli
+Add .github/workflows/release.yml triggered by a tag push (v*) that builds
+release binaries, writes SHA-256SUMS and an attested build provenance, and does
+not create a GitHub release unless every step succeeds.
+  * DO NOT create a tag in this session. Read the next paragraph before you try.
+  * The repository's Immutable-Tags ruleset requires SIGNED tags and declares
+    no bypass actors. This environment produces unsigned commits (0eb5651 is
+    verified:false, reason:"unsigned"), and PR #67 only merged because --admin
+    bypassed Require-Signed-Commits. A signed tag cannot be produced here. If
+    the session reaches the tagging step, stop and hand it to the owner with
+    the exact command and the key requirement, rather than attempting it.
+  * The repo's Actions policy is selected-actions-only with sha_pinning_required.
+    Check the org allowlist before adding any third-party action; prefer
+    `gh release create` and `actions/attest-build-provenance` if admitted, and
+    pin every `uses:` to a 40-hex SHA.
+  * A new .yml needs an entry in ci/yaml-ratchet.kyaml or the Format ratchet
+    fails. A new .json needs one in ci/json-ratchet.kyaml.
+  * Do NOT publish to crates.io. That is an owner decision, not an engineering
+    one, and renaming later is expensive.
+
+CONSTRAINTS (standing, from docs/PLAN.adoc and the repository deeds):
+  * Do not mutate the 0.4.0 schema. The envelope is 0.5.0 current, 0.4.0 frozen;
+    do not bump either in this session.
+  * Do not present any Rust code as verified. Creusot reports contract_count=0;
+    that silence is the accurate status and is already guarded by the gate.
+  * Zero warnings; all existing tests stay green; SPDX header on every new file
+    (MPL-2.0 for code and config, CC-BY-SA-4.0 for prose); UK English; AsciiDoc;
+    TOML for config.
+  * The working branch may receive concurrent commits from other agents or the
+    maintainer. `git fetch` and diff before every push; do not blind-push, and
+    prefer resetting to origin over reconciling duplicated fixes.
+
+VERIFICATION: there is no local Rust toolchain in the agent sandbox
+(static.rust-lang.org, index.crates.io and sh.rustup.rs are blocked). Verify
+through GitHub Actions: open the PR and read `rust-ci`, `Format Policy`,
+`Secret Scanner`, `Central Estate CI/CD Audit`. If you need a bespoke runner
+command, add a temporary workflow_dispatch lane, register it in
+ci/yaml-ratchet.kyaml, and delete both the lane and its ratchet entry in the
+same PR before merging.
+
+DEFINITION OF DONE: eight issues each closed-with-evidence or reopened-with-a-
+reproducer; the count-drift gate and its mutant merged; one ADR per number with
+the owner decision recorded; docs/RELEASING.adoc and a never-yet-run
+release.yml on main; zero schema changes; CI green.
+----
+
+=== P2/P3 — pons-asinorum, the session after
+
+[source,text]
+----
+SESSION: pons-asinorum — measure the tool, and pre-register the measurement
+before you run it.
+
+Baseline: whatever main is at the start of the session; read PROOF-PROGRESS.adoc
+first and trust it over this brief.
+
+This session is a measurement study, not a feature. Its output is a
+pre-registration, a corpus pinned by revision, and per-rule numbers with
+intervals — never a precision claim about "the tool".
+
+READ FIRST: docs/EXNOVATION-ROADMAP.adoc §"Statistical proof plan" (units and
+labels, precision/recall with uncertainty, acceptance gates before production
+claims), §"Phase 1 — Measured M4 hardening", docs/adr/0002 (the FP amendment,
+and the #47 recorded FP classes), docs/EVIDENCE-CONTRACT.adoc (what a record
+carries, and why a fingerprint is not a defect identity).
+
+TASK A — write the pre-registration FIRST, as a committed document, before any
+corpus is scanned. It must state: the units (findings, not files), the
+denominator, the corpus revisions (commit SHAs, not branch names), the rules in
+scope, the precision target, the interval method and the decision rule that a
+missed target triggers. Commit it. Then run the study.
+Registering after seeing the results is the defect this ordering prevents.
+
+TASK B — the two corpora.
+  1. Re-scan the recorded google-flatbuffers-bounty revision named in Phase 1.
+     Report the three flexbuffers true positives and keep the class A/B split
+     and the Wilson intervals from the earlier pass, or explain the difference.
+  2. A second, independent Python corpus, including generated code and
+     exception-heavy idioms. Record why it is independent of the first.
+Report zero unexplained parse-error trees, or list every one.
+
+TASK C — performance, and the upstream trap before it.
+`tests/proven` has no committed benchmark baseline. Before cutting one, read
+docs/handoffs/upstream-prompts.adoc §8: the vendored
+`scripts/proven-bench/compute-bench-baseline.sh` accepts an empty file as a
+validated run and then writes `window: 9` while its own MIN_RUNS=10 check is
+satisfied by ARGUMENT COUNT, which makes the gate mathematically inert and the
+baseline permanently self-consistent-but-wrong. `check-bench-regression.sh`
+likewise reads only the first document of a multi-document baseline.
+  * Do not patch scripts/proven-bench/*. They are vendored byte-for-byte with a
+    digest check (scripts/proven-bench/verify-upstream.sh); patching them breaks
+    the proof that the copy is the upstream copy.
+  * Either wait for the upstream fix, or verify `window == reps == the number of
+    genuinely validated documents` by hand and record that verification in the
+    PR. Say which you did.
+
+TASK D — do not do these.
+  * Do not tag v0.1.0 unless every M8 box is checked. The tag ruleset requires
+    signed tags with no bypass; a session cannot produce one, so tagging is an
+    owner action either way.
+  * Do not add a rule to make a number look better, and do not widen a negative
+    corpus to silence a false positive you did not diagnose. No rule merges
+    without a negative corpus.
+  * Do not report a precision figure without its denominator, corpus revision
+    and interval. A single point estimate from a reduced corpus is the exact
+    claim class this repository forbids.
+
+DEFINITION OF DONE: pre-registration merged BEFORE the results; both corpus
+revisions and their digests recorded; per-rule precision with intervals and
+denominators; every parse failure either explained or listed; a performance
+figure that is either withheld with a reason or accompanied by the manual
+window verification; no tag, no schema change, no claim of production readiness.
+
+IF you finish early, the next capability task is M5: source-derived T2 typestate
+per ADR-0003 — walk the existing CFG with extracted protocol events and produce
+rule 11 with path witnesses that cite two concrete lines. It requires positive,
+negative AND alias-uncertainty corpora, and it is a multi-session project; start
+it only with the owner's agreement that M8 slips.
+----
+
+=== S1 — metadatastician/standards: the verdict grid is reading a stale pons
+
+[source,text]
+----
+TASK: update the verdict grid's pons asinorum row for scan envelope 0.5.0, and
+answer one design question deliberately.
+
+Context. hyperpolymath/pons-asinorum merged 84f58f9 on 2026-10-29. Since the
+commit this lane pins by default it has changed:
+  * envelope 0.5.0 (0.4.0 is frozen, not superseded) with three appended keys:
+    findings[].semantic_fingerprint, counts.actionable,
+    counts.demoted_speculative;
+  * schemas/verdict-matrix-1.0.0.json, a committed data file stating, for all
+    twelve (severity x evidence class) pairs, sarif_level, aggregate_weight,
+    counts_toward_verdict, gate_eligible, count_bucket and demotion_suffix —
+    generated from code with a drift test, so a consumer never re-derives it;
+  * pons validate-report recomputes the corroboration key rather than checking
+    its shape.
+
+1. RE-PIN. .github/workflows/hypatia-scan-reusable.yml defaults `pons-ref` to
+   bca1ea289a4f8a86bac6212731e6f8ec15c67ad4, which is the commit BEFORE the
+   merge. Move the default to 84f58f910de7020b79450f2c2643599fe7760f73 (or
+   later). Nothing else in the lane changes shape; the envelope is additive in
+   both directions.
+
+2. ADOPT THE DEMOTION NOW, WHILE IT IS A NO-OP. No T3 rule is registered in
+   pons, so counts.demoted_speculative is 0 and this change moves no number
+   today. That is the point: `scripts/lib/verdict-grid.jq`'s pons reader counts
+   findings by severity alone, so the first registered T3 rule would render as
+   "blue, minor" at INFO — or purple at ERROR — for a finding pons's own
+   contract says never counts toward a verdict. Read counts.actionable and
+   counts.demoted_speculative, and exclude `evidence == "SPECULATIVE"` from the
+   graded set and from the severity counts. Report the demoted count separately
+   in the pons row's detail rather than dropping it silently; a guess stays
+   visible.
+
+3. FIX THE EXIT-CODE MAPPING. The scan step writes status:"error" for any
+   non-zero exit. Pons exits 2 when nothing applicable was analysed AND still
+   prints a parseable envelope with scanned.coverage_status ==
+   "no-applicable-input". A documentation-only repository therefore gets a
+   permanent orange pons row claiming missing evidence, when the truth is that
+   there was nothing to analyse. Map that specific case to status "not_run" (or
+   not_applicable) with the reason, and keep "error" for a non-zero exit WITHOUT
+   a parseable envelope. cicd-suite's actions/custom-tools-check/check.sh
+   already maps pons exit 2 to not_run; the estate is currently inconsistent
+   about the same exit code. Also distinguish exit 1, which under --fail-on
+   means findings at or above a threshold, from exit 2. The lane does not pass
+   --fail-on today, so this is latent, not live.
+
+4. THE QUESTION, AND A NON-ASK.
+   pons's semantic_fingerprint is BLAKE3 over (root-relative path, 1-based
+   line, EVIDENCE class). Your cross-reporter fingerprint is (normalised path,
+   positive line, DEFECT class or CWE), falling back to rule_id for pons.
+   These are different keys on purpose and should stay different. Do NOT
+   substitute pons's key as the grid's join key: it would collapse every pons
+   finding on a line with every other reporter's finding on that line regardless
+   of defect, which is the over-merge your "absent identity must never collapse
+   distinct defects" guard and uncorrelatable_total exist to prevent, and it
+   would silently change what unique_total means for every reporter, not just
+   pons. If the site key is interesting, add it as a separate, non-grading
+   "site overlap" figure — never a replacement.
+   Please record that decision in docs/VERDICT-GRID-SPEC.adoc, in one or two
+   sentences, so the next consumer does not re-litigate it. Pons's own
+   documentation claims agreement "at the same line" is one corroborated site;
+   your stricter model is the one that should win, and pons will be corrected to
+   say so if you record it.
+
+5. A QUESTION YOU MAY ANSWER "NO" TO. Pons has no tag, no GitHub release and no
+   crate publication; this lane builds it from source per SHA in ~/.pons with a
+   ten-minute timeout. If pons later cuts attested release binaries, would you
+   prefer them over the source build? Pons should not plan its release to suit
+   one consumer, and you should not relax sha pinning to suit pons, so "no" is a
+   perfectly good answer — but say which it is, once, rather than leaving the
+   next session to guess.
+
+Permissions: none needed. The pons row is advisory and does not gate; this
+changes reporting, not enablement.
+Installs: none. Existing cargo/source-build path is unchanged.
+Verification: re-render the grid on a pull request in a repository that has
+pons findings (standards itself has pons.toml and .ponsignore), and confirm the
+pons row's ref line moves to the new SHA and its counts are unchanged against
+the previous revision apart from the ref (profile change -> "no comparable
+baseline" is expected). If you add a speculative fixture to prove point 2, keep
+it out of the graded path and say so in the PR.
+Do not: change the grid's severity vocabulary to accommodate pons's evidence
+classes. Evidence class is a pons concept; the grid's vocabulary already
+normalises, and adding a fourth axis for one reporter is how a shared contract
+becomes a special case.
+----
+
+=== S2 — hyperpolymath/cicd-suite: custom-tools-check has no install story
+
+[source,text]
+----
+TASK: give actions/custom-tools-check a documented, pinned install path for
+pons, and make its pons contract explicit.
+
+The gate is now correct in the important ways and does not need redesigning: it
+calls `pons scan .` (not the phantom `pons verify` of the stub it replaced), it
+treats exit 2 as not_run rather than as a pass, and it refuses to certify a scan
+that never ran. Three gaps remain, all in the same place.
+
+1. THERE IS NO INSTALL PATH, AND PONS HAS NO RELEASE.
+The header says "Callers that want this gate must install panic-attack and pons
+first", but pons has zero tags, zero GitHub releases and no crate publication
+(`gh release list` and `git ls-remote --tags` are both empty as of 2026-10-29).
+The only working install is a source build at a pinned revision, which is what
+metadatastician/standards already does in its hypatia-scan-reusable.yml:
+  cargo install --git https://github.com/hyperpolymath/pons-asinorum \
+    --rev <40-hex-sha> --locked --force --root "$HOME/.pons" pons-cli
+    # binary lands at $HOME/.pons/bin/pons
+Please add that recipe to the action's README and to the action's own docs, with
+a cache key of the form pons-<runner.os>-<runner.arch>-<sha> on $HOME/.pons, and
+a bounded timeout (standards uses 600s; pons is a four-crate workspace with five
+tree-sitter grammars, so allow it). A caller that follows the current header
+will fail with "pons is not on PATH — NO CHECK WAS PERFORMED" and no way to fix
+it from the message.
+
+2. PIN, DO NOT FLOAT.
+Add inputs `pons-ref` and `panic-attack-ref` (40-hex SHA, defaulting to your
+currently tested pair) rather than relying on whatever is on PATH, so a
+caller pins what it trusts and the gate's profile can name it. Refuse a
+non-40-hex value the way the estate's other gates do (HEAD only as an explicit
+canary, if you allow it at all).
+
+3. CONSIDER PARTIAL ENROLMENT, WITHOUT WEAKENING THE DEFAULT.
+The gate requires BOTH tools, so a repository that wants pons analysis on its
+own cannot use the action. An input (e.g. `tools: pons,panic-attack`) defaulting
+to both, where an explicitly requested tool must be on PATH or the gate exits 2,
+would keep the current strictness by default. Optional — only if it does not
+complicate the exit-code contract.
+
+THE EXIT-CODE CONTRACT, since it is the thing most likely to be broken by a
+future pons change. Pons ADR-0005 plus docs/COVERAGE-MIGRATION.adoc define:
+  0 — analysis ran, findings (if any) below the --fail-on threshold; no
+      --fail-on is passed by this gate, so 0 is the normal case;
+  1 — findings at or above --fail-on. This gate does not pass --fail-on, so a
+      1 here would mean pons changed its default; treat it as `failed`;
+  2 — NO APPLICABLE INPUT: zero files analysed, or an operational error (an
+      unopenable root, a bad config). Pons still prints a parseable JSON
+      envelope for the coverage case, with scanned.coverage_status ==
+      "no-applicable-input". not_run is the right mapping for both, but the
+      reason string should quote which one it was, because "exited 2" alone
+      cannot be diagnosed from a log.
+If pons ever changes these semantics it will bump nothing — the exit contract
+is an ADR, not a schema — so reference ADR-0005 in a comment and in the
+README rather than restating the numbers as fact.
+
+Do not: re-onboard this gate into hyperpolymath/pons-asinorum's own estate
+audit or any other repository's audit. That de-onboarding was deliberate (a
+cross-repo reusable under sha_pinning_required startup-fails with zero jobs, per
+main-estate-audit.yml's own header), and pons passing its own scan is not a
+reason to reverse it.
+
+Permissions: none. The action declares contents: read and needs nothing more;
+a GitHub App token is not required for either tool.
+Installs: cargo is required on the runner for the pons source build; the action
+should say so and exit 2 with that reason when cargo is absent, rather than
+letting a missing toolchain read as a scan defect.
+Verification: run the action's own pass-on-absence.sh and
+composite-shell-contract.sh, plus a new case for "cargo present, pons build
+failed" and "pons exit 2 with a parseable envelope".
+----
+
+=== S3 — hyperpolymath/proven-tests-and-benches: two defects that poison the first baseline
+
+[source,text]
+----
+TASK: fix two validation defects in the benchmark scripts, and publish the
+document contract that non-Idris harnesses are already implementing by imitation.
+
+A full, evidence-backed draft of both defects already exists at
+hyperpolymath/pons-asinorum: docs/handoffs/upstream-prompts.adoc, section 8
+("two defects in the vendored benchmark scripts") and section 5 ("a harness
+contract for non-Idris repositories"). Please read that file rather than
+re-deriving this; it names the exact lines and the exact failure mechanism. In
+summary, because it is a one-line bug with a large blast radius:
+
+1. compute-bench-baseline.sh counts FILE ARGUMENTS, not validated run documents.
+   `validate_run` runs per input document and produces no output for an empty
+   file, so an empty file passes; the later `jq -s` then collects nine documents
+   instead of ten and the baseline is written with window: 9 — while the
+   script's own MIN_RUNS=10 check was satisfied by the number of arguments. The
+   gate is then mathematically inert, which is precisely what the script's
+   "BASELINE BOOTSTRAPPING" refusal exists to prevent. Please reject an empty
+   file and a multi-document file, and count validated run documents rather than
+   file names.
+
+2. check-bench-regression.sh accepts a baseline containing more than one JSON
+   document: it uses `--slurpfile b "$BASELINE"` and reads $b[0], so a
+   two-document baseline silently compares against the first and reports nothing
+   about the extra. Please reject a baseline that is not exactly one valid
+   document, before comparing.
+
+Why it is now urgent rather than theoretical: pons-asinorum has no committed
+baseline today, so nothing is broken in that repository — its ledger entry is a
+declared Unproven gap. But its next session cuts the FIRST baseline as part of
+the M8 performance gate, and a first baseline written with a wrong `window` is
+permanently self-consistent and wrong. The consumer cannot patch the scripts: it
+vendors them byte-for-byte with a digest check against a pinned revision
+(scripts/proven-bench/verify-upstream.sh), so a local fix breaks the proof that
+the copy is the upstream copy.
+
+Please also add a regression test in this repository that feeds (a) an empty
+file and (b) a two-document file, asserting rejection in each case. The defects
+were found by review in a consumer, which means neither script has a test that
+would have caught them.
+
+Separately, the summary answer to section 5 is still wanted: whether a non-Idris
+harness producing the same document shape from shell or Rust is a supported
+producer, and whether the framework prefers to be fetched at a pinned revision
+rather than vendored. Pons vendors only because its checker must run offline; if
+the framework would rather be fetched, say so and pons will stop vendoring.
+
+Permissions: none. CI-only changes.
+Installs: the scripts need jq (and bash 4+). Please state the minimum jq version
+the tests use, since pons vendors bench-stats.jq alongside them.
+----
+
+=== S4 — hyperpolymath/panic-attack: the interop contract, and one shared identity
+
+[source,text]
+----
+TASK: answer two questions about the pons/panic-attack exchange, and settle
+where the cross-producer identity is defined.
+
+pons-asinorum is panic-attack's design companion (ADR-0004). The division of
+labour is recorded in pons's docs/PURPOSE-AND-PROOF.adoc: panic-attack does
+breadth/security/resilience, pons does depth/waste/contradiction, and they
+"exchange versioned evidence while retaining independent analyses and
+identities". The exchange is designed and never exercised.
+
+1. CAN A NON-IDRIS PRODUCER EMIT THE PROOF-LADDER ARTEFACT?
+pons has no machine-checked proof artefact and says so (Creusot reports
+contract_count=0; the gate is silent rather than green). But it does carry a
+provenance ledger in the same tier vocabulary the framework uses — every test
+entry is Actually-Proven / Provisionally-Proven / Unproven, and Actually-Proven
+is unreachable here because proof_artifacts is empty. Question: can a producer
+that is permanently Provisionally-Proven participate in the ladder at all, and
+if so, what does it emit — an empty ladder file with a classification, an
+explicit abstention, or nothing? The wrong answer is "emit something that
+aggregate counts as coverage".
+
+2. WHAT IS THE CANONICAL SELF-SCAN?
+The estate's custom-tools-check invokes `panic-attack assail .` and `pons scan .`
+when both are on PATH, and now correctly exits 2 (no check performed) when they
+are not. What is the documented invocation a repository should run over its OWN
+source, with the flags you would stand behind? A documented invocation that a
+repository can wire into CI for real would close the gap; the current situation
+is that the gate is honest but unused.
+
+3. THE ONE THAT ACTUALLY MATTERS — WHERE DOES CROSS-PRODUCER IDENTITY LIVE?
+metadatastician/standards renders both tools in one verdict grid, and its
+cross-reporter fingerprint is (normalised repository-relative path, positive
+line, normalised defect class or CWE) — for panic-attack it uses `category`, for
+pons it falls back to rule_id. pons has just published its own
+semantic_fingerprint, which is (path, line, EVIDENCE class), because pons's unit
+of honesty is the evidence tier. Those keys deliberately do not match and must
+not be reconciled by making either tool adopt the other's.
+   * Does panic-attack's `report.weak_points[]` carry, or could it carry, a
+     defect class or CWE that is stable across versions? If yes, a single
+     defect-class key can join both tools' output and neither has to invent a
+     second identity scheme.
+   * If no, then pons's site key stays site-scoped and cross-producer
+     corroboration stays defect-class-scoped. That is the outcome pons expects;
+     it is asking now so that its documentation stops implying otherwise.
+Please answer with a decision, not an option list — pons will record whichever
+answer you give in docs/EVIDENCE-CONTRACT.adoc.
+
+Do not: relax panic-attack's own severity vocabulary to match pons's evidence
+classes. The two are different axes and the grid normalises both already.
+
+Permissions: none. This is a documentation and, at most, one optional field in
+an existing JSON envelope.
+Installs: none.
+----
+
+=== S5 — organisation Actions allowlist (owner/admin action, not a repository change)
+
+[source,text]
+----
+TASK (OWNER/ORG ADMIN): unblock two conformance lanes in pons-asinorum, and
+finish the repository rename that is still breaking callers elsewhere.
+
+This cannot be done from any repository working tree. It is an organisation
+setting, which is why it is listed separately from the code prompts.
+
+1. THE ORG ACTIONS ALLOWLIST REFUSES TWO REUSABLES.
+Under the estate's selected-actions posture, GitHub kills at startup any
+`uses:` of a reusable workflow not on the organisation's live patterns_allowed
+— zero jobs, no log, and the run is attributed to the workflow FILE rather than
+the workflow. Measured in hyperpolymath/pons-asinorum on PR #65 and again on
+#67, twice each, at two different pins:
+  * metadatastician/standards/.github/workflows/deed-conformance.yml -> startup_failure
+  * metadatastician/standards/.github/workflows/k9-conformance.yml    -> startup_failure
+The pin is not the variable; the allowlist is. The secret-scanner reusable from
+the same repository IS on the list and runs successfully, which is the control
+that proves it. Consequently pons's deed-conformance.yml and k9-conformance.yml
+are workflow_dispatch-only stubs that report their own unwired status, and the
+DEED/K9 conformance evidence for that repository is manual (both deeds pass the
+normative deed_lint.js run under node; all six verb contracts conform at
+contract v1.0.0 layer 1 structural; layer 2 Nickel typecheck and layer 3
+Ed25519 were SKIPPED, never passed).
+ACTION: add both reusables to the org's allowed patterns at a pinned SHA, then
+restore the two calls in pons (both files carry the exact YAML to restore, in
+their headers). Do not restore them before the allowlist change: a lane that
+always startup-fails is worse than no lane, and is the failure mode that got a
+validator deleted instead of the files fixed.
+
+2. THE ALLOWLIST FILE STILL LISTS ONLY hyperpolymath/*.
+rhodium-standard-repositories/actions-allowlist/allowed-actions.json has not
+been updated for the transfer of `standards` to `metadatastician`. The
+consequence is subtle: a repository whose live Actions policy HAS been migrated
+to the new owner is therefore not a superset of the canonical list, and
+scripts/check-actions-policy.sh reports it as non-compliant. The two halves of
+the estate disagree about the name of the repository they are describing.
+ACTION: add metadatastician/* (or the specific entries) to that file, and keep
+it in step with the org's live patterns_allowed, since those are the two things
+that must agree.
+
+3. WHILE YOU ARE THERE: CALLERS STILL SPELLING THE OLD OWNER.
+GitHub's REST API follows the rename (GET /repos/hyperpolymath/standards answers
+full_name: metadatastician/standards) but the ACTIONS resolver does not, and the
+failure mode is silent: no job, no log, and the run carries the workflow file's
+name so it does not look like the workflow it is. The list of live callers as of
+2026-10-25 is in hyperpolymath/pons-asinorum's
+docs/handoffs/upstream-prompts.adoc, section 1 — standards itself, cicd-suite
+(two workflows), rsr-template-repo (nine files), cicd-squabbler (actions.lock).
+Two of those repositories' last green runs predate the transfer, so they have not
+run since it and do not know yet. The cheapest check is
+`gh run list --json conclusion,name` filtered for runs whose name is a file path.
+
+4. WHAT THIS UNBLOCKS, AND WHAT IT DOES NOT.
+Unblocked: the two conformance lanes in pons, and honest "the lane ran" evidence
+for DEED/K9 in every consumer of those reusables.
+NOT unblocked, and must not be claimed as a result: K9 layers 2 and 3 in pons,
+which have never been run at all, and any Creusot proof (contract_count is 0).
+A green lane and a proved property are different things; this repository's whole
+documentation is organised around not confusing them.
+
+Permissions needed: organisation owner (or an organisation-level Actions admin)
+for the allowlist; write access to rhodium-standard-repositories for the JSON.
+Neither is available to an agent session — this is a human task.
+----
+
+== Owner actions, condensed
+
+. Decide the ADR renumbering (two files numbered 0005; one is marked
+  superseded). Until then every reference to "ADR-0005" is ambiguous.
+. Decide whether pons publishes to crates.io. It is a naming and supply-chain
+  decision, and it is cheap now and expensive after the SPDX header sweep that a
+  later `publish` flag would imply.
+. Provide a signing key for tags, or tag releases yourself. `Immutable-Tags`
+  requires signed tags with no bypass actors, and this environment cannot sign.
+. Apply the org allowlist change in S5.
+
+== What this document is not
+
+It is not a claim that any of the above is easy, and it is not a capability
+claim for anything. The repository's own rule applies to this file too: never
+dress a heuristic up as a proof. Pons has 13 rules, 250 tests, one frozen
+contract and no release. That is what it has, and that is what a consumer may
+depend on.
