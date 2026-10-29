@@ -36,7 +36,7 @@ a diagnosis. No philosophy qualification is expected.
   models. These check supplied premises/events, not source-derived typestate.
 * Scoped configuration and suppression: `pons.toml`, `--config`, rule/path
   allowances, inline comment allowances, and suppression accounting.
-* Human, JSON 0.4.0 and SARIF 2.1.0 output. SARIF carries invocation
+* Human, JSON 0.5.0 (0.4.0 frozen and still validatable) and SARIF 2.1.0 output. SARIF carries invocation
   notifications for skipped paths; JSON carries skip, transcode and suppression
   accounting; a transcoded file omits misleading artifact byte offsets.
 * Generated help/man/catalogue, `doctor`, and a CLI/rule/doc drift test.

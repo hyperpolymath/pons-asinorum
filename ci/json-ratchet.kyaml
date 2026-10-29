@@ -25,6 +25,7 @@
     },
     {
       paths: [
+        "crates/pons-core/tests/golden/report-0.4.0.json",
         "crates/pons-core/tests/golden/report.json",
         "crates/pons-core/tests/golden/report.sarif.json",
       ],
@@ -144,9 +145,12 @@
     {
       paths: [
         "schemas/evidence-1.0.0.json",
+        "schemas/index.json",
         "schemas/scan-0.4.0.json",
+        "schemas/scan-0.5.0.json",
+        "schemas/verdict-matrix-1.0.0.json",
       ],
-      reason: "The published report schemas. They are the human-readable contract for Pons's machine-readable output and are reviewed line by line; a canonical rendering of a 755-line schema is not reviewable.",
+      reason: "The published contract artifacts: the report schemas, the frozen 0.4.0 schema, the version index that attests each of them by BLAKE3, and the severity x evidence matrix. They are the human-readable contract for Pons's machine-readable output and are reviewed line by line; a canonical rendering of a 755-line schema is not reviewable, and canonicalising a document whose field order is part of its published guarantee would change the contract rather than enforce it.",
     },
   ],
 }

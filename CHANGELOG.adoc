@@ -3,6 +3,76 @@
 
 == Unreleased — 0.1.0-dev.1
 
+=== Added
+
+* The three things a repinning consumer needs are now published, and each one is
+  a fact the code checks rather than a promise the docs make.
+
+  **The report contract is versioned, and 0.4.0 is frozen.** The envelope moves
+  to 0.5.0 with three appended keys: `findings[].semantic_fingerprint`,
+  `counts.actionable` and `counts.demoted_speculative`. Additive in both
+  directions, and the bump is still taken, because a consumer has to be able to
+  tell whether a report carries the corroboration key at all. `0.4.0` does not
+  disappear: `schemas/scan-0.4.0.json` is byte-pinned by
+  `FROZEN_0_4_0_SCHEMA_BLAKE3` (a test recomputes the digest, so editing the
+  frozen file fails the build instead of a consumer), and `pons
+  validate-report` still accepts a 0.4.0 report — the version *declared inside
+  the document* selects the schema, so a 0.4.0 declaration cannot carry a 0.5.0
+  key. `schemas/index.json` lists every published artifact with its version,
+  status and BLAKE3 digest, and `schemas/README.adoc` states the freeze rule and
+  how to add a version.
+
+  **The severity × evidence matrix is published as data.**
+  `schemas/verdict-matrix-1.0.0.json` carries all twelve (severity, evidence)
+  cells with `sarif_level`, `aggregate_weight`, `counts_toward_verdict`,
+  `gate_eligible`, `count_bucket` and `demotion_suffix`, plus both scales and the
+  corroboration recipe. It is generated from `crates/pons-core/src/verdict.rs`,
+  which is now the single home of the SARIF level and rank tables, the
+  evidence-contract confidence labels and the `--fail-on` rank, so the published
+  document cannot state a different number from the reporter; a drift test fails
+  if the committed file and the code disagree.
+
+  **Every finding carries a semantic fingerprint.**
+  `findings[].semantic_fingerprint` is BLAKE3 over
+  `pons-corroboration-v1`, the root-relative path, the 1-based start line and
+  the evidence class — a *site*, not a finding, so a grid can mark Pons's
+  finding and a panic-attack or Hypatia finding at the same line as one
+  corroborated site instead of double-counting the overlap. It deliberately
+  ignores the rule id, the producer and the severity. The record fingerprint is
+  unchanged and still does the other job (one finding, rule id plus a
+  whitespace-folded anchor). `validate-report` recomputes the key rather than
+  checking its shape, so a producer cannot point a finding at an arbitrary site.
+
+  **`SPECULATIVE` is demoted numerically as well as visually.** The demoted
+  bucket has an aggregate weight of **zero** at every severity, `counts.actionable`
+  excludes it, and `validate-report` rejects a document whose
+  `actionable + demoted_speculative` does not account for `counts.total` — the
+  demotion is a number in the contract, not a convention a reader might miss.
+  The human summary gains a `verdict:` line separating the two. Appendix E's
+  SARIF `rank` of 20 is kept, on purpose and published as a *different* number:
+  a guess stays visible and adds nothing.
+
+* Tests for all of it, including the ones that make the claims non-vacuous: a
+  frozen 0.4.0 report still validates through the binary, a 0.4.0 declaration
+  carrying a 0.5.0 key is rejected, an unknown version is refused rather than
+  validated against the nearest shape, a forged corroboration key is rejected,
+  and the frozen schema digest is recomputed from disk.
+
+=== Added (verification lane)
+
+* The estate's Creusot gate is now called by this repository
+  (`.github/workflows/creusot-gate.yml`) at the same cicd-suite pin as the
+  estate audit, instead of only arriving inside the audit's `languages`
+  component. Nothing is proved by this and nothing claims to be: measured with
+  the gate's own `detect` and `theatre` phases on this tree, `obligations=false
+  claims=false contract_count=0 trusted_count=0`, and the gate's verdict is its
+  own words — "nothing was proved and nothing claims to be". What the lane buys
+  is the negative: a claim that this code is proved, with no contracts behind
+  it, is now a build failure (T1), a `creusot-std` dependency that annotates nothing
+  is a failure here because `enforce_hollow` is set (T2), and every `#[trusted]`
+  axiom must be listed (T3). `PROOF-PROGRESS.adoc` records the state and what a
+  first real obligation requires.
+
 === Fixed
 
 * The shared secret scanner's owner spelling is now recorded where it is

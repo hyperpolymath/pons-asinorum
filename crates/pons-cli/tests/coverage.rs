@@ -55,7 +55,7 @@ fn inventory_accounts_for_supported_unsupported_excluded_and_parse_error() {
     let out = t.scan(&["--format", "json", "--fail-on-skips"]);
     assert_eq!(out.status.code(), Some(2));
     let v: Value = serde_json::from_slice(&out.stdout).unwrap();
-    assert_eq!(v["schema_version"], "0.4.0");
+    assert_eq!(v["schema_version"], "0.5.0");
     let inv = v["scanned"]["inventory"].as_array().unwrap();
     assert_eq!(inv.len(), 7);
     for (name, status) in [

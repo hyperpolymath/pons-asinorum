@@ -34,9 +34,11 @@ differently from proofs:
 
 - **`human`** (default) — terminal, `SPECULATIVE` visually demoted.
 - **`json`** — a stable envelope (Appendix G of the plan): `schema_version`,
-  `tool`, `scanned` counts, `counts.by_evidence`, and a `findings[]` array with
-  fixed field order. Compatible in shape with panic-attack's JSON habit, easing a
-  shared records sink.
+  `tool`, `scanned` counts, `counts.by_evidence`, `counts.actionable`,
+  `counts.demoted_speculative`, and a `findings[]` array with fixed field order.
+  Compatible in shape with panic-attack's JSON habit, easing a shared records
+  sink, and each finding carries a `semantic_fingerprint` so an aggregating grid
+  can mark one site once instead of counting overlapping producers twice.
 - **`sarif`** — SARIF 2.1.0, for GitHub code scanning, IDEs, and any SARIF viewer.
 
 ## SARIF: the demotion survives (this is the important bit)
@@ -111,7 +113,18 @@ it does not invent them.
   surface, so a grammar change that would alter results breaks fixtures loudly
   rather than silently drifting your findings.
 - The JSON envelope and SARIF mapping carry `schema_version`; treat a bump as a
-  potential breaking change for your parser.
+  potential breaking change for your parser. The envelope is at **0.5.0**; **0.4.0
+  is frozen** — its schema file is byte-pinned, `pons validate-report` still
+  accepts 0.4.0 reports, and the version inside a document selects the schema it
+  is checked against. `schemas/index.json` lists every published version, file
+  and BLAKE3 digest; read it at your pin.
+- Do not re-derive the severity/evidence policy. It is published as data in
+  `schemas/verdict-matrix-1.0.0.json` (generated from the code, drift-tested),
+  including the demoted-count fields and the corroboration-key recipe.
+- `SPECULATIVE` findings are demoted visually (message suffix, SARIF `note`) and
+  numerically (`aggregate_weight` 0, `counts.actionable` excludes them). If your
+  dashboard sums findings, sum `counts.actionable`, or show both numbers — never
+  add a guess into a verdict total.
 
 ## Estate integration (AmbientOps)
 

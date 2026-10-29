@@ -100,13 +100,9 @@ pub fn contract(report: &ScanReport) -> Contract<'_> {
                 rule: f.rule_id().into(),
                 tier: f.tier(),
                 evidence: f.evidence(),
-                confidence: match f.tier() {
-                    Tier::T0 => "heuristic",
-                    Tier::T1 => "model-dependent",
-                    Tier::T2 => "premise-dependent",
-                    Tier::T3 => "speculative",
-                }
-                .into(),
+                // One table, in verdict.rs, because the same label is
+                // published to consumers in schemas/verdict-matrix-1.0.0.json.
+                confidence: crate::verdict::confidence(f.evidence()).into(),
                 path: relative,
                 line: f.location().line_start,
                 trace: f.evidence_note().into(),

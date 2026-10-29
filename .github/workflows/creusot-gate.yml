@@ -1,0 +1,96 @@
+# SPDX-License-Identifier: MPL-2.0
+name: Creusot Gate
+
+# Rust deductive verification, as the estate requires it: the Creusot gate in
+# hyperpolymath/cicd-suite, called rather than copied. This file adds no
+# steps of its own, exactly like main-estate-audit.yml — a copy would freeze
+# this repository at whatever cicd-suite commit it happened to hold.
+#
+# Why this file exists at all: the estate audit's own `languages` job runs the
+# Idris2, Zig, proof-runner and BoJ checks, not this one, so before this file
+# nothing in this repository watched for a Creusot claim. The gate's checks are
+# therefore new coverage here, not a duplicate of the audit's.
+#
+# KNOWN LIMIT OF THE PINNED GATE (reviewed, upstream fix required): the pinned
+# script recognises a Creusot dependency by its literal `creusot-std` /
+# `creusot-contracts` key. A crate that renames the dependency
+# (`creusot = { package = "creusot-std" }`) and writes contracts would set
+# `obligations=true` while leaving the selected-crate list empty, so the proof
+# loop could run over nothing and still exit green. That is a gap in the gate,
+# not a pass for this tree, and it cannot be fixed from here without copying
+# the gate (which is what this repository refuses to do). It is recorded so the
+# first aliased dependency arrives with someone looking; the honest fix is a
+# cicd-suite release that resolves the alias and rejects an empty crate list
+# when obligations exist.
+#
+# WHAT THIS GATE DOES, AND WHAT IT DOES NOT CLAIM
+# -----------------------------------------------
+# Three phases, run by the reusable:
+#
+#   detect   does any crate carry a Creusot obligation (a creusot-std /
+#            creusot-contracts dependency, or a #[requires]/#[ensures] and
+#            friends)? does any prose or source header CLAIM Creusot
+#            verification?
+#   theatre  T1: a claim with no obligations behind it is a hard failure —
+#            "verified with Creusot" without contracts is proof theatre.
+#            T2: a creusot-std dependency that annotates nothing is named.
+#            T3: every #[trusted] axiom is listed, because a proof is only as
+#            strong as the set it trusts.
+#   prove    only runs when detect found obligations. It installs Creusot at
+#            a pinned release, proves a planted FALSE contract and REQUIRES
+#            the prover to refuse it, proves a planted TRUE one and requires
+#            success, and only then runs `cargo creusot prove` in every crate
+#            with obligations. A prover that cannot say no is not a prover.
+#
+# MEASURED ON THIS TREE (2026-10-28, cicd-suite bf7dd95 creusot-check):
+#   obligations=false  claims=false  contract_count=0  trusted_count=0
+# so the theatre phase reports, in its own words, "no Creusot obligations and
+# no verification claims in this tree. Nothing was proved and nothing claims
+# to be — this gate is silent, not green-as-assurance."
+#
+# That is the honest state, and it is the state PROOF-PROGRESS.adoc records:
+# Pons has no machine-checked soundness proof. The gate exists here so that
+# the first time anyone claims, in a README, a module header or a doc, that
+# this code has been proved by Creusot — with no contracts behind it — the
+# build goes red (T1) instead of the claim shipping. (The gate reads that
+# claim phrase out of prose lines, so even quoting it here would be a mistake
+# if workflows were scanned; this comment deliberately paraphrases.) It is a guard against theatre today and the
+# wiring for real obligations tomorrow: the day a crate depends on
+# creusot-std, detect flips obligations to true, prove runs, and the tree has
+# to discharge its contracts or fail.
+#
+# A first obligation therefore needs, together: a creusot-std dependency, the
+# nightly pin Creusot is built against (the reusable's `rust_nightly` input),
+# and a crate whose contracts `cargo creusot prove` actually discharges. There
+# is no way to have the third without the toolchain, and no honest way to
+# claim it before it runs.
+#
+# Pin: the same cicd-suite commit main-estate-audit.yml uses (bf7dd95), so the
+# audit's `languages` component and this job run the same gate revision.
+# DE-ONBOARDED from actions.lock deliberately, like the secret-scanner and
+# estate-audit callers: a reusable onboarded cross-repo startup-fails with zero
+# jobs under sha_pinning_required. Do not run a full-directory `gh actions-lock`
+# that re-onboards this file.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  creusot:
+    uses: hyperpolymath/cicd-suite/.github/workflows/creusot-gate.yml@bf7dd95cf49733019343ff485c2f45c6b261839c # cicd-suite main
+    # A creusot-std dependency that annotates nothing is a hollow dependency:
+    # this repository adds one only when it also writes the contract, so the
+    # warning is escalated to a failure. It costs nothing today — there is no
+    # such dependency — and it means the first one cannot arrive alone.
+    with:
+      enforce_hollow: true

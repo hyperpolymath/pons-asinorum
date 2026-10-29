@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.4.0",
+  "schema_version": "0.5.0",
   "tool": {
     "name": "pons",
     "version": "0.1.0",
@@ -36,7 +36,9 @@
       "PROTOCOL": 1,
       "SPECULATIVE": 1
     },
-    "total": 4
+    "total": 4,
+    "actionable": 3,
+    "demoted_speculative": 1
   },
   "findings": [
     {
@@ -55,7 +57,8 @@
       },
       "message": "value assigned to `total` is never read before it is overwritten",
       "evidence_note": "live-variable analysis: `total` not in LiveOut after this store",
-      "counter_condition": null
+      "counter_condition": null,
+      "semantic_fingerprint": "a54bb8fa2b7f74ff5c9d1fa745ac22e61abb49847ddbac0bd220fef2442baaf1"
     },
     {
       "rule_id": "div-by-literal-zero",
@@ -73,7 +76,8 @@
       },
       "message": "division by a literal zero",
       "evidence_note": "constant zero on the right-hand side",
-      "counter_condition": "the surrounding branch is provably dead"
+      "counter_condition": "the surrounding branch is provably dead",
+      "semantic_fingerprint": "59709a1c67d882050dcb5d14464e720154430b85a860c89a3bede92bc6615f31"
     },
     {
       "rule_id": "suppress-then-emit",
@@ -91,7 +95,8 @@
       },
       "message": "channel enters `suppressed` and reaches `prompt` with no `set_loud`",
       "evidence_note": "enters `suppressed` at line 4; reaches `prompt` at line 9",
-      "counter_condition": "a different channel instance reaches the prompt"
+      "counter_condition": "a different channel instance reaches the prompt",
+      "semantic_fingerprint": "0ca3019e7ced8cb406e68d08411f62c00e7b100369bc96b3aed3afd02bff7b86"
     },
     {
       "rule_id": "possible-superlinear",
@@ -109,7 +114,8 @@
       },
       "message": "nested iteration may be superlinear in the input size",
       "evidence_note": "two loops over collections derived from the same source",
-      "counter_condition": null
+      "counter_condition": null,
+      "semantic_fingerprint": "ebf407bdf66ad80a109f8ecd833f1af4c163d3ac09f5fbecaef4841fa63f10ed"
     }
   ],
   "evidence_contract": {

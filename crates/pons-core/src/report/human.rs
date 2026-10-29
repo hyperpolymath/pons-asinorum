@@ -3,8 +3,7 @@
 use std::fmt::Write as _;
 
 use crate::engine::ScanReport;
-use crate::finding::{EvidenceClass, Finding, Severity};
-use crate::report::SPECULATIVE_SUFFIX;
+use crate::finding::{Finding, Severity};
 
 /// Deterministic, colour-free rendering of findings for terminal/CI output.
 pub fn render(findings: &[Finding]) -> String {
@@ -14,6 +13,8 @@ pub fn render(findings: &[Finding]) -> String {
 /// Full terminal report, including the accounting a reader needs to know
 /// whether a clean result was a complete scan. `--explain` adds the evidence
 /// class and tier that back (or qualify) each finding.
+/// The verdict summary excludes speculative findings from the actionable count
+/// and reports their demoted count separately; the scanned finding total includes both.
 pub fn render_report(report: &ScanReport, explain: bool) -> String {
     let mut out = render_detailed(&report.findings, explain);
     let _ = writeln!(
@@ -24,6 +25,24 @@ pub fn render_report(report: &ScanReport, explain: bool) -> String {
         report.suppressed_findings,
         report.skipped.len(),
         report.transcoded.len()
+    );
+    // The numeric half of the demotion. The per-finding suffix above demotes a
+    // guess visually; this line stops it being added to the count a reader
+    // takes away, which is the same distinction the JSON envelope publishes as
+    // counts.actionable / counts.demoted_speculative.
+    // The predicate and the text both come from verdict.rs, which is where the
+    // published matrix gets them: a local `== Speculative` test here would be a
+    // second source of truth the matrix drift test cannot see.
+    let speculative = report
+        .findings
+        .iter()
+        .filter(|f| !crate::verdict::counts_toward_verdict(f.evidence()))
+        .count();
+    let _ = writeln!(
+        out,
+        "verdict: {} actionable finding(s); {} speculative demoted, not counted",
+        report.findings.len() - speculative,
+        speculative
     );
     let _ = writeln!(out, "coverage: {}", report.coverage_status());
     for failure in &report.coverage_failures {
@@ -62,11 +81,7 @@ fn render_one(f: &Finding, out: &mut String, explain: bool) {
         Severity::Error => "ERROR",
     };
 
-    let suffix = if f.evidence() == EvidenceClass::Speculative {
-        SPECULATIVE_SUFFIX
-    } else {
-        ""
-    };
+    let suffix = crate::verdict::demotion_suffix(f.evidence());
 
     let loc = f.location();
     let _ = writeln!(
@@ -165,6 +180,17 @@ mod golden_tests {
             "report.txt",
             &out,
             include_str!("../../tests/golden/report.txt"),
+        );
+    }
+
+    #[test]
+    fn the_summary_demotes_speculative_numerically() {
+        // The shared fixture carries one SPECULATIVE finding of four.
+        let out = render_report(&fixture::report(), false);
+        assert!(
+            out.contains("verdict: 3 actionable finding(s); 1 speculative demoted, not counted"),
+            "the aggregate line must separate guesses from the count a reader \
+             takes away; got:\n{out}"
         );
     }
 

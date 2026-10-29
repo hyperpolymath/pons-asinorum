@@ -93,11 +93,11 @@ enum FailOn {
 }
 
 impl FailOn {
-    fn rank(self) -> u8 {
+    fn severity(self) -> Severity {
         match self {
-            FailOn::Info => 0,
-            FailOn::Warn => 1,
-            FailOn::Error => 2,
+            FailOn::Info => Severity::Info,
+            FailOn::Warn => Severity::Warn,
+            FailOn::Error => Severity::Error,
         }
     }
 }
@@ -123,14 +123,6 @@ impl Language {
             Language::Rust => Lang::Rust,
             Language::Php => Lang::Php,
         }
-    }
-}
-
-fn severity_rank(s: Severity) -> u8 {
-    match s {
-        Severity::Info => 0,
-        Severity::Warn => 1,
-        Severity::Error => 2,
     }
 }
 
@@ -312,8 +304,11 @@ fn doctor() -> String {
 /// `no_speculative` removes speculative findings and counts them as suppressed;
 /// `explain` adds evidence and tier annotations only in human output.
 ///
-/// Returns 2 if `fail_on_skips` is set and any input was skipped, otherwise 1
-/// if a remaining non-speculative finding meets `fail_on`, or 0.
+/// Each entry in `required_languages` must have at least one inventory entry,
+/// with every matching entry analysed completely.
+/// Returns 2 if no files were analysed, a coverage requirement failed, or
+/// `fail_on_skips` is set and any input was skipped; otherwise 1 if a remaining
+/// non-speculative finding meets `fail_on`, or 0.
 ///
 /// Missing paths, a forced grammar for a directory, unknown selected rules,
 /// configuration and discovery errors, and rendering or stdout errors propagate.
@@ -450,8 +445,12 @@ fn run_scan(
         || (fail_on_skips && !report.skipped.is_empty());
     let finding_threshold = fail_on.is_some_and(|threshold| {
         report.findings.iter().any(|f| {
-            f.evidence() != EvidenceClass::Speculative
-                && severity_rank(f.severity()) >= threshold.rank()
+            pons_core::verdict::counts_toward_verdict(f.evidence())
+                // One rank table, shared with the published verdict matrix
+                // (schemas/verdict-matrix-1.0.0.json), so a consumer reading
+                // the data and the binary get the same gate.
+                && pons_core::verdict::fail_on_rank(f.severity())
+                    >= pons_core::verdict::fail_on_rank(threshold.severity())
         })
     });
     report.exit_code = Some(if coverage_failed {

@@ -43,10 +43,19 @@ trust label that travels with the finding into every report.
 - `HEURISTIC` — a syntactic match. Almost always right for its narrow pattern
   (e.g. `x / 0` with a **literal** zero), but it did not reason about reachability.
 - `SPECULATIVE` — a guess. pons thinks this **might** be worth a look and is
-  telling you so **without pretending to know**. In every format it is demoted:
-  in the terminal it is set apart and suffixed "`(heuristic — not a verdict)`";
-  in SARIF it is forced to `level: note` with a low `rank`; in JSON it carries
-  `"evidence": "SPECULATIVE"`. You can hide all of them with `--no-speculative`.
+  telling you so **without pretending to know**. In every format it is demoted,
+  visually *and* numerically: in the terminal it is set apart and suffixed
+  "`(heuristic — not a verdict)`", and the summary line separates actionable
+  findings from demoted ones; in SARIF it is forced to `level: note` with a low
+  `rank` (visible, deliberately); in JSON it carries
+  `"evidence": "SPECULATIVE"`, and `counts.actionable` excludes it while
+  `counts.demoted_speculative` counts it — so a dashboard that sums findings
+  cannot turn a guess into weight. You can hide all of them with
+  `--no-speculative`.
+
+  The same table consumers need is published as data in
+  `schemas/verdict-matrix-1.0.0.json`: all twelve severity × evidence cells with
+  their SARIF level, aggregate weight, count bucket and demotion suffix.
 
 ## The rule that makes this real: lossy labelling
 
