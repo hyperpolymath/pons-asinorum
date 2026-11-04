@@ -1,6 +1,7 @@
-# The same pure None guard bounds both the definition and the use.
+# Snapshot the descriptor once; subsequent local identity tests are stable.
 def pack(self):
-    if self.name is not None:
+    value = self.name
+    if value is not None:
         name = 1
-    if self.name is not None:
+    if value is not None:
         MonsterAddName(name)
