@@ -11,14 +11,11 @@ use tree_sitter::Node;
 
 const LANGUAGES: &[Lang] = &[Lang::Python];
 
-/// Rule 10: a read of a local that some path reaches before the name is
-/// bound — Python raises `UnboundLocalError`. `WARN` uniformly in v0.1.0:
-/// raising the every-path case to `ERROR` would need a must-analysis, which
-/// ADR-0002 declines. Python has no default initialisation, so the rule has
-/// no counter-condition. Opacity and scope are handled by the OPAQUE hatch and
-/// the locals pre-pass; the analysis is also path-insensitive, so correlated
-/// guards and loops over non-empty literals yield infeasible-path false
-/// positives that ADR-0002 does not yet name (#47).
+/// Rule 10: a local read may precede binding in the abstract CFG.
+/// WARN denotes a dataflow finding, not a proven feasible Python execution.
+/// Correlated guards, exceptional paths and opaque constructs limit precision.
+/// The bounded pruning pass accepts plain names only, never attributes whose
+/// descriptor evaluation may change between reads.
 pub struct ReadBeforeInit;
 
 impl ReadBeforeInit {
@@ -47,7 +44,8 @@ impl Rule for ReadBeforeInit {
     }
 
     /// Reports possible unbound local reads in analysable functions as `WARN`,
-    /// without counter-conditions. Opaque functions produce no findings.
+    /// with an explicit path-feasibility counter-condition. Opaque functions
+    /// produce no findings.
     /// Offsets selected by the bounded correlated-guard pass are omitted.
     fn check(&self, ctx: &RuleCtx) -> Vec<RawFinding> {
         let mut findings = Vec::new();
@@ -73,10 +71,10 @@ impl Rule for ReadBeforeInit {
                     "local may be read before it is assigned",
                     format!(
                         "on at least one path through `{}`, `{name}` is read here before it \
-                         is assigned — Python raises `UnboundLocalError`",
+                         is assigned in the abstract CFG; path feasibility is not established",
                         cfg.name()
                     ),
-                    None,
+                    Some("Correlated conditions, exceptional control flow or other model limitations may make this abstract path infeasible.".into()),
                 ));
             }
         }
@@ -86,8 +84,8 @@ impl Rule for ReadBeforeInit {
 
 /// Extract a textual base and polarity from an `is None` or `is not None`
 /// suffix with exactly that spacing. The trimmed base may contain only ASCII
-/// letters, digits, underscores and dots; calls are rejected. This is a
-/// syntactic filter and does not establish that attribute access is pure.
+/// letters, digits and underscores. Attribute access is rejected because a
+/// Python descriptor may return a different value on every read.
 fn guard_key(cond: Node<'_>, text: &str) -> Option<(String, String)> {
     let raw = &text[cond.byte_range()];
     let (base, polarity) = if let Some(base) = raw.strip_suffix(" is not None") {
@@ -97,11 +95,7 @@ fn guard_key(cond: Node<'_>, text: &str) -> Option<(String, String)> {
         (base, "none")
     };
     let base = base.trim();
-    if base.is_empty()
-        || !base
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.'))
-    {
+    if base.is_empty() || !base.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
         return None;
     }
     Some((base.to_string(), polarity.to_string()))
@@ -300,7 +294,7 @@ mod tests {
 
     #[test]
     fn a_correlated_guard_read_is_pruned_but_a_mismatched_guard_is_not() {
-        let correlated = "def pack(self):\n    if self.name is not None:\n        name = 1\n    if self.name is not None:\n        MonsterAddName(name)\n";
+        let correlated = "def pack(value):\n    if value is not None:\n        name = 1\n    if value is not None:\n        MonsterAddName(name)\n";
         assert!(
             check(correlated).is_empty(),
             "identical pure guard was not pruned"
@@ -312,6 +306,14 @@ mod tests {
             1,
             "a different guard is a real may-unbound path"
         );
+    }
+
+    #[test]
+    fn attribute_guards_are_not_assumed_pure_or_stable() {
+        let src = "def pack(self):\n    if self.name is not None:\n        name = 1\n    if self.name is not None:\n        return name\n";
+        let findings = check(src);
+        assert_eq!(findings.len(), 1, "a descriptor can change between reads");
+        assert!(findings[0].counter_condition().is_some());
     }
 
     #[test]
