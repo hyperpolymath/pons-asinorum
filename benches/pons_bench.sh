@@ -72,7 +72,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 REPS=5
-BIN="target/release/pons"
+BIN="${CARGO_TARGET_DIR:-target}/release/pons"
 
 echo "bench: building pons-cli (release)"
 if ! cargo build --release --locked -p pons-cli; then
