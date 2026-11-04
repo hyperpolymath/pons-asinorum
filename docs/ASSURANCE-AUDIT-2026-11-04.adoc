@@ -1,0 +1,31 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Assurance audit repair — 2026-11-04
+
+Base `84f58f910de7020b79450f2c2643599fe7760f73` passed 250 Rust tests.
+The expanded suite passes 251. Tests are not proofs of analysis soundness.
+
+== Descriptor counterexample
+
+The former negative `read-before-init/correlated_guard.py` repeats
+`self.name is not None`. Python descriptors may return None on the first access
+and a value on the second. With MonsterAddName bound to a harmless function,
+executing that specimen raises UnboundLocalError before the call.
+
+The exact original specimen is retained in `positive/attribute_guard.py`.
+The corrected negative snapshots `self.name` into a local once. The optimisation
+now refuses attribute guards, and finding evidence states that abstract CFG
+paths may be infeasible. This does not close general path-sensitivity issue #47,
+exception modelling or the other limits of the remaining plain-name pruning.
+
+== Other evidence
+
+Both scanners ran against cicd-suite and proven-tests-and-benches. Strict scans
+were partial: Pons analysed 1 and 8 files respectively. Those repositories'
+shell/configuration/Idris source is not certified by these runs. The shared suite
+contains the reproducible bounded parser/report controls and detailed audit.
+
+The benchmark harness now locates the binary under CARGO_TARGET_DIR when set.
+Exploratory timings on modified worktrees are not accepted regression baselines;
+source commit, dirty state, binary/toolchain and workload identity must accompany
+any comparison. Mathematical source-to-model soundness and independent oracle
+coverage remain open.
