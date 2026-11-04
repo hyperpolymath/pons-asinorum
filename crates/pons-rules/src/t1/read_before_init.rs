@@ -86,6 +86,9 @@ impl Rule for ReadBeforeInit {
 /// suffix with exactly that spacing. The trimmed base may contain only ASCII
 /// letters, digits and underscores. Attribute access is rejected because a
 /// Python descriptor may return a different value on every read.
+/// Returns the base and `none` or `not-none` polarity, or `None` if the
+/// suffix or non-empty base does not match. This is a textual filter, not
+/// Python identifier validation. `text` must be the source for `cond`.
 fn guard_key(cond: Node<'_>, text: &str) -> Option<(String, String)> {
     let raw = &text[cond.byte_range()];
     let (base, polarity) = if let Some(base) = raw.strip_suffix(" is not None") {
