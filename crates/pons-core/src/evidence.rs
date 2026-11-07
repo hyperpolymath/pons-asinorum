@@ -65,7 +65,7 @@ pub(crate) fn path_candidates(file: &str, root: &str) -> Vec<(String, bool)> {
         return vec![path_for_style(file, root, true)];
     }
     let posix = path_for_style(file, root, false);
-    if root.starts_with('/') {
+    if root.starts_with('/') && !root.starts_with("//") {
         return vec![posix];
     }
     let windows = path_for_style(file, root, true);
@@ -95,6 +95,10 @@ mod portable_paths {
         );
         assert!(path_candidates(r"repo\a.py", "repo").contains(&("a.py".into(), true)));
         assert!(path_candidates(r".\a.py", ".").contains(&("a.py".into(), true)));
+        assert!(
+            path_candidates(r"//server/share\sample.php", "//server/share")
+                .contains(&("sample.php".into(), true))
+        );
     }
     #[test]
     fn posix_boundaries_and_ambiguous_historical_keys_are_preserved() {

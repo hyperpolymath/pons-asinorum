@@ -319,6 +319,12 @@ fn ambiguous_legacy_paths_require_one_consistent_record_and_fingerprint() {
         .unwrap();
     for (root, file, key, conflicting_key) in [
         (
+            "//server/share",
+            r"//server/share\sample.php",
+            "sample.php",
+            "server/share/sample.php",
+        ),
+        (
             "repo",
             r"repo\sub/sample.php",
             "repo/sub/sample.php",
