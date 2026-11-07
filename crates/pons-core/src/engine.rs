@@ -129,7 +129,15 @@ pub struct ScanReport {
 
 impl ScanReport {
     pub fn coverage_status(&self) -> &'static str {
-        if self.files_scanned == 0 {
+        if self.files_scanned == 0
+            && self.coverage_failures.is_empty()
+            && self.inventory.iter().all(|entry| {
+                matches!(
+                    entry.outcome,
+                    Outcome::Unsupported | Outcome::ExcludedByPolicy
+                )
+            })
+        {
             "no-applicable-input"
         } else if !self.skipped.is_empty()
             || !self.coverage_failures.is_empty()

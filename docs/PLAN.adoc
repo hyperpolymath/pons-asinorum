@@ -368,7 +368,7 @@ truth thereafter.
 | crate | purpose | pin (fill at M0)
 | `tree-sitter` | core parsing/query API | `=0.27.0`
 | `tree-sitter-python` | Python grammar (T0 + T1 + T2) | `=0.25.0`
-| `tree-sitter-javascript` | JS grammar (T0) | `=0.25.0`
+| `tree-sitter-javascript` | JS/JSX grammar (T0) | `=0.23.1` (compatibility pin below)
 | `tree-sitter-typescript` | TS + TSX grammars (T0) | `=0.23.2`
 | `tree-sitter-rust` | Rust grammar (T0) | `=0.24.2`
 | `serde` / `serde_json` | JSON + SARIF serialisation | `=1.0.229` / `=1.0.151` (M1+)
@@ -377,6 +377,18 @@ truth thereafter.
 | `anyhow` | error handling (house style) | `=1.0.104`
 | `ignore` / `walkdir` | file discovery + `.ponsignore` | `=0.4.33` (ignore, direct); `walkdir` `2.5.0` pulled in transitively, not a direct dependency
 |===
+
+Compatibility correction, 2026-11-07 (echo-types#362): JavaScript grammar
+0.25.0 rejects valid JSX keyword attribute names, including SVG
+`<feMergeNode in="SourceGraphic" />`. Pin 0.23.1, whose JavaScript/JSX
+grammar accepts that syntax, and retain the separate TypeScript/TSX mapping.
+The source is not rewritten and recovered error trees are still rejected.
+Parser and CLI regressions check valid keyword attributes, malformed JSX,
+real analysis and report validation. Revisit newer grammar releases only
+when these and the complete existing corpus pass; support for syntax unique
+to a newer grammar is not claimed by this compatibility pin. Parser receipts
+record the actual selected version. A supported source that fails parsing
+has partial coverage even when no file was analysed; it is not no-applicable-input.
 
 Resolved 2026-09-14 via `cargo add tree-sitter tree-sitter-python
 tree-sitter-javascript tree-sitter-typescript tree-sitter-rust -p pons-core`

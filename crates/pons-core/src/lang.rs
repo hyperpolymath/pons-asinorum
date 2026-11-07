@@ -45,7 +45,8 @@ impl Lang {
 
     pub fn parser_version(self) -> &'static str {
         match self {
-            Lang::Python | Lang::JavaScript => "0.25.0",
+            Lang::Python => "0.25.0",
+            Lang::JavaScript => "0.23.1",
             Lang::TypeScript | Lang::Tsx => "0.23.2",
             Lang::Rust => "0.24.2",
             Lang::Php => "0.25.1",

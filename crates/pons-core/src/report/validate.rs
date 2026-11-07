@@ -158,7 +158,14 @@ fn validate_value(v: Value) -> Result<String> {
             );
         }
     }
-    let status = if analysed == 0 {
+    let status = if analysed == 0
+        && failures.is_empty()
+        && inventory.iter().all(|entry| {
+            matches!(
+                entry.outcome,
+                Outcome::Unsupported | Outcome::ExcludedByPolicy
+            )
+        }) {
         "no-applicable-input"
     } else if !skipped.is_empty()
         || !failures.is_empty()

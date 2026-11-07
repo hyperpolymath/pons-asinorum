@@ -75,6 +75,52 @@ fn inventory_accounts_for_supported_unsupported_excluded_and_parse_error() {
     }
     assert_eq!(v["scanned"]["coverage_status"], "partial");
 }
+
+#[test]
+fn only_parse_errors_are_partial_coverage_not_no_applicable_input() {
+    let t = Temp::new();
+    fs::write(t.0.join("invalid.jsx"), "const view = <svg in= />;").unwrap();
+    let out = t.scan(&["--format", "json", "--fail-on-skips"]);
+    assert_eq!(out.status.code(), Some(2));
+    let mut report: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(report["scanned"]["files"], 0);
+    assert_eq!(report["scanned"]["coverage_status"], "partial");
+    assert_eq!(report["scanned"]["inventory"][0]["outcome"], "parse-error");
+    assert!(pons_core::report::validate::validate(&report.to_string()).is_ok());
+    report["scanned"]["coverage_status"] = "no-applicable-input".into();
+    assert!(pons_core::report::validate::validate(&report.to_string()).is_err());
+}
+
+#[test]
+fn jsx_keyword_attributes_reach_analysis_and_validate() {
+    let t = Temp::new();
+    fs::write(
+        t.0.join("filter.jsx"),
+        r#"const view = <svg><feMergeNode in="SourceGraphic" /></svg>;"#,
+    )
+    .unwrap();
+    let out = t.scan(&[
+        "--format",
+        "json",
+        "--fail-on-skips",
+        "--require-language",
+        "javascript",
+    ]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let report: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(report["scanned"]["files"], 1);
+    assert_eq!(
+        report["scanned"]["coverage_status"],
+        "complete-within-policy"
+    );
+    assert!(report["scanned"]["skipped"].as_array().unwrap().is_empty());
+    assert!(pons_core::report::validate::validate(&report.to_string()).is_ok());
+}
 #[test]
 fn absent_required_language_cannot_be_suppressed() {
     let t = Temp::new();

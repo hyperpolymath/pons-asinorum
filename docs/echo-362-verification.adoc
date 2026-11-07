@@ -1,0 +1,46 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= Echo Types scanner follow-up — 7 November 2026
+
+== Scope and correction
+
+The baseline is PONS `b9ab55c6973514a731c7659a2fbee21b5037b1ef`.
+The source reproducer is echo-types `ebde9ac4e1a9f115b441c642c82aced1316c5983`,
+`docs/echo-types/prototypes/warrant_debugger_prototype.jsx`.
+Its valid SVG keyword attribute `in="SourceGraphic"` fails with JavaScript
+grammar 0.25.0. The compatible 0.23.1 grammar parses that file without source
+rewriting or accepting recovered syntax-error trees. This is a deliberate
+compatibility pin, not a claim of support for newer grammar-only syntax.
+The shared tree-sitter core and TypeScript/TSX grammar remain unchanged.
+
+When every supported source fails parsing, the report now says `partial`,
+not `no-applicable-input`. Report validation independently rejects the old
+misclassification. Unsupported Agda inputs remain explicitly unsupported;
+this repair does not add an Agda analyser or constitute browser execution.
+
+== Executed local evidence
+
+Rust 1.99.1 on a case-sensitive Linux filesystem:
+
+* `cargo test --workspace --locked`: 255 test executions passed.
+* `cargo clippy --workspace --all-targets --locked -- -D warnings`: passed.
+* The exact JSX source above: one file analysed, zero findings, zero skips,
+  complete-within-policy for that single-file invocation, exit 0, with
+  `--no-speculative --fail-on error --fail-on-skips --require-language javascript`.
+* New parser controls accept JSX keyword attributes and reject malformed JSX.
+  CLI controls check real analysis, partial coverage on parsing failure,
+  report validity and rejection of a forged no-applicable-input status.
+
+Hosted CI and review results are recorded by the change's pull request;
+these local results are not a claim that those checks already completed.
+
+== Formal verification plan and trust boundary
+
+Creusot with Pearlite contracts: `OPEN`, not run for this repair.
+Verus: `OPEN`, not run for this repair. The Rust regressions above are tests,
+not formal proofs of parser correctness or the coverage classification.
+Pearlite is Creusot's specification language, not a third verifier.
+
+The third-party grammar's JavaScript/JSX semantics remain a dependency
+assumption (`ASSUMED`), with its exact version and lockfile checksum pinned.
+No third-party code or licence was rewritten. A future grammar update must
+pass these regressions and the complete existing suite before adoption.
