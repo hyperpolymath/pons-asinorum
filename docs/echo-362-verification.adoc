@@ -30,6 +30,9 @@ Rust 1.99.1 on a case-sensitive Linux filesystem:
   also exposed Unix-only permission fixtures and a rooted-path validation gap;
   those have explicit platform guards and a real Windows regression check.
   Final hosted checks are separate from this local evidence.
+* The final Windows workspace suite passed 253 test executions, and all-targets
+  Clippy with warnings denied passed. POSIX permission fixtures remain Unix
+  checks rather than being claimed as executed on Windows.
 * The exact JSX source above: one file analysed, zero findings, zero skips,
   complete-within-policy for that single-file invocation, exit 0, with
   `--no-speculative --fail-on error --fail-on-skips --require-language javascript`.

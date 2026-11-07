@@ -20,8 +20,8 @@ The official Linux x64 generator archive's verified SHA-256 is
 Generated parser sources are committed so consumers need no generator,
 JavaScript runtime or network access to build this dependency.
 
-The patched grammar passed the upstream `tree-sitter test` corpus, including
-all 116 highlight/injection/tag parses. PONS adds keyword-attribute, modern
+The patched grammar passed the upstream `tree-sitter test` command, which
+reported 116 parses and zero failures. PONS adds keyword-attribute, modern
 using-declaration, malformed-JSX and reserved-keyword rejection controls.
 The exact Echo warrant-debugger source is a separate executed reproducer.
 
