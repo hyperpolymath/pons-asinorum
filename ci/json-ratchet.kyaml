@@ -10,6 +10,14 @@
   declared_non_canonical: [
     {
       paths: [
+        "vendor/tree-sitter-javascript/src/grammar.json",
+        "vendor/tree-sitter-javascript/src/node-types.json",
+        "vendor/tree-sitter-javascript/tree-sitter.json",
+      ],
+      reason: "Pinned upstream tree-sitter metadata and the standard generated grammar output. Preserve upstream metadata and the official generator's reproducible bytes; provenance and regeneration are recorded in vendor/tree-sitter-javascript/PATCHES.adoc. These files remain subject to I-JSON validity checks; no JCS-canonicality claim is made.",
+    },
+    {
+      paths: [
         ".github/label-classifier.json",
         ".github/labels.json",
         ".github/rulesets/Immutable-Tags.json",
