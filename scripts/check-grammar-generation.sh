@@ -13,7 +13,31 @@ jq -e --arg manifest "$vendor/Cargo.toml" '
   [.packages[] | select(.name == "tree-sitter-javascript")] |
   length == 1 and .[0].version == "0.25.0" and .[0].source == null and .[0].manifest_path == $manifest
 ' "$work/metadata.json" > /dev/null
-curl --fail --silent --show-error --location --retry 3 \
+# An independent workspace must also receive the modified parser, without
+# repeating a [patch] section. Exercise the public library through that edge.
+mkdir -p "$work/consumer/src"
+cat > "$work/consumer/Cargo.toml" <<EOF
+[package]
+name = "pons-downstream-control"
+version = "0.0.0"
+edition = "2021"
+[workspace]
+[dependencies]
+pons-core = { path = "$root/crates/pons-core" }
+EOF
+cat > "$work/consumer/src/main.rs" <<'EOF'
+use pons_core::{lang::Lang, parse, source::SourceFile};
+fn main() {
+    let source = SourceFile {
+        path: "downstream.jsx".into(), lang: Lang::JavaScript,
+        text: "const v = <Icons.default in='SourceGraphic' />;".into(),
+        transcoded: false,
+    };
+    assert!(parse::parse(&source).is_ok());
+}
+EOF
+cargo run --offline --manifest-path "$work/consumer/Cargo.toml" --target-dir "$root/target"
+curl --proto '=https' --proto-redir '=https' --fail --silent --show-error --location --retry 3 \
   https://github.com/tree-sitter/tree-sitter/releases/download/v0.27.0/tree-sitter-linux-x64.gz \
   -o "$work/generator.gz"
 printf '%s  %s\n' '20a1f39ec1c45f2211492dcb8881c802b643b554bb196869a29ac3778277fa77' "$work/generator.gz" | sha256sum --check --strict

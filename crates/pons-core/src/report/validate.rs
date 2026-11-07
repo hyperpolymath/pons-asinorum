@@ -180,10 +180,18 @@ fn validate_value(v: Value) -> Result<String> {
     } else {
         "complete-within-policy"
     };
+    // Earlier 0.4.0 readers accepted both frozen writer output and partial
+    // zero-file reports with explicit failures. The envelope below still
+    // requires execution_outcome to agree with the declared coverage status.
+    let frozen_partial = version == "0.4.0"
+        && analysed == 0
+        && !failures.is_empty()
+        && s["coverage_status"] == "partial";
     ensure!(
-        s["coverage_status"] == status,
+        s["coverage_status"] == status || frozen_partial,
         "coverage status contradicts inventory"
     );
+    let status = if frozen_partial { "partial" } else { status };
     if analysed == 0 || !failures.is_empty() {
         ensure!(
             code.is_null() || code.as_u64() == Some(2),
@@ -234,17 +242,7 @@ fn validate_value(v: Value) -> Result<String> {
             let file = location["file"].as_str().context("missing finding file")?;
             let relative = crate::evidence::relative_path(file, root);
             ensure!(
-                !std::path::Path::new(&relative).has_root()
-                    && !std::path::Path::new(&relative)
-                        .components()
-                        .any(|component| {
-                            matches!(
-                                component,
-                                std::path::Component::Prefix(_) | std::path::Component::ParentDir
-                            )
-                        })
-                    && !relative.starts_with("../")
-                    && relative != "..",
+                is_root_relative(&relative),
                 "finding path is not inside the scan root"
             );
         }
@@ -371,5 +369,51 @@ mod tests {
         assert!(validator.is_valid(&value));
         value["findings"][0]["evidence"] = serde_json::json!("PROTOCOL");
         assert!(!validator.is_valid(&value));
+    }
+}
+
+// Report paths are portable data, not paths on the reader's filesystem.
+// Reject drive prefixes on every host. Permit lexical parents only when
+// they cannot escape the root; retain spelling so frozen fingerprints agree.
+fn is_root_relative(path: &str) -> bool {
+    let path = path.replace('\\', "/");
+    if path.starts_with('/') || path.as_bytes().get(1) == Some(&b':') {
+        return false;
+    }
+    let mut depth = 0usize;
+    for component in path.split('/') {
+        match component {
+            "" | "." => (),
+            ".." => {
+                if depth == 0 {
+                    return false;
+                }
+                depth -= 1;
+            }
+            _ => depth += 1,
+        }
+    }
+    depth > 0
+}
+
+#[cfg(test)]
+mod portable_path_tests {
+    use super::is_root_relative;
+    #[test]
+    fn portable_paths_cannot_escape_but_may_cancel_components() {
+        for path in [
+            "C:/outside/a.php",
+            "C:a.php",
+            "C:\\outside\\a.php",
+            "/a.php",
+            "../a.php",
+            "sub/../../a.php",
+            "//server/share/a.php",
+        ] {
+            assert!(!is_root_relative(path), "accepted {path}");
+        }
+        for path in ["a.php", "sub/../a.php", "sub/./a.php"] {
+            assert!(is_root_relative(path), "rejected {path}");
+        }
     }
 }

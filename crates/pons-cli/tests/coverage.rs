@@ -106,6 +106,18 @@ fn only_parse_errors_are_partial_coverage_not_no_applicable_input() {
         validated.is_ok(),
         "frozen parse-only report rejected: {validated:?}"
     );
+    frozen["scanned"]["coverage_status"] = "partial".into();
+    frozen["evidence_contract"]["execution_outcome"] = "partial".into();
+    frozen["scanned"]["coverage_failures"] =
+        serde_json::json!(["required JavaScript coverage failed"]);
+    assert!(pons_core::report::validate::validate(&frozen.to_string()).is_ok());
+    frozen["evidence_contract"]["execution_outcome"] = "no-applicable-input".into();
+    assert!(pons_core::report::validate::validate(&frozen.to_string()).is_err());
+    let default = t.scan(&["--format", "json"]);
+    assert_eq!(default.status.code(), Some(2));
+    let default_report: Value = serde_json::from_slice(&default.stdout).unwrap();
+    assert_eq!(default_report["scanned"]["coverage_status"], "partial");
+    assert!(pons_core::report::validate::validate(&default_report.to_string()).is_ok());
     report["scanned"]["coverage_status"] = "no-applicable-input".into();
     report["evidence_contract"]["execution_outcome"] = "no-applicable-input".into();
     assert!(pons_core::report::validate::validate(&report.to_string()).is_err());

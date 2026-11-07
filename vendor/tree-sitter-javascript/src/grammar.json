@@ -2896,7 +2896,7 @@
               "members": [
                 {
                   "type": "SYMBOL",
-                  "name": "identifier"
+                  "name": "_jsx_identifier"
                 },
                 {
                   "type": "ALIAS",
@@ -2921,7 +2921,7 @@
               "type": "ALIAS",
               "content": {
                 "type": "SYMBOL",
-                "name": "identifier"
+                "name": "_jsx_identifier"
               },
               "named": true,
               "value": "property_identifier"
@@ -6911,10 +6911,6 @@
         {
           "type": "STRING",
           "value": "static"
-        },
-        {
-          "type": "STRING",
-          "value": "export"
         },
         {
           "type": "STRING",

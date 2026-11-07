@@ -9,8 +9,10 @@ use serde::{Deserialize, Serialize};
 pub(crate) const ASSUMPTION: &str = "Only registered rule semantics and declared parser/model coverage; no runtime safety certification";
 
 pub(crate) fn relative_path(file: &str, root: &str) -> String {
-    let path = std::path::Path::new(file);
-    let root = std::path::Path::new(root);
+    let file = file.replace('\\', "/");
+    let root = root.replace('\\', "/");
+    let path = std::path::Path::new(&file);
+    let root = std::path::Path::new(&root);
     // A file scan has root == file. Do not consult the validator's filesystem:
     // the original checkout may no longer exist where evidence is consumed.
     let base = if path == root {
@@ -22,6 +24,25 @@ pub(crate) fn relative_path(file: &str, root: &str) -> String {
         .unwrap_or(path)
         .to_string_lossy()
         .replace('\\', "/")
+}
+
+#[cfg(test)]
+mod portable_paths {
+    #[test]
+    fn windows_reports_have_the_same_keys_on_every_reader_host() {
+        assert_eq!(
+            super::relative_path(r"C:\repo\sample.php", r"C:\repo"),
+            "sample.php"
+        );
+        assert_eq!(
+            super::relative_path(r"C:\repo\sample.php", r"C:\repo\sample.php"),
+            "sample.php"
+        );
+        assert_eq!(
+            super::relative_path(r"C:\outside\sample.php", r"C:\repo"),
+            "C:/outside/sample.php"
+        );
+    }
 }
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

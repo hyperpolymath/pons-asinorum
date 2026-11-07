@@ -53,6 +53,7 @@ typedef enum {
     REJECT,     // Semicolon is illegal, ie a syntax error occurred
     NO_NEWLINE, // Unclear if semicolon will be legal, continue
     ACCEPT,     // Semicolon is legal, assuming a comment was encountered
+    NEWLINE,    // A comment contained or ended at an actual line terminator
 } WhitespaceResult;
 
 /**
@@ -71,7 +72,7 @@ static WhitespaceResult scan_whitespace_and_comments(TSLexer *lexer, bool *scann
 
             if (lexer->lookahead == '/') {
                 skip(lexer);
-                while (lexer->lookahead != 0 && lexer->lookahead != '\n' && lexer->lookahead != 0x2028 &&
+                while (lexer->lookahead != 0 && lexer->lookahead != '\n' && lexer->lookahead != '\r' && lexer->lookahead != 0x2028 &&
                        lexer->lookahead != 0x2029) {
                     skip(lexer);
                 }
@@ -86,12 +87,12 @@ static WhitespaceResult scan_whitespace_and_comments(TSLexer *lexer, bool *scann
                             *scanned_comment = true;
 
                             if (lexer->lookahead != '/' && !consume) {
-                                return saw_block_newline ? ACCEPT : NO_NEWLINE;
+                                return saw_block_newline ? NEWLINE : NO_NEWLINE;
                             }
 
                             break;
                         }
-                    } else if (lexer->lookahead == '\n' || lexer->lookahead == 0x2028 || lexer->lookahead == 0x2029) {
+                    } else if (lexer->lookahead == '\n' || lexer->lookahead == '\r' || lexer->lookahead == 0x2028 || lexer->lookahead == 0x2029) {
                         saw_block_newline = true;
                         skip(lexer);
                     } else {
@@ -107,9 +108,24 @@ static WhitespaceResult scan_whitespace_and_comments(TSLexer *lexer, bool *scann
     }
 }
 
+// Match the grammar's identifier-continuation boundary, including escaped and
+// non-ASCII continuations, instead of the locale-dependent alphabetic test.
+static bool is_identifier_continue(int32_t c) {
+    if (c <= 0x20 || iswspace(c) || c == 0xFEFF || c == 0x2060 || c == 0x200B) return false;
+    switch (c) {
+        case ':': case ';': case '`': case '"': case '\'': case '@': case '#':
+        case '.': case ',': case '|': case '^': case '&': case '<': case '>':
+        case '=': case '+': case '-': case '*': case '/': case '%': case '?':
+        case '!': case '~': case '(': case ')': case '[': case ']': case '{': case '}':
+            return false;
+        default: return true;
+    }
+}
+
 static bool scan_automatic_semicolon(TSLexer *lexer, bool comment_condition, bool *scanned_comment) {
     lexer->result_symbol = AUTOMATIC_SEMICOLON;
     lexer->mark_end(lexer);
+    bool newline_in_comment = false;
 
     for (;;) {
         if (lexer->lookahead == 0) {
@@ -120,6 +136,13 @@ static bool scan_automatic_semicolon(TSLexer *lexer, bool comment_condition, boo
             WhitespaceResult result = scan_whitespace_and_comments(lexer, scanned_comment, false);
             if (result == REJECT) {
                 return false;
+            }
+            if (result == NEWLINE) {
+                if (comment_condition && lexer->lookahead != ',' && lexer->lookahead != '=') {
+                    return true;
+                }
+                newline_in_comment = true;
+                break;
             }
 
             if (result == ACCEPT && comment_condition && lexer->lookahead != ',' && lexer->lookahead != '=') {
@@ -135,7 +158,7 @@ static bool scan_automatic_semicolon(TSLexer *lexer, bool comment_condition, boo
             return true;
         }
 
-        if (lexer->lookahead == '\n' || lexer->lookahead == 0x2028 || lexer->lookahead == 0x2029) {
+        if (lexer->lookahead == '\n' || lexer->lookahead == '\r' || lexer->lookahead == 0x2028 || lexer->lookahead == 0x2029) {
             break;
         }
 
@@ -146,7 +169,7 @@ static bool scan_automatic_semicolon(TSLexer *lexer, bool comment_condition, boo
         skip(lexer);
     }
 
-    skip(lexer);
+    if (!newline_in_comment) skip(lexer);
 
     if (scan_whitespace_and_comments(lexer, scanned_comment, true) == REJECT) {
         return false;
@@ -199,7 +222,7 @@ static bool scan_automatic_semicolon(TSLexer *lexer, bool comment_condition, boo
             }
             skip(lexer);
 
-            if (!iswalpha(lexer->lookahead)) {
+            if (!is_identifier_continue(lexer->lookahead)) {
                 return false;
             }
 
@@ -210,7 +233,7 @@ static bool scan_automatic_semicolon(TSLexer *lexer, bool comment_condition, boo
                 skip(lexer);
             }
 
-            if (!iswalpha(lexer->lookahead)) {
+            if (!is_identifier_continue(lexer->lookahead)) {
                 return false;
             }
             break;
@@ -278,7 +301,7 @@ static bool scan_html_comment(TSLexer *lexer) {
         return false;
     }
 
-    while (lexer->lookahead != 0 && lexer->lookahead != '\n' && lexer->lookahead != 0x2028 &&
+    while (lexer->lookahead != 0 && lexer->lookahead != '\n' && lexer->lookahead != '\r' && lexer->lookahead != 0x2028 &&
            lexer->lookahead != 0x2029) {
         advance(lexer);
     }
