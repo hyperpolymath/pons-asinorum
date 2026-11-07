@@ -36,6 +36,13 @@ fn no_input_is_not_success_even_without_strict_flag() {
         let out = t.scan(&["--format", format]);
         assert_eq!(out.status.code(), Some(2));
         assert!(String::from_utf8_lossy(&out.stdout).contains("no-applicable-input"));
+        if format == "sarif" {
+            let report: Value = serde_json::from_slice(&out.stdout).unwrap();
+            assert_eq!(
+                report["runs"][0]["invocations"][0]["executionSuccessful"],
+                false
+            );
+        }
     }
 }
 #[test]
@@ -87,8 +94,34 @@ fn only_parse_errors_are_partial_coverage_not_no_applicable_input() {
     assert_eq!(report["scanned"]["coverage_status"], "partial");
     assert_eq!(report["scanned"]["inventory"][0]["outcome"], "parse-error");
     assert!(pons_core::report::validate::validate(&report.to_string()).is_ok());
+    let mut frozen = report.clone();
+    frozen["schema_version"] = "0.4.0".into();
+    frozen["scanned"]["coverage_status"] = "no-applicable-input".into();
+    frozen["evidence_contract"]["execution_outcome"] = "no-applicable-input".into();
+    let counts = frozen["counts"].as_object_mut().unwrap();
+    counts.remove("actionable");
+    counts.remove("demoted_speculative");
+    let validated = pons_core::report::validate::validate(&frozen.to_string());
+    assert!(
+        validated.is_ok(),
+        "frozen parse-only report rejected: {validated:?}"
+    );
     report["scanned"]["coverage_status"] = "no-applicable-input".into();
+    report["evidence_contract"]["execution_outcome"] = "no-applicable-input".into();
     assert!(pons_core::report::validate::validate(&report.to_string()).is_err());
+    let sarif = t.scan(&["--format", "sarif", "--fail-on-skips"]);
+    assert_eq!(sarif.status.code(), Some(2));
+    let sarif: Value = serde_json::from_slice(&sarif.stdout).unwrap();
+    let invocation = &sarif["runs"][0]["invocations"][0];
+    assert_eq!(invocation["executionSuccessful"], true);
+    assert_eq!(invocation["properties"]["coverageStatus"], "partial");
+    assert_eq!(
+        invocation["toolExecutionNotifications"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
 }
 
 #[test]

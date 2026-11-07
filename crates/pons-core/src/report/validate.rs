@@ -158,14 +158,17 @@ fn validate_value(v: Value) -> Result<String> {
             );
         }
     }
+    // Preserve the zero-file classification written by frozen 0.4.0 scanners.
+    // Current writers distinguish unsupported input from supported parse failures.
     let status = if analysed == 0
-        && failures.is_empty()
-        && inventory.iter().all(|entry| {
-            matches!(
-                entry.outcome,
-                Outcome::Unsupported | Outcome::ExcludedByPolicy
-            )
-        }) {
+        && (version == "0.4.0"
+            || (failures.is_empty()
+                && inventory.iter().all(|entry| {
+                    matches!(
+                        entry.outcome,
+                        Outcome::Unsupported | Outcome::ExcludedByPolicy
+                    )
+                }))) {
         "no-applicable-input"
     } else if !skipped.is_empty()
         || !failures.is_empty()
@@ -231,7 +234,15 @@ fn validate_value(v: Value) -> Result<String> {
             let file = location["file"].as_str().context("missing finding file")?;
             let relative = crate::evidence::relative_path(file, root);
             ensure!(
-                !std::path::Path::new(&relative).is_absolute()
+                !std::path::Path::new(&relative).has_root()
+                    && !std::path::Path::new(&relative)
+                        .components()
+                        .any(|component| {
+                            matches!(
+                                component,
+                                std::path::Component::Prefix(_) | std::path::Component::ParentDir
+                            )
+                        })
                     && !relative.starts_with("../")
                     && relative != "..",
                 "finding path is not inside the scan root"

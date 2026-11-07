@@ -62,6 +62,41 @@ fn fixed_seed_parser_mutations() {
         }
     }
 }
+
+#[test]
+fn modern_using_declarations_remain_supported() {
+    for text in [
+        "using resource = acquire();",
+        "async function work() { await using resource = acquire(); }",
+    ] {
+        let source = SourceFile {
+            path: "resources.js".into(),
+            lang: Lang::JavaScript,
+            text: text.into(),
+            transcoded: false,
+        };
+        assert!(
+            parse::parse(&source).is_ok(),
+            "rejected modern declaration: {text}"
+        );
+    }
+}
+
+#[test]
+fn jsx_attribute_patch_does_not_relax_javascript_keywords() {
+    for text in ["const in = 1;", "const view = <C value={const} />;"] {
+        let source = SourceFile {
+            path: "invalid-keyword.js".into(),
+            lang: Lang::JavaScript,
+            text: text.into(),
+            transcoded: false,
+        };
+        assert!(
+            parse::parse(&source).is_err(),
+            "accepted invalid keyword: {text}"
+        );
+    }
+}
 #[test]
 fn deep_ast_is_rejected_before_recursive_rules() {
     let src = SourceFile {

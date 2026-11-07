@@ -1,0 +1,39 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+= JavaScript grammar patch provenance
+
+Upstream: tree-sitter/tree-sitter-javascript v0.25.0,
+commit `44c892e0be055ac465d5eeddae6d3e194424e7de`.
+The upstream MIT licence, Rust bindings, scanner and queries are preserved.
+
+One grammar correction: admit the existing reserved keyword terminals as
+identifier aliases inside `_jsx_identifier`. JSX names do not carry
+JavaScript's reserved-word exclusion. This admits SVG's `in`, keyword-named
+attributes and namespaces without relaxing keywords in JavaScript statements
+or attribute-value expressions. The current grammar, including modern
+`using` declarations, remains in use; there is no grammar downgrade or TSX
+fallback and no source rewriting.
+
+Generated with the official tree-sitter CLI 0.27.0, native QuickJS runtime,
+ABI 15: `tree-sitter generate --js-runtime native --abi 15`.
+Append one final LF to `src/grammar.json` and `src/node-types.json`, which
+the pinned generator omits, to meet the repository's JSON file-boundary policy.
+This does not change their JSON values and is included in CI regeneration.
+The official Linux x64 generator archive's verified SHA-256 is
+`20a1f39ec1c45f2211492dcb8881c802b643b554bb196869a29ac3778277fa77`.
+Generated parser sources are committed so consumers need no generator,
+JavaScript runtime or network access to build this dependency.
+
+The patched grammar passed the upstream `tree-sitter test` command, which
+reported 116 parses and zero failures. PONS adds keyword-attribute, modern
+using-declaration, malformed-JSX and reserved-keyword rejection controls.
+The exact Echo warrant-debugger source is a separate executed reproducer.
+
+This locally patched source is declared through the root crates.io patch.
+The parser receipt identifies it as `0.25.0+jsx-keywords.1`. The generated
+source, patch, upstream revision and generator identity travel together;
+neither a crates.io checksum nor an unmodified-upstream claim is invented.
+
+`scripts/check-grammar-generation.sh` verifies the generator archive and
+regenerates all committed generated files in Linux CI, comparing their bytes
+with the shipped files. The three standard JSON metadata files are explicitly
+recorded as non-JCS in `ci/json-ratchet.kyaml`; I-JSON validity remains enforced.
