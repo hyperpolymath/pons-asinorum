@@ -385,7 +385,7 @@ declarations, and patch JSX identifiers to admit the existing reserved-word
 terminals in that context. The pinned upstream source and generated parser
 ship in `vendor/tree-sitter-javascript`; `PATCHES.adoc` records provenance
 and regeneration. There is no source rewriting or TSX fallback, and recovered
-error trees remain rejected. Parser receipts name `0.25.0+jsx-keywords.1`.
+error trees remain rejected. Parser receipts name `0.25.0+jsx-keywords.3`.
 Parser and CLI regressions cover keyword names, malformed JSX, modern resource
 declarations, analysis, coverage and report validation. Supported parse failures
 give partial coverage even when no file was analysed. Frozen 0.4.0 reports

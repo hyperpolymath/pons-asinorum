@@ -9,21 +9,40 @@ use serde::{Deserialize, Serialize};
 pub(crate) const ASSUMPTION: &str = "Only registered rule semantics and declared parser/model coverage; no runtime safety certification";
 
 pub(crate) fn relative_path(file: &str, root: &str) -> String {
-    let file = file.replace('\\', "/");
-    let root = root.replace('\\', "/");
-    let path = std::path::Path::new(&file);
-    let root = std::path::Path::new(&root);
+    relative_path_details(file, root).0
+}
+
+pub(crate) fn relative_path_details(file: &str, root: &str) -> (String, bool) {
+    let windows = root.as_bytes().get(1) == Some(&b':')
+        || root.starts_with("\\\\")
+        || (cfg!(windows) && !root.starts_with('/'));
+    let file = if windows {
+        file.replace('\\', "/")
+    } else {
+        file.into()
+    };
+    let root = if windows {
+        root.replace('\\', "/")
+    } else {
+        root.into()
+    };
     // A file scan has root == file. Do not consult the validator's filesystem:
     // the original checkout may no longer exist where evidence is consumed.
-    let base = if path == root {
-        root.parent().unwrap_or(root)
+    let base = if file == root {
+        root.rsplit_once('/').map_or("", |(parent, _)| parent)
     } else {
-        root
+        root.trim_end_matches('/')
     };
-    path.strip_prefix(base)
-        .unwrap_or(path)
-        .to_string_lossy()
-        .replace('\\', "/")
+    let prefix = format!("{base}/");
+    let relative = if base.is_empty() && !file.starts_with('/') {
+        Some(file.as_str())
+    } else {
+        file.strip_prefix(&prefix)
+    };
+    (
+        relative.unwrap_or(&file).replace('\\', "/"),
+        relative.is_some(),
+    )
 }
 
 #[cfg(test)]
@@ -41,6 +60,20 @@ mod portable_paths {
         assert_eq!(
             super::relative_path(r"C:\outside\sample.php", r"C:\repo"),
             "C:/outside/sample.php"
+        );
+    }
+    #[test]
+    fn posix_filename_boundaries_survive_single_file_scans() {
+        for file in [r"/tmp/a\b.py", "/tmp/a:b.py"] {
+            assert_eq!(
+                super::relative_path(file, file),
+                super::relative_path(file, "/tmp")
+            );
+            assert!(super::relative_path_details(file, "/tmp").1);
+        }
+        assert_eq!(
+            super::relative_path(r"/tmp/a\b.py", r"/tmp/a\b.py"),
+            "a/b.py"
         );
     }
 }

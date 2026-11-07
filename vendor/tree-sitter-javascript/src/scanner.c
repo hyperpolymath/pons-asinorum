@@ -111,7 +111,10 @@ static WhitespaceResult scan_whitespace_and_comments(TSLexer *lexer, bool *scann
 // Match the grammar's identifier-continuation boundary, including escaped and
 // non-ASCII continuations, instead of the locale-dependent alphabetic test.
 static bool is_identifier_continue(int32_t c) {
-    if (c <= 0x20 || iswspace(c) || c == 0xFEFF || c == 0x2060 || c == 0x200B) return false;
+    // ECMAScript WhiteSpace and LineTerminator are independent of C locale.
+    if (c <= 0x20 || c == 0x00A0 || c == 0x1680 || (c >= 0x2000 && c <= 0x200A) ||
+        c == 0x2028 || c == 0x2029 || c == 0x202F || c == 0x205F || c == 0x3000 ||
+        c == 0xFEFF || c == 0x2060 || c == 0x200B) return false;
     switch (c) {
         case ':': case ';': case '`': case '"': case '\'': case '@': case '#':
         case '.': case ',': case '|': case '^': case '&': case '<': case '>':

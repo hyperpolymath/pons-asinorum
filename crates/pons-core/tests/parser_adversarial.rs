@@ -151,3 +151,61 @@ fn reviewed_javascript_boundaries_preserve_valid_syntax() {
         );
     }
 }
+
+#[test]
+fn comments_and_unicode_operator_boundaries_preserve_expression_structure() {
+    for newline in ["\r", "\n", "\u{2028}", "\u{2029}"] {
+        for (suffix, kind) in [
+            ("(x)", "call_expression"),
+            (".x", "member_expression"),
+            ("+ x", "binary_expression"),
+        ] {
+            let src = SourceFile {
+                path: "comment.js".into(),
+                lang: Lang::JavaScript,
+                text: format!("f /* comment{newline} */ {suffix};"),
+                transcoded: false,
+            };
+            let tree = parse::parse(&src).unwrap();
+            let root = tree.root_node();
+            assert_eq!(
+                root.named_child_count(),
+                1,
+                "split expression: {}",
+                src.text
+            );
+            let statement = root.named_child(0).unwrap();
+            assert_eq!(statement.kind(), "expression_statement");
+            assert_eq!(
+                statement.named_child(0).unwrap().kind(),
+                kind,
+                "{}",
+                src.text
+            );
+        }
+    }
+    for space in [
+        "\u{a0}", "\u{1680}", "\u{2003}", "\u{2028}", "\u{2029}", "\u{202f}", "\u{205f}",
+        "\u{3000}", "\u{feff}",
+    ] {
+        for operator in ["in", "instanceof"] {
+            let src = SourceFile {
+                path: "operator.js".into(),
+                lang: Lang::JavaScript,
+                text: format!("value\n{operator}{space}Object;"),
+                transcoded: false,
+            };
+            let tree = parse::parse(&src).unwrap_or_else(|error| panic!("{}: {error}", src.text));
+            assert_eq!(tree.root_node().named_child_count(), 1, "{}", src.text);
+            assert_eq!(
+                tree.root_node()
+                    .named_child(0)
+                    .unwrap()
+                    .named_child(0)
+                    .unwrap()
+                    .kind(),
+                "binary_expression"
+            );
+        }
+    }
+}

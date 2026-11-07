@@ -240,9 +240,9 @@ fn validate_value(v: Value) -> Result<String> {
         // is right for rendering and wrong for a join key, so it is refused.
         if has_corroboration {
             let file = location["file"].as_str().context("missing finding file")?;
-            let relative = crate::evidence::relative_path(file, root);
+            let (relative, stripped) = crate::evidence::relative_path_details(file, root);
             ensure!(
-                is_root_relative(&relative),
+                is_root_relative(&relative, stripped),
                 "finding path is not inside the scan root"
             );
         }
@@ -375,9 +375,9 @@ mod tests {
 // Report paths are portable data, not paths on the reader's filesystem.
 // Reject drive prefixes on every host. Permit lexical parents only when
 // they cannot escape the root; retain spelling so frozen fingerprints agree.
-fn is_root_relative(path: &str) -> bool {
+fn is_root_relative(path: &str, stripped: bool) -> bool {
     let path = path.replace('\\', "/");
-    if path.starts_with('/') || path.as_bytes().get(1) == Some(&b':') {
+    if path.starts_with('/') || (!stripped && path.as_bytes().get(1) == Some(&b':')) {
         return false;
     }
     let mut depth = 0usize;
@@ -410,10 +410,11 @@ mod portable_path_tests {
             "sub/../../a.php",
             "//server/share/a.php",
         ] {
-            assert!(!is_root_relative(path), "accepted {path}");
+            assert!(!is_root_relative(path, false), "accepted {path}");
         }
         for path in ["a.php", "sub/../a.php", "sub/./a.php"] {
-            assert!(is_root_relative(path), "rejected {path}");
+            assert!(is_root_relative(path, false), "rejected {path}");
         }
+        assert!(is_root_relative("a:b.py", true));
     }
 }
