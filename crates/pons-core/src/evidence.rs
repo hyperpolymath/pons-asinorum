@@ -8,14 +8,22 @@ use crate::{
 use serde::{Deserialize, Serialize};
 pub(crate) const ASSUMPTION: &str = "Only registered rule semantics and declared parser/model coverage; no runtime safety certification";
 
+// Writers retain the native path semantics of the historical format.
 pub(crate) fn relative_path(file: &str, root: &str) -> String {
-    relative_path_details(file, root).0
+    let path = std::path::Path::new(file);
+    let root = std::path::Path::new(root);
+    let base = if path == root {
+        root.parent().unwrap_or(root)
+    } else {
+        root
+    };
+    path.strip_prefix(base)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .replace('\\', "/")
 }
 
-pub(crate) fn relative_path_details(file: &str, root: &str) -> (String, bool) {
-    let windows = root.as_bytes().get(1) == Some(&b':')
-        || root.starts_with("\\\\")
-        || (cfg!(windows) && !root.starts_with('/'));
+fn path_for_style(file: &str, root: &str, windows: bool) -> (String, bool) {
     let file = if windows {
         file.replace('\\', "/")
     } else {
@@ -26,8 +34,6 @@ pub(crate) fn relative_path_details(file: &str, root: &str) -> (String, bool) {
     } else {
         root.into()
     };
-    // A file scan has root == file. Do not consult the validator's filesystem:
-    // the original checkout may no longer exist where evidence is consumed.
     let base = if file == root {
         root.rsplit_once('/').map_or("", |(parent, _)| parent)
     } else {
@@ -45,36 +51,73 @@ pub(crate) fn relative_path_details(file: &str, root: &str) -> (String, bool) {
     )
 }
 
+// Historical relative roots do not identify the producer's platform. Readers
+// enumerate both lexical interpretations and require the record and fingerprint
+// to agree on ONE of them; they never consult their own filesystem or host OS.
+pub(crate) fn path_candidates(file: &str, root: &str) -> Vec<(String, bool)> {
+    let drive_absolute = root.as_bytes().first().is_some_and(u8::is_ascii_alphabetic)
+        && root.as_bytes().get(1) == Some(&b':')
+        && root
+            .as_bytes()
+            .get(2)
+            .is_some_and(|c| matches!(c, b'/' | b'\\'));
+    if drive_absolute || root.starts_with("\\\\") {
+        return vec![path_for_style(file, root, true)];
+    }
+    let posix = path_for_style(file, root, false);
+    if root.starts_with('/') && !root.starts_with("//") {
+        return vec![posix];
+    }
+    let windows = path_for_style(file, root, true);
+    if windows == posix {
+        vec![posix]
+    } else {
+        vec![posix, windows]
+    }
+}
+
 #[cfg(test)]
 mod portable_paths {
+    use super::path_candidates;
     #[test]
     fn windows_reports_have_the_same_keys_on_every_reader_host() {
         assert_eq!(
-            super::relative_path(r"C:\repo\sample.php", r"C:\repo"),
-            "sample.php"
+            path_candidates(r"C:\repo\sample.php", r"C:\repo"),
+            vec![("sample.php".into(), true)]
         );
         assert_eq!(
-            super::relative_path(r"C:\repo\sample.php", r"C:\repo\sample.php"),
-            "sample.php"
+            path_candidates(r"C:\repo\sample.php", r"C:\repo\sample.php"),
+            vec![("sample.php".into(), true)]
         );
         assert_eq!(
-            super::relative_path(r"C:\outside\sample.php", r"C:\repo"),
-            "C:/outside/sample.php"
+            path_candidates(r"C:\outside\sample.php", r"C:\repo"),
+            vec![("C:/outside/sample.php".into(), false)]
+        );
+        assert!(path_candidates(r"repo\a.py", "repo").contains(&("a.py".into(), true)));
+        assert!(path_candidates(r".\a.py", ".").contains(&("a.py".into(), true)));
+        assert!(
+            path_candidates(r"//server/share\sample.php", "//server/share")
+                .contains(&("sample.php".into(), true))
         );
     }
     #[test]
-    fn posix_filename_boundaries_survive_single_file_scans() {
-        for file in [r"/tmp/a\b.py", "/tmp/a:b.py"] {
-            assert_eq!(
-                super::relative_path(file, file),
-                super::relative_path(file, "/tmp")
-            );
-            assert!(super::relative_path_details(file, "/tmp").1);
-        }
+    fn posix_boundaries_and_ambiguous_historical_keys_are_preserved() {
         assert_eq!(
-            super::relative_path(r"/tmp/a\b.py", r"/tmp/a\b.py"),
-            "a/b.py"
+            path_candidates(r"/tmp/a\b.py", r"/tmp/a\b.py"),
+            vec![("a/b.py".into(), true)]
         );
+        assert!(!path_candidates(r"/tmp/repo\outside/a.py", "/tmp/repo")[0].1);
+        for (file, root, expected) in [
+            (r"repo\sub/a.py", "repo", "repo/sub/a.py"),
+            (r"repo\sub/a.py", "repo", "sub/a.py"),
+            (r"src\a.py", r"src\a.py", "a.py"),
+            (r"src\a.py", r"src\a.py", "src/a.py"),
+            (r"a:b\c.py", r"a:b\c.py", "a:b/c.py"),
+        ] {
+            assert!(path_candidates(file, root)
+                .iter()
+                .any(|(path, _)| path == expected));
+        }
     }
 }
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

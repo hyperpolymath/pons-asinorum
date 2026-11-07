@@ -326,6 +326,8 @@ fn run_scan(
     fail_on_skips: bool,
     required_languages: &[String],
 ) -> Result<u8> {
+    let absolute_path = std::path::absolute(path)?;
+    let path = absolute_path.as_path();
     if !path.exists() {
         bail!("no such path: {}", path.display());
     }

@@ -90,3 +90,24 @@ The updated Windows workspace suite passed 258 test executions; all-target
 Clippy, eight parser regressions and the 116-parse upstream corpus passed.
 The generator provenance is unchanged; the external scanner revision advances
 with the explicit Unicode boundary repair.
+
+The subsequent review identified ambiguous relative source paths. Normal CLI
+scans (including forced grammars) and `Engine::scan` now use absolute roots,
+so POSIX filenames resembling drive paths remain recognisable as POSIX input.
+The reader derives relative Windows directory paths from their separators,
+independently of its own operating system. Regression reports are rebased to
+Windows relative syntax and validated on both hosted operating systems.
+
+Historical path behaviour was checked against commits `6a20ca7` and
+`84f58f9`: those implementations determined the parent before replacing
+backslashes. On POSIX, a single file `/tmp/a\b.py` therefore produced
+`a/b.py`, as the current regression requires. The later temporary early-
+normalisation bug is not adopted as the frozen 0.4.0 format's semantics.
+Old reports with intrinsically ambiguous relative roots lack explicit
+producer-platform metadata. The reader preserves both POSIX and Windows
+interpretations and requires the record path and semantic fingerprint to
+agree on the same one. Native writers retain the original path behaviour.
+This establishes internal consistency, not a unique historical filesystem
+identity. Tests cover both 0.4.0 and 0.5.0 legacy forms and reject mixed
+interpretations; the Windows workspace suite passed 261 test executions,
+with all-target Clippy and the eight CLI contract tests passing.

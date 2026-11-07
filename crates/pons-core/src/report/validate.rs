@@ -240,9 +240,11 @@ fn validate_value(v: Value) -> Result<String> {
         // is right for rendering and wrong for a join key, so it is refused.
         if has_corroboration {
             let file = location["file"].as_str().context("missing finding file")?;
-            let (relative, stripped) = crate::evidence::relative_path_details(file, root);
+            let candidates = crate::evidence::path_candidates(file, root);
             ensure!(
-                is_root_relative(&relative, stripped),
+                candidates
+                    .iter()
+                    .any(|(path, stripped)| is_root_relative(path, *stripped)),
                 "finding path is not inside the scan root"
             );
         }
@@ -255,13 +257,12 @@ fn validate_value(v: Value) -> Result<String> {
             let line = location["line_start"]
                 .as_u64()
                 .context("missing finding line")? as usize;
-            let expected = crate::corroborate::fingerprint_of(
-                &crate::evidence::relative_path(file, root),
-                line,
-                evidence,
-            );
             ensure!(
-                f["semantic_fingerprint"] == expected.as_str(),
+                crate::evidence::path_candidates(file, root)
+                    .iter()
+                    .any(|(path, stripped)| is_root_relative(path, *stripped)
+                        && f["semantic_fingerprint"]
+                            == crate::corroborate::fingerprint_of(path, line, evidence)),
                 "semantic fingerprint mismatch"
             );
         }
@@ -316,7 +317,15 @@ fn validate_value(v: Value) -> Result<String> {
             r.rule == f["rule_id"]
                 && serde_json::to_value(r.tier)? == f["tier"]
                 && serde_json::to_value(r.evidence)? == f["evidence"]
-                && r.path == crate::evidence::relative_path(file, root)
+                && crate::evidence::path_candidates(file, root)
+                    .iter()
+                    .any(|(path, stripped)| r.path == *path
+                        && (!has_corroboration
+                            || (is_root_relative(path, *stripped)
+                                && f["semantic_fingerprint"]
+                                    == crate::corroborate::fingerprint_of(
+                                        path, r.line, r.evidence
+                                    ))))
                 && Some(r.line as u64) == f["location"]["line_start"].as_u64()
                 && r.trace == f["evidence_note"]
                 && r.counterconditions == counterconditions
