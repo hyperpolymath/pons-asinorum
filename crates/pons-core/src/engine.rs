@@ -197,6 +197,10 @@ impl Engine {
     /// splitting them by which layer noticed would only invite a consumer to
     /// handle one and miss the others.
     pub fn scan(&self, root: &Path) -> anyhow::Result<ScanReport> {
+        // Absolute roots disambiguate POSIX filenames that resemble Windows
+        // drive paths without requiring access to the producer's filesystem.
+        let absolute_root = std::path::absolute(root)?;
+        let root = absolute_root.as_path();
         let discovery = source::discover(root)?;
         let mut report = self.scan_files(root, &discovery.files);
         report.inventory.extend(discovery.inventory);

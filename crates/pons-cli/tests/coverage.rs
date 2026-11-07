@@ -166,6 +166,51 @@ fn jsx_keyword_attributes_reach_analysis_and_validate() {
     assert!(report["scanned"]["skipped"].as_array().unwrap().is_empty());
     assert!(pons_core::report::validate::validate(&report.to_string()).is_ok());
 }
+
+#[test]
+fn relative_cli_inputs_emit_absolute_roots() {
+    let t = Temp::new();
+    fs::write(t.0.join("input.js"), "const value = 1;").unwrap();
+    for extra in [&[][..], &["--lang", "javascript"][..]] {
+        let out = Command::new(env!("CARGO_BIN_EXE_pons"))
+            .current_dir(&t.0)
+            .args(["scan", "input.js", "--format", "json"])
+            .args(extra)
+            .output()
+            .unwrap();
+        assert_eq!(out.status.code(), Some(0));
+        let report: Value = serde_json::from_slice(&out.stdout).unwrap();
+        assert!(PathBuf::from(report["scanned"]["root"].as_str().unwrap()).is_absolute());
+        assert!(pons_core::report::validate::validate(&report.to_string()).is_ok());
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn relative_posix_colon_and_backslash_filename_keeps_its_evidence_boundary() {
+    let t = Temp::new();
+    let file = r"a:b\c.php";
+    fs::write(
+        t.0.join(file),
+        "<?php function render() { echo $_GET['x']; }\n",
+    )
+    .unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_pons"))
+        .current_dir(&t.0)
+        .args(["scan", file, "--format", "json"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(0));
+    let report: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert!(!report["evidence_contract"]["records"]
+        .as_array()
+        .unwrap()
+        .is_empty());
+    for record in report["evidence_contract"]["records"].as_array().unwrap() {
+        assert_eq!(record["path"], "a:b/c.php");
+    }
+    assert!(pons_core::report::validate::validate(&report.to_string()).is_ok());
+}
 #[test]
 fn absent_required_language_cannot_be_suppressed() {
     let t = Temp::new();

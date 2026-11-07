@@ -13,9 +13,18 @@ pub(crate) fn relative_path(file: &str, root: &str) -> String {
 }
 
 pub(crate) fn relative_path_details(file: &str, root: &str) -> (String, bool) {
-    let windows = root.as_bytes().get(1) == Some(&b':')
-        || root.starts_with("\\\\")
-        || (cfg!(windows) && !root.starts_with('/'));
+    let drive_absolute = root.as_bytes().first().is_some_and(u8::is_ascii_alphabetic)
+        && root.as_bytes().get(1) == Some(&b':')
+        && root
+            .as_bytes()
+            .get(2)
+            .is_some_and(|c| matches!(c, b'/' | b'\\'));
+    let relative_windows = file != root
+        && !root.starts_with('/')
+        && file
+            .strip_prefix(root.trim_end_matches(['/', '\\']))
+            .is_some_and(|suffix| suffix.starts_with('\\'));
+    let windows = drive_absolute || root.starts_with("\\\\") || relative_windows;
     let file = if windows {
         file.replace('\\', "/")
     } else {
@@ -75,6 +84,10 @@ mod portable_paths {
             super::relative_path(r"/tmp/a\b.py", r"/tmp/a\b.py"),
             "a/b.py"
         );
+        assert_eq!(super::relative_path(r"a:b\c.py", r"a:b\c.py"), "a:b/c.py");
+        assert_eq!(super::relative_path(r"repo\a.py", "repo"), "a.py");
+        assert_eq!(super::relative_path(r".\a.py", "."), "a.py");
+        assert!(!super::relative_path_details(r"/tmp/repo\outside/a.py", "/tmp/repo").1);
     }
 }
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

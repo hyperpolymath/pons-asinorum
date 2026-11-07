@@ -269,3 +269,30 @@ fn a_finding_outside_the_scan_root_is_rejected() {
         String::from_utf8_lossy(&rejected.stderr)
     );
 }
+
+#[test]
+fn a_relative_windows_report_validates_on_every_reader_host() {
+    fn rebase(value: &mut Value, root: &str) {
+        match value {
+            Value::String(text) => {
+                if let Some(suffix) = text.strip_prefix(root) {
+                    *text = format!("repo{suffix}").replace('/', "\\");
+                }
+            }
+            Value::Array(values) => values.iter_mut().for_each(|value| rebase(value, root)),
+            Value::Object(values) => values.values_mut().for_each(|value| rebase(value, root)),
+            _ => (),
+        }
+    }
+    let fixture = Fixture::new();
+    let mut report = fixture.scan();
+    let root = report["scanned"]["root"].as_str().unwrap().to_owned();
+    rebase(&mut report, &root);
+    assert_eq!(report["scanned"]["root"], "repo");
+    let result = fixture.validate(&report);
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
