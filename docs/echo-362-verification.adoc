@@ -67,7 +67,7 @@ The next patch extends JSX keywords to member names, removes the invalid
 `export` expression alternative, and repairs CR-only and identifier-boundary
 automatic semicolon handling. It includes the upstream parameter-highlight
 query referenced by the grammar manifest. The receipt is
-`0.25.0+jsx-keywords.2`.
+`0.25.0+jsx-keywords.3`.
 
 `pons-core` directly depends on the vendored grammar so a downstream Git or
 path consumer receives the same parser. It is explicitly non-publishable
@@ -81,3 +81,12 @@ reject drive prefixes and escaping parents on every host, while permitting
 non-escaping parent components. Default parse-only CLI coverage is exercised.
 The generator download requires HTTPS for the original URL and redirects,
 in addition to its pinned digest. Hosted PR checks record final verification.
+
+The subsequent portability review preserves POSIX single-file basename
+boundaries before display normalization. A successfully stripped scan-root
+prefix distinguishes in-root colon filenames from drive-qualified paths that
+were never inside the root. Both are checked independently of the reader host.
+The updated Windows workspace suite passed 258 test executions; all-target
+Clippy, eight parser regressions and the 116-parse upstream corpus passed.
+The generator provenance is unchanged; the external scanner revision advances
+with the explicit Unicode boundary repair.

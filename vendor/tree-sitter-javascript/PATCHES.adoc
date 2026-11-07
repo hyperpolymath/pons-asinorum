@@ -39,7 +39,7 @@ The exact Echo warrant-debugger source is a separate executed reproducer.
 This locally patched source is a direct path dependency of `pons-core`.
 Registry publication of `pons-core` is disabled until the patched grammar
 has a distributable package; downstream Git/path consumers retain it.
-The parser receipt identifies it as `0.25.0+jsx-keywords.2`. The generated
+The parser receipt identifies it as `0.25.0+jsx-keywords.3`. The generated
 source, patch, upstream revision and generator identity travel together;
 neither a crates.io checksum nor an unmodified-upstream claim is invented.
 
@@ -47,3 +47,8 @@ neither a crates.io checksum nor an unmodified-upstream claim is invented.
 regenerates all committed generated files in Linux CI, comparing their bytes
 with the shipped files. The three standard JSON metadata files are explicitly
 recorded as non-JCS in `ci/json-ratchet.kyaml`; I-JSON validity remains enforced.
+
+Revision 3 makes the identifier-continuation whitespace set explicit and
+independent of the C locale. AST controls check that multiline comments before
+calls, members and addition preserve one expression, including U+2028/U+2029.
+The upstream 116-parse corpus remains unchanged and passes.
