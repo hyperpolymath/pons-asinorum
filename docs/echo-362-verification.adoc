@@ -55,6 +55,29 @@ not formal proofs of parser correctness or the coverage classification.
 Pearlite is Creusot's specification language, not a third verifier.
 
 The third-party grammar's JavaScript/JSX semantics remain a dependency
-assumption (`ASSUMED`), with its exact version and lockfile checksum pinned.
-No third-party code or licence was rewritten. A future grammar update must
-pass these regressions and the complete existing suite before adoption.
+assumption (`ASSUMED`), with upstream commit, local patch and generator digest recorded in
+`vendor/tree-sitter-javascript/PATCHES.adoc`. This is modified vendored
+source; its path dependency has no registry checksum. The MIT licence is
+unchanged. A future grammar update must pass the regressions, regeneration
+check and complete existing suite before adoption.
+
+== Review follow-up
+
+The next patch extends JSX keywords to member names, removes the invalid
+`export` expression alternative, and repairs CR-only and identifier-boundary
+automatic semicolon handling. It includes the upstream parameter-highlight
+query referenced by the grammar manifest. The receipt is
+`0.25.0+jsx-keywords.2`.
+
+`pons-core` directly depends on the vendored grammar so a downstream Git or
+path consumer receives the same parser. It is explicitly non-publishable
+until a distributable grammar package is provided; a root-only Cargo patch
+cannot guarantee registry consumers receive the repaired code.
+
+Report validation retains both historically accepted 0.4.0 zero-file
+classifications when explicit coverage failures justify partial coverage.
+Coverage and execution outcomes must still agree. Portable path checks
+reject drive prefixes and escaping parents on every host, while permitting
+non-escaping parent components. Default parse-only CLI coverage is exercised.
+The generator download requires HTTPS for the original URL and redirects,
+in addition to its pinned digest. Hosted PR checks record final verification.

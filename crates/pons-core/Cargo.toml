@@ -2,6 +2,7 @@
 [package]
 name = "pons-core"
 version = "0.1.0"
+publish = false
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
@@ -14,9 +15,10 @@ toml.workspace = true
 serde = { workspace = true }
 serde_json = { workspace = true }
 tree-sitter = "=0.27.0"
-# The root patch retains 0.25.0 syntax (including `using`) and fixes JSX
-# keyword attributes. Provenance: vendor/tree-sitter-javascript/PATCHES.adoc.
-tree-sitter-javascript = "=0.25.0"
+# A direct path travels with Git dependencies; root-only patches do not.
+# Registry publication requires distributing this patched grammar first.
+# Provenance: vendor/tree-sitter-javascript/PATCHES.adoc.
+tree-sitter-javascript = { path = "../../vendor/tree-sitter-javascript" }
 tree-sitter-python = "=0.25.0"
 tree-sitter-rust = "=0.24.2"
 tree-sitter-typescript = "=0.23.2"

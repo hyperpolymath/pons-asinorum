@@ -3,15 +3,23 @@
 
 Upstream: tree-sitter/tree-sitter-javascript v0.25.0,
 commit `44c892e0be055ac465d5eeddae6d3e194424e7de`.
-The upstream MIT licence, Rust bindings, scanner and queries are preserved.
+The upstream MIT licence and Rust bindings are preserved. Queries are copied
+from that revision, including the parameter-highlight query required by the manifest.
 
-One grammar correction: admit the existing reserved keyword terminals as
-identifier aliases inside `_jsx_identifier`. JSX names do not carry
+The JSX grammar correction: admit the existing reserved keyword terminals as
+identifier aliases inside `_jsx_identifier`, including nested member names. JSX names do not carry
 JavaScript's reserved-word exclusion. This admits SVG's `in`, keyword-named
 attributes and namespaces without relaxing keywords in JavaScript statements
 or attribute-value expressions. The current grammar, including modern
 `using` declarations, remains in use; there is no grammar downgrade or TSX
 fallback and no source rewriting.
+
+The second patch also removes `export` from the upstream contextual-identifier
+alternative, which incorrectly admitted it in JavaScript expressions. Property
+names and export declarations remain valid. In the external scanner, CR joins
+LF, U+2028 and U+2029 as a line terminator, including comments; `in` and
+`instanceof` distinguish identifiers using the grammar's continuation boundary
+instead of a locale-dependent alphabetic-only test.
 
 Generated with the official tree-sitter CLI 0.27.0, native QuickJS runtime,
 ABI 15: `tree-sitter generate --js-runtime native --abi 15`.
@@ -28,8 +36,10 @@ reported 116 parses and zero failures. PONS adds keyword-attribute, modern
 using-declaration, malformed-JSX and reserved-keyword rejection controls.
 The exact Echo warrant-debugger source is a separate executed reproducer.
 
-This locally patched source is declared through the root crates.io patch.
-The parser receipt identifies it as `0.25.0+jsx-keywords.1`. The generated
+This locally patched source is a direct path dependency of `pons-core`.
+Registry publication of `pons-core` is disabled until the patched grammar
+has a distributable package; downstream Git/path consumers retain it.
+The parser receipt identifies it as `0.25.0+jsx-keywords.2`. The generated
 source, patch, upstream revision and generator identity travel together;
 neither a crates.io checksum nor an unmodified-upstream claim is invented.
 

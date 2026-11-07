@@ -110,3 +110,44 @@ fn deep_ast_is_rejected_before_recursive_rules() {
         .to_string()
         .contains("budget exhausted"));
 }
+
+#[test]
+fn reviewed_javascript_boundaries_preserve_valid_syntax() {
+    for text in [
+        "const view = <Icons.default />;",
+        "const view = <default.Icons.class />;",
+        "const value = {export: 1}; value.export;",
+        "export const value = 1;",
+        "const x = 1\rconst y = 2",
+        "const x = 1 // comment\rconst y = 2",
+        "const x = 1 /* comment\r */ const y = 2",
+        "const x = 1\nin_value()",
+        "const x = 1\ninstanceof_value()",
+        "const x = 1\nin$()",
+        "const x = 1\nin0()",
+        "const x = 1\ninstanceof0()",
+        "const x = 1\niné()",
+        "const flag = key\nin object;",
+        "const flag = value\ninstanceof Object;",
+    ] {
+        let src = SourceFile {
+            path: "review.jsx".into(),
+            lang: Lang::JavaScript,
+            text: text.into(),
+            transcoded: false,
+        };
+        assert!(parse::parse(&src).is_ok(), "rejected valid syntax: {text}");
+    }
+    for text in ["const view = <C value={export} />;", "const x = export;"] {
+        let src = SourceFile {
+            path: "invalid.jsx".into(),
+            lang: Lang::JavaScript,
+            text: text.into(),
+            transcoded: false,
+        };
+        assert!(
+            parse::parse(&src).is_err(),
+            "accepted invalid syntax: {text}"
+        );
+    }
+}

@@ -9,9 +9,6 @@ members = [
 ]
 exclude = ["vendor/tree-sitter-javascript"]
 
-[patch.crates-io]
-tree-sitter-javascript = { path = "vendor/tree-sitter-javascript" }
-
 [workspace.package]
 edition = "2021"
 license = "MPL-2.0"
