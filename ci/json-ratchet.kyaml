@@ -14,7 +14,7 @@
         "vendor/tree-sitter-javascript/src/node-types.json",
         "vendor/tree-sitter-javascript/tree-sitter.json",
       ],
-      reason: "Pinned upstream tree-sitter metadata and the standard generated grammar output. Preserve upstream metadata and the official generator's reproducible bytes; provenance and regeneration are recorded in vendor/tree-sitter-javascript/PATCHES.adoc. These files remain subject to I-JSON validity checks; no JCS-canonicality claim is made.",
+      reason: "Pinned upstream tree-sitter metadata and standard generated grammar output, with the required final LF on generated JSON. Preserve upstream metadata and the documented reproducible generation chain; provenance and regeneration are recorded in vendor/tree-sitter-javascript/PATCHES.adoc. I-JSON validity remains enforced; no JCS-canonicality claim is made.",
     },
     {
       paths: [

@@ -67,6 +67,8 @@ jobs:
         run: cargo test --workspace
       - name: build
         run: cargo build --release
+      - name: Pinned grammar regeneration
+        run: bash scripts/check-grammar-generation.sh
       - name: e2e
         run: bash tests/e2e.sh
       - name: e2e non-vacuity (stub binary must fail the suite)
