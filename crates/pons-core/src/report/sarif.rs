@@ -446,7 +446,7 @@ pub fn render(report: &ScanReport) -> anyhow::Result<String> {
                 // The scan itself completed: per ADR-0005 a skipped subtree is
                 // a partial result, not an operational failure. Consumers can
                 // opt into `--fail-on-skips` at the CLI for a hard gate.
-                execution_successful: report.files_scanned > 0,
+                execution_successful: report.coverage_status() != "no-applicable-input",
                 properties: serde_json::json!({"coverageStatus":report.coverage_status(),
                     "exitCode": report.exit_code,
                     "inventory":report.inventory, "coverageFailures":report.coverage_failures}),
@@ -731,9 +731,8 @@ mod tests {
             .as_array()
             .unwrap()
             .is_empty());
-        report.files_scanned = 0;
-        let v: serde_json::Value = serde_json::from_str(&render(&report).unwrap()).unwrap();
-        assert_eq!(v["runs"][0]["invocations"][0]["executionSuccessful"], false);
+        // Empty input and parse-only scans are exercised through the real CLI
+        // in tests/coverage.rs, with consistent inventories and file counts.
     }
     #[test]
     fn invocations_remains_present_when_nothing_was_skipped() {

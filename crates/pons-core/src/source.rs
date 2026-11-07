@@ -338,6 +338,7 @@ pub fn read_with_digest(file: &DiscoveredFile) -> anyhow::Result<(SourceFile, St
 
 #[cfg(test)]
 mod tests {
+    #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt as _;
 
     use super::*;
@@ -421,6 +422,7 @@ mod tests {
     /// than a red one. The guard makes that situation *loud*: CI here is
     /// `ubuntu-latest` with no container, i.e. non-root, so a failure means
     /// something about the environment changed and the coverage went away.
+    #[cfg(unix)]
     fn unreadable_dir(parent: &Path, name: &str) -> PathBuf {
         let dir = parent.join(name);
         std::fs::create_dir_all(&dir).unwrap();
@@ -435,11 +437,13 @@ mod tests {
     }
 
     /// Undo [`unreadable_dir`] so the temp tree can actually be removed.
+    #[cfg(unix)]
     fn make_readable(dir: &Path) {
         let _ = std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o755));
     }
 
     #[test]
+    #[cfg(unix)]
     fn an_unreadable_subdirectory_is_skipped_and_the_rest_of_the_tree_still_enumerates() {
         let dir = tempfile_dir();
         std::fs::write(dir.join("kept.py"), "x = 1\n").unwrap();
@@ -509,6 +513,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn an_unreadable_root_is_an_error_even_though_an_unreadable_subdirectory_is_not() {
         let dir = tempfile_dir();
         let locked = unreadable_dir(&dir, "root");

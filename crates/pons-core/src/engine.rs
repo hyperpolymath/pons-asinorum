@@ -542,6 +542,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn a_directory_the_walker_could_not_enter_is_reported_alongside_the_findings() {
         use std::os::unix::fs::PermissionsExt as _;
 
