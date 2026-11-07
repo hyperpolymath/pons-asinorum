@@ -6,6 +6,13 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 vendor="$root/vendor/tree-sitter-javascript"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
+# A regenerated vendored parser is irrelevant if Cargo stopped using it.
+cd "$root"
+cargo metadata --locked --format-version 1 > "$work/metadata.json"
+jq -e --arg manifest "$vendor/Cargo.toml" '
+  [.packages[] | select(.name == "tree-sitter-javascript")] |
+  length == 1 and .[0].version == "0.25.0" and .[0].source == null and .[0].manifest_path == $manifest
+' "$work/metadata.json" > /dev/null
 curl --fail --silent --show-error --location --retry 3 \
   https://github.com/tree-sitter/tree-sitter/releases/download/v0.27.0/tree-sitter-linux-x64.gz \
   -o "$work/generator.gz"
