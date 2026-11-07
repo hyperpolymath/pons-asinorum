@@ -103,6 +103,11 @@ Historical path behaviour was checked against commits `6a20ca7` and
 backslashes. On POSIX, a single file `/tmp/a\b.py` therefore produced
 `a/b.py`, as the current regression requires. The later temporary early-
 normalisation bug is not adopted as the frozen 0.4.0 format's semantics.
-Old reports with intrinsically ambiguous relative single-file roots still
-lack explicit producer-platform metadata; this receipt does not claim that
-every such historical spelling can establish a unique filesystem identity.
+Old reports with intrinsically ambiguous relative roots lack explicit
+producer-platform metadata. The reader preserves both POSIX and Windows
+interpretations and requires the record path and semantic fingerprint to
+agree on the same one. Native writers retain the original path behaviour.
+This establishes internal consistency, not a unique historical filesystem
+identity. Tests cover both 0.4.0 and 0.5.0 legacy forms and reject mixed
+interpretations; the Windows workspace suite passed 261 test executions,
+with all-target Clippy and the eight CLI contract tests passing.

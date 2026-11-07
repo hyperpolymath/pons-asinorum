@@ -180,9 +180,28 @@ fn relative_cli_inputs_emit_absolute_roots() {
             .unwrap();
         assert_eq!(out.status.code(), Some(0));
         let report: Value = serde_json::from_slice(&out.stdout).unwrap();
-        assert!(PathBuf::from(report["scanned"]["root"].as_str().unwrap()).is_absolute());
+        let expected = if extra.is_empty() {
+            t.0.join("input.js")
+        } else {
+            t.0.clone()
+        };
+        assert_eq!(
+            PathBuf::from(report["scanned"]["root"].as_str().unwrap()),
+            expected
+        );
         assert!(pons_core::report::validate::validate(&report.to_string()).is_ok());
     }
+    let out = Command::new(env!("CARGO_BIN_EXE_pons"))
+        .current_dir(&t.0)
+        .args(["scan", ".", "--format", "json"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(0));
+    let report: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(
+        PathBuf::from(report["scanned"]["root"].as_str().unwrap()),
+        t.0
+    );
 }
 
 #[cfg(unix)]

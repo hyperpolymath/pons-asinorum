@@ -113,8 +113,9 @@ pub struct ScanReport {
     pub exit_code: Option<u8>,
     pub anchors: std::collections::BTreeMap<String, String>,
     pub coverage_failures: Vec<String>,
-    /// The root exactly as the caller gave it — never canonicalised, so
-    /// relative invocations stay relative in the output.
+    /// Normal scans use an absolute root without resolving symbolic links.
+    /// Explicit `scan_files` callers retain their supplied label. Absolute
+    /// roots may contain checkout details; exchange keys are root-relative.
     pub root: String,
     pub findings: Vec<Finding>,
     pub files_scanned: usize,

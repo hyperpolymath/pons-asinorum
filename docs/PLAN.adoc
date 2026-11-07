@@ -464,10 +464,15 @@ file that could not be parsed. It is an **empty array when nothing was skipped,
 never omitted** — a consumer must be able to tell "clean" from "the key is
 missing so I cannot tell". One unreadable subdirectory is a skip, not a fatal
 error (#29); an unopenable **root** is still an operational error and exits 2,
-per ADR-0005. `scanned.root` is the root exactly as the caller spelled it and is
-deliberately not canonicalised, so a relative invocation stays relative — the
-absolute form would be a build-machine detail, the same one Appendix E strips
-out of `artifactLocation.uri`.
+per ADR-0005. Normal CLI scans, forced-language scans and `Engine::scan` now
+emit an absolute `scanned.root`, without resolving symbolic links. Explicit
+`scan_files` callers retain their supplied root label. Absolute roots can
+contain checkout details; consumers should use the root-relative exchange
+keys, not publish the whole local root as an artifact identifier. Historical
+relative-root reports remain readable. When a relative spelling admits both
+POSIX and Windows interpretations, validation requires the record path and
+semantic fingerprint to agree on one interpretation; it cannot prove a
+producer platform that the historical envelope never recorded.
 
 === Versioning this envelope
 

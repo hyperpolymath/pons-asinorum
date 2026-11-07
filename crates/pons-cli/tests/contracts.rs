@@ -296,3 +296,79 @@ fn a_relative_windows_report_validates_on_every_reader_host() {
         String::from_utf8_lossy(&result.stderr)
     );
 }
+
+#[test]
+fn ambiguous_legacy_paths_require_one_consistent_record_and_fingerprint() {
+    use pons_core::{corroborate::fingerprint_of, finding::EvidenceClass};
+    fn replace_path(value: &mut Value, original: &str, replacement: &str) {
+        match value {
+            Value::String(text) if text == original => *text = replacement.into(),
+            Value::Array(values) => values
+                .iter_mut()
+                .for_each(|v| replace_path(v, original, replacement)),
+            Value::Object(values) => values
+                .values_mut()
+                .for_each(|v| replace_path(v, original, replacement)),
+            _ => (),
+        }
+    }
+    let fixture = Fixture::new();
+    let original = fixture.scan();
+    let original_file = original["findings"][0]["location"]["file"]
+        .as_str()
+        .unwrap();
+    for (root, file, key, conflicting_key) in [
+        (
+            "repo",
+            r"repo\sub/sample.php",
+            "repo/sub/sample.php",
+            "sub/sample.php",
+        ),
+        (
+            r"src\sample.php",
+            r"src\sample.php",
+            "sample.php",
+            "src/sample.php",
+        ),
+        (
+            r"src\sample.php",
+            r"src\sample.php",
+            "src/sample.php",
+            "sample.php",
+        ),
+    ] {
+        let mut report = original.clone();
+        replace_path(&mut report, original_file, file);
+        report["scanned"]["root"] = json!(root);
+        for finding in report["findings"].as_array_mut().unwrap() {
+            let evidence: EvidenceClass =
+                serde_json::from_value(finding["evidence"].clone()).unwrap();
+            let line = finding["location"]["line_start"].as_u64().unwrap() as usize;
+            finding["semantic_fingerprint"] = json!(fingerprint_of(key, line, evidence));
+        }
+        for record in report["evidence_contract"]["records"]
+            .as_array_mut()
+            .unwrap()
+        {
+            record["path"] = json!(key);
+        }
+        let result = fixture.validate(&report);
+        assert!(
+            result.status.success(),
+            "{key}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let frozen_result = fixture.validate(&as_0_4_0(&report));
+        assert!(
+            frozen_result.status.success(),
+            "frozen {key}: {}",
+            String::from_utf8_lossy(&frozen_result.stderr)
+        );
+        report["evidence_contract"]["records"][0]["path"] = json!(conflicting_key);
+        assert_eq!(
+            fixture.validate(&report).status.code(),
+            Some(2),
+            "mixed interpretations accepted"
+        );
+    }
+}
