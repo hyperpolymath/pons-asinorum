@@ -23,28 +23,53 @@ pub(crate) fn relative_path(file: &str, root: &str) -> String {
         .replace('\\', "/")
 }
 
+/// The components `std::path` compares, each with its offset in `text`: the
+/// root, then every name. Empty components are dropped, and so is every `.`
+/// except a leading one; `..` is kept. Only the Windows reading tells a `//`
+/// root from `/`. Drive and verbatim prefixes are ordinary names here, as
+/// they were under the literal rule this replaces.
+fn components(text: &str, windows: bool) -> Vec<(&str, usize)> {
+    let body = text.trim_start_matches('/');
+    let lead = text.len() - body.len();
+    let mut parts = Vec::new();
+    if lead > 0 {
+        parts.push((&text[..lead.min(1 + usize::from(windows))], 0));
+    }
+    let mut start = lead;
+    for name in body.split('/') {
+        if !name.is_empty() && (name != "." || start == 0) {
+            parts.push((name, start));
+        }
+        start += name.len() + 1;
+    }
+    parts
+}
+
+// One reading of `relative_path`: the same component comparison, and the same
+// remainder, without `std::path` and therefore without the reader's host.
 fn path_for_style(file: &str, root: &str, windows: bool) -> (String, bool) {
-    let file = if windows {
-        file.replace('\\', "/")
+    let (file, root) = if windows {
+        (file.replace('\\', "/"), root.replace('\\', "/"))
     } else {
-        file.into()
+        (file.to_owned(), root.to_owned())
     };
-    let root = if windows {
-        root.replace('\\', "/")
-    } else {
-        root.into()
+    let parts = components(&file, windows);
+    let base = components(&root, windows);
+    let same = |a: &[(&str, usize)], b: &[(&str, usize)]| {
+        a.iter().map(|part| part.0).eq(b.iter().map(|part| part.0))
     };
-    let base = if file == root {
-        root.rsplit_once('/').map_or("", |(parent, _)| parent)
-    } else {
-        root.trim_end_matches('/')
-    };
-    let prefix = format!("{base}/");
-    let relative = if base.is_empty() && !file.starts_with('/') {
-        Some(file.as_str())
-    } else {
-        file.strip_prefix(&prefix)
-    };
+    // A file that is the root itself is keyed below the root's parent. A bare
+    // root has no parent.
+    let has_parent = base.last().is_some_and(|last| !last.0.starts_with('/'));
+    let depth = base.len() - usize::from(has_parent && same(&parts, &base));
+    let relative = (parts.len() >= depth && same(&parts[..depth], &base[..depth])).then(|| {
+        match (parts.get(depth), parts.last()) {
+            // As `Components::as_path`: from the next component to the end of
+            // the last one, spelled as the producer spelled it.
+            (Some(first), Some(last)) => &file[first.1..last.1 + last.0.len()],
+            _ => "",
+        }
+    });
     (
         relative.unwrap_or(&file).replace('\\', "/"),
         relative.is_some(),
@@ -118,6 +143,140 @@ mod portable_paths {
                 .iter()
                 .any(|(path, _)| path == expected));
         }
+    }
+    // The writer strips by component (`Path::strip_prefix`), so `.` and
+    // repeated separators next to the root never reach a key. Each row gives
+    // the exact POSIX and Windows readings; the native writer is compared with
+    // the reading of the host that runs the test.
+    #[test]
+    fn component_equivalent_spellings_have_the_writer_key() {
+        let inside = |key: &str| (key.to_string(), true);
+        let outside = |key: &str| (key.to_string(), false);
+        for (file, root, posix, windows) in [
+            ("repo/./a.php", "repo", inside("a.php"), inside("a.php")),
+            (
+                "repo/./sub/a.php",
+                "repo",
+                inside("sub/a.php"),
+                inside("sub/a.php"),
+            ),
+            ("repo//a.php", "repo", inside("a.php"), inside("a.php")),
+            ("repo/a.php/.", "repo", inside("a.php"), inside("a.php")),
+            ("repo/a.php", "repo/.", inside("a.php"), inside("a.php")),
+            ("repo/a.php", "repo//", inside("a.php"), inside("a.php")),
+            // The same file named twice: the key is its name below the parent.
+            (
+                "repo/./a.php",
+                "repo/a.php",
+                inside("a.php"),
+                inside("a.php"),
+            ),
+            ("./a.php", ".", inside("a.php"), inside("a.php")),
+            (
+                "/tmp/repo/./a.php",
+                "/tmp/repo",
+                inside("a.php"),
+                inside("a.php"),
+            ),
+            // Only the components next to the root are dropped. The remainder
+            // keeps its spelling, `..` is never resolved, and a leading `.` is
+            // a component of its own.
+            (
+                "repo/sub/./a.php",
+                "repo",
+                inside("sub/./a.php"),
+                inside("sub/./a.php"),
+            ),
+            (
+                "repo/../repo/a.php",
+                "repo",
+                inside("../repo/a.php"),
+                inside("../repo/a.php"),
+            ),
+            (
+                "./repo/a.php",
+                "repo",
+                outside("./repo/a.php"),
+                outside("./repo/a.php"),
+            ),
+            // A backslash separates components only in the Windows reading.
+            (
+                r"repo\.\a.php",
+                "repo",
+                outside("repo/./a.php"),
+                inside("a.php"),
+            ),
+            (
+                r"repo\.\sub\a.php",
+                r"repo\",
+                outside("repo/./sub/a.php"),
+                inside("sub/a.php"),
+            ),
+        ] {
+            let native = if cfg!(windows) { &windows } else { &posix };
+            assert_eq!(
+                super::relative_path(file, root),
+                native.0,
+                "writer: {file} in {root}"
+            );
+            let mut expected = vec![posix.clone()];
+            // An absolute POSIX root has one reading.
+            if windows != posix && !root.starts_with('/') {
+                expected.push(windows);
+            }
+            assert_eq!(
+                path_candidates(file, root),
+                expected,
+                "reader: {file} in {root}"
+            );
+        }
+        assert_eq!(
+            path_candidates(r"C:\repo\.\a.php", r"C:\repo"),
+            vec![inside("a.php")]
+        );
+        assert_eq!(
+            path_candidates(r"//server/share\.\a.php", "//server/share")[1],
+            inside("a.php")
+        );
+    }
+    // Every short path over a name, `.` and the host's separators: the reading
+    // for this host is the native writer, string for string. Windows prefixes
+    // need `:` or two leading separators; the reader does not model them, so
+    // they are not generated.
+    #[test]
+    fn the_host_reading_is_the_native_writer_on_every_short_path() {
+        let alphabet: &[char] = if cfg!(windows) {
+            &['a', '.', '/', '\\']
+        } else {
+            &['a', '.', '/']
+        };
+        let mut paths = vec![String::new()];
+        let mut from = 0;
+        for _ in 0..6 {
+            let until = paths.len();
+            for index in from..until {
+                for letter in alphabet {
+                    paths.push(format!("{}{letter}", paths[index]));
+                }
+            }
+            from = until;
+        }
+        let prefixed = |path: &str| {
+            cfg!(windows) && path.len() > 1 && path[..2].chars().all(|c| matches!(c, '/' | '\\'))
+        };
+        paths.retain(|path| !prefixed(path));
+        let mut compared = 0usize;
+        for file in &paths {
+            for root in paths.iter().filter(|root| root.len() < 5) {
+                assert_eq!(
+                    super::path_for_style(file, root, cfg!(windows)).0,
+                    super::relative_path(file, root),
+                    "{file:?} in {root:?}"
+                );
+                compared += 1;
+            }
+        }
+        assert!(compared > 100_000, "the comparison was vacuous: {compared}");
     }
 }
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

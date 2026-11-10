@@ -378,3 +378,104 @@ fn ambiguous_legacy_paths_require_one_consistent_record_and_fingerprint() {
         );
     }
 }
+
+/// The writer keys a file by component (`Path::strip_prefix`), so a `.` next to
+/// the scan root never reaches a key; the reader has to derive the same one.
+/// The report here is this build's own output, not a hand-made document.
+#[test]
+fn a_component_equivalent_file_spelling_validates_with_the_writer_key() {
+    use pons_core::{
+        corroborate::fingerprint_of, engine::Engine, finding::EvidenceClass, lang::Lang,
+        source::DiscoveredFile,
+    };
+    fn rebase(value: &mut Value, root: &str, separator: &str) {
+        match value {
+            Value::String(text) => {
+                if let Some(suffix) = text.strip_prefix(root) {
+                    *text = format!("repo{}", suffix.replace(['/', '\\'], separator));
+                }
+            }
+            Value::Array(values) => values
+                .iter_mut()
+                .for_each(|value| rebase(value, root, separator)),
+            Value::Object(values) => values
+                .values_mut()
+                .for_each(|value| rebase(value, root, separator)),
+            _ => (),
+        }
+    }
+    fn accepted(fixture: &Fixture, report: &Value, what: &str) {
+        for (version, document) in [("0.5.0", report.clone()), ("0.4.0", as_0_4_0(report))] {
+            let result = fixture.validate(&document);
+            assert!(
+                result.status.success(),
+                "{what} as {version}: {}",
+                String::from_utf8_lossy(&result.stderr)
+            );
+        }
+    }
+    let fixture = Fixture::new();
+    // The CLI makes its root absolute and walks it, so it never names a file
+    // through a `.` component. The public `scan_files` API can.
+    let spelled = fixture.src.join(".").join("sample.php");
+    let scanned = Engine::new(pons_rules::registry::RuleRegistry::all()).scan_files(
+        &fixture.src,
+        &[DiscoveredFile {
+            path: spelled.clone(),
+            lang: Lang::Php,
+        }],
+    );
+    let native: Value =
+        serde_json::from_str(&pons_core::report::json::render(&scanned).unwrap()).unwrap();
+    assert_eq!(
+        native["findings"][0]["location"]["file"],
+        json!(spelled.display().to_string()),
+        "the report must carry the spelling under test"
+    );
+    assert_eq!(
+        native["evidence_contract"]["records"][0]["path"],
+        "sample.php"
+    );
+    accepted(&fixture, &native, "the native report");
+
+    // The same report under a relative root label, in each separator style.
+    // No writer emits the lexical `./sample.php`: it is refused as a record
+    // path, as a fingerprint input, as both together, and in a frozen report.
+    let root = native["scanned"]["root"].as_str().unwrap().to_owned();
+    let lexical = "./sample.php";
+    for (separator, file) in [("/", "repo/./sample.php"), ("\\", r"repo\.\sample.php")] {
+        let mut relative = native.clone();
+        rebase(&mut relative, &root, separator);
+        assert_eq!(relative["scanned"]["root"], "repo");
+        assert_eq!(relative["findings"][0]["location"]["file"], file);
+        accepted(&fixture, &relative, file);
+
+        let evidence: EvidenceClass =
+            serde_json::from_value(relative["findings"][0]["evidence"].clone()).unwrap();
+        let line = relative["findings"][0]["location"]["line_start"]
+            .as_u64()
+            .unwrap() as usize;
+        for (record, fingerprint) in [(true, false), (false, true), (true, true)] {
+            let mut forged = relative.clone();
+            if record {
+                forged["evidence_contract"]["records"][0]["path"] = json!(lexical);
+            }
+            if fingerprint {
+                forged["findings"][0]["semantic_fingerprint"] =
+                    json!(fingerprint_of(lexical, line, evidence));
+            }
+            assert_eq!(
+                fixture.validate(&forged).status.code(),
+                Some(2),
+                "{file}: lexical key accepted (record {record}, fingerprint {fingerprint})"
+            );
+        }
+        let mut frozen = as_0_4_0(&relative);
+        frozen["evidence_contract"]["records"][0]["path"] = json!(lexical);
+        assert_eq!(
+            fixture.validate(&frozen).status.code(),
+            Some(2),
+            "{file}: lexical key accepted in a frozen report"
+        );
+    }
+}
