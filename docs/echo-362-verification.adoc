@@ -112,7 +112,7 @@ identity. Tests cover both 0.4.0 and 0.5.0 legacy forms and reject mixed
 interpretations; the Windows workspace suite passed 261 test executions,
 with all-target Clippy and the eight CLI contract tests passing.
 
-== Component-equivalent paths — 10 November 2026
+== Component-equivalent paths: 10 November 2026
 
 The review of #73 left one finding open. The writer and the reader disagreed
 on a file named through a component that `std::path` drops. For root `repo`
