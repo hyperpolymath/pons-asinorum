@@ -111,3 +111,68 @@ This establishes internal consistency, not a unique historical filesystem
 identity. Tests cover both 0.4.0 and 0.5.0 legacy forms and reject mixed
 interpretations; the Windows workspace suite passed 261 test executions,
 with all-target Clippy and the eight CLI contract tests passing.
+
+== Component-equivalent paths — 10 November 2026
+
+The review of #73 left one finding open. The writer and the reader disagreed
+on a file named through a component that `std::path` drops. For root `repo`
+and file `repo/./a.php`, the writer (`Path::strip_prefix`) keys `a.php`. The
+reader removed the literal prefix `repo/` and derived `./a.php`.
+
+Reproduced at `612145d805c6ec519d60fc65e406e9c091462848` on x86_64 Linux with
+rustc 1.97.1 (`8bab26f4f`), the `rust-toolchain.toml` pin:
+
+* `Engine::scan_files` wrote record path `sample.php` for the file
+  `<root>/./sample.php`. `pons validate-report` rejected that report with
+  `semantic fingerprint mismatch` as 0.5.0, and with `record/finding mismatch`
+  as its frozen 0.4.0 projection.
+* The same disagreement occurred for `repo/./sub/a.php`, `repo//a.php`,
+  `repo/a.php/.`, the root spelling `repo/.`, the absolute form
+  `/tmp/repo/./a.php`, and one file named twice (file `repo/./a.php`, root
+  `repo/a.php`).
+* Not affected: the root spelling `repo//`, `./a.php` below `.`, and spelling
+  after the first kept component (`repo/sub/./a.php` is `sub/./a.php` on both
+  sides).
+* The Windows spelling `repo\.\a.php` does not reproduce on a POSIX writer,
+  which keeps the string as one name. The reader's Windows reading had the
+  defect (`./a.php`). A Windows writer was not run locally.
+
+The reader now derives each reading with the writer's rule. It compares
+components (the root, then every name; empty components and every `.` except
+a leading one are dropped; `..` is kept) and returns the producer's spelling
+from the next component to the end of the last one. The writer, the
+fingerprint, the validator rule that requires one reading, and both schemas
+are unchanged, so current and frozen keys are unchanged. The lexical
+`./a.php` is not an additional candidate.
+
+Controls added:
+
+* `component_equivalent_spellings_have_the_writer_key` gives the exact POSIX
+  and Windows reading for each case above. It compares the native writer with
+  the reading of the host that runs it.
+* `the_host_reading_is_the_native_writer_on_every_short_path` compares the
+  native writer with the host reading for every path of up to six characters
+  over a name, `.` and the host separators, against every root of up to four:
+  132,253 pairs on Linux. Windows paths that need a prefix are not generated.
+* `a_component_equivalent_file_spelling_validates_with_the_writer_key` drives
+  this build's own `scan_files` report through `pons validate-report`, as
+  0.5.0 and as 0.4.0, with its absolute root and with the relative label
+  `repo` in both separator styles. It rejects `./sample.php` as a record path,
+  as a fingerprint input, as both together, and in a frozen report.
+
+Local results on the fix: `cargo fmt --check` and all-target Clippy with
+warnings denied passed. `cargo test --workspace --no-fail-fast` as root gave
+266 passed and 3 failed. The three are the POSIX permission fixtures, which
+refuse to run as root; they fail identically at `612145d` (263 passed, 3
+failed). The `pons-core` unit binary run as uid 1000 passed 146 of 146.
+`tests/e2e.sh` on the release build gave 46 passed, 0 failed, 0 skipped, and
+`tests/doc_drift.sh` passed. Three deliberate reader mutations (keep interior
+`.`, drop the parent rule, keep trailing components) each failed both new
+unit tests; the mutations are not committed.
+
+Limits. Drive, UNC and verbatim prefixes remain ordinary names in the reader,
+as at `612145d`: a drive-letter case difference, a bare `C:` root and `.`
+below a `\\?\` root are not modelled, and nothing here tests them. No Windows
+host ran these tests locally; the hosted Linux and Windows checks belong to
+the pull request. Creusot with Pearlite contracts and Verus remain `OPEN`, not
+run. The tests, including the exhaustive comparison, are tests and not proofs.
