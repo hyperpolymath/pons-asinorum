@@ -4,7 +4,7 @@
   :schema-version "1.0.0"
   :canonical-name "pons-asinorum"
   :repo-uuid #u8"gv-clade-index:github.com/hyperpolymath/pons-asinorum"
-  :beholding-chora #u5"estate/chora"
+  :beholding-chora #u8"chora:estate/github.com/hyperpolymath"
   (identity :owner "hyperpolymath" :primary-forge github)
   (front-doors :human "README.adoc" :agent "0-AI-MANIFEST.deed")
   (authority
