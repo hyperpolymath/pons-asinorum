@@ -4,7 +4,7 @@
   :schema-version "1.0.0"
   :canonical-name "pons-asinorum"
   :repo-uuid #u8"gv-clade-index:github.com/hyperpolymath/pons-asinorum"
-  :beholding-chora #u5"estate/chora"
+  :beholding-chora #u8"chora:estate/github.com/hyperpolymath"
 
   (purpose
     :text "A falsifier-first static scanner: pons flags the small set of mistakes that experts spot on sight (wasted work, self-contradiction, missing escape hatches) and labels every finding with an honest evidence tier, so that heuristics are never mistaken for proofs and the tool can be trusted precisely as far as its evidence reaches.")
