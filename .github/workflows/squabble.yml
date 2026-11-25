@@ -88,7 +88,7 @@ jobs:
       # provenance does not match, so nothing is executed until both hold.
       - name: Install the pinned, attested squabble release
         id: squabble
-        uses: hyperpolymath/cicd-squabbler/.github/actions/squabble@b62a5ce01efdbf5c86977f35e3507759fcb4c22d # cicd-squabbler main
+        uses: hyperpolymath/cicd-squabbler/.github/actions/squabble@b7771033614fe78d8382bb03562160ab0e9d42a4 # cicd-squabbler main
 
       # BLOCKING: the fighter must be present and runnable. A CI/CD gate
       # that cannot be fought cannot be proved.
